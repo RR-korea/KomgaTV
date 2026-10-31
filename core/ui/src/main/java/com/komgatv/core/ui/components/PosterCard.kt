@@ -1,24 +1,17 @@
 package com.komgatv.core.ui.components
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -38,7 +31,7 @@ import coil3.request.crossfade
 /**
  * TV에 최적화된 포스터 카드 컴포저블
  *
- * D-Pad 포커스 처리, 스케일 애니메이션, Coil 3 이미지 로딩을 포함합니다.
+ * D-Pad 포커스 처리(Card의 확대·테두리), Coil 3 이미지 로딩을 포함합니다.
  * 만화/웹툰의 표지 이미지를 표시하는 데 사용됩니다.
  *
  * @param title 카드 하단에 표시될 제목
@@ -56,16 +49,6 @@ fun PosterCard(
     modifier: Modifier = Modifier,
     subtitle: String? = null,
 ) {
-    // 포커스 상태 추적
-    var isFocused by remember { mutableStateOf(false) }
-
-    // 포커스 시 스케일 애니메이션 (1.0 → 1.05)
-    val scale by animateFloatAsState(
-        targetValue = if (isFocused) 1.05f else 1.0f,
-        animationSpec = tween(durationMillis = 200),
-        label = "poster_scale",
-    )
-
     // 이미지 요청을 remember하여 불필요한 재생성 방지
     val context = LocalContext.current
     val imageRequest = remember(imageUrl) {
@@ -76,12 +59,7 @@ fun PosterCard(
     }
 
     Column(
-        modifier = modifier
-            .width(150.dp)
-            .scale(scale)
-            .onFocusChanged { focusState ->
-                isFocused = focusState.isFocused
-            },
+        modifier = modifier.width(150.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         // 포스터 이미지 카드
@@ -90,6 +68,8 @@ fun PosterCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(2f / 3f), // 만화 포스터 비율 (2:3)
+            // 포커스 확대는 Card가 한다. 아래 제목을 덮지 않게 작게 키운다.
+            scale = CardDefaults.scale(focusedScale = 1.05f),
             shape = CardDefaults.shape(
                 shape = RoundedCornerShape(8.dp),
             ),
@@ -100,14 +80,13 @@ fun PosterCard(
                 ),
             ),
         ) {
-            Box {
-                AsyncImage(
-                    model = imageRequest,
-                    contentDescription = title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.matchParentSize(),
-                )
-            }
+            // Card 내용은 크기를 갖지 않으므로 이미지가 직접 채운다 (크기 0이면 Coil이 요청하지 않는다)
+            AsyncImage(
+                model = imageRequest,
+                contentDescription = title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
 
         // 제목 텍스트
@@ -120,7 +99,7 @@ fun PosterCard(
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 6.dp, start = 4.dp, end = 4.dp),
+                .padding(top = 10.dp, start = 4.dp, end = 4.dp),
         )
 
         // 부제목 (선택)

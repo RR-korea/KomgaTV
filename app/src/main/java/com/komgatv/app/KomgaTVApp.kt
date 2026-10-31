@@ -11,6 +11,7 @@ import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.bitmapConfig
 import coil3.request.crossfade
+import coil3.util.DebugLogger
 import dagger.hilt.android.HiltAndroidApp
 import okhttp3.Call
 import timber.log.Timber
@@ -68,6 +69,7 @@ class KomgaTVApp : Application(), SingletonImageLoader.Factory {
             }
             .bitmapConfig(Bitmap.Config.RGB_565)
             .crossfade(false)
+            .apply { if (BuildConfig.DEBUG) logger(DebugLogger()) }
             .build()
     }
 }

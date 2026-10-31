@@ -8,6 +8,7 @@ import com.komgatv.core.data.repository.LibraryRepository
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.Library
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -70,7 +71,9 @@ class HomeViewModel @Inject constructor(
      */
     fun loadHomeData() {
         viewModelScope.launch {
-            _uiState.value = HomeUiState.Loading
+            // 이미 내용이 보이면 로딩 화면으로 바꾸지 않는다 (포커스·스크롤 위치 유지)
+            val showing = _uiState.value as? HomeUiState.Success
+            if (showing == null) _uiState.value = HomeUiState.Loading
 
             try {
                 // coroutineScope로 묶어 자식 비동기 작업의 실패가 structured concurrency로 바깥 try-catch에 안전하게 전달되도록 함
@@ -86,8 +89,12 @@ class HomeViewModel @Inject constructor(
                         libraries = libraries,
                     )
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.e(e, "홈 데이터 로드 실패")
+                // 보이는 내용이 있으면 그대로 두고, 처음 읽기에 실패했을 때만 오류 화면을 보인다
+                if (showing != null) return@launch
                 _uiState.value = HomeUiState.Error(
                     message = e.localizedMessage ?: "홈 화면 데이터를 불러올 수 없습니다"
                 )
@@ -105,7 +112,7 @@ class HomeViewModel @Inject constructor(
         return bookRepository.getBooksInProgress(page = 0, size = 20).first().books
     }
 
-    /** 데이터 새로고침 */
+    /** 데이터 새로고침 (다른 화면에서 돌아왔을 때 — 읽기 진행이 바뀌었을 수 있다) */
     fun refresh() {
         loadHomeData()
     }

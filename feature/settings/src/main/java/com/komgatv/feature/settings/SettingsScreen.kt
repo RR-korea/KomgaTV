@@ -29,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -98,6 +99,7 @@ fun SettingsScreen(
             value = uiState.serverUrl,
             onValueChange = viewModel::updateServerUrl,
             placeholder = stringResource(R.string.settings_server_url_placeholder),
+            keyboardType = KeyboardType.Uri,
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(firstFocusRequester),
@@ -144,6 +146,7 @@ fun SettingsScreen(
                 value = uiState.username,
                 onValueChange = viewModel::updateUsername,
                 placeholder = stringResource(R.string.settings_username_placeholder),
+                keyboardType = KeyboardType.Email,
                 modifier = Modifier.fillMaxWidth(),
             )
 
@@ -160,6 +163,7 @@ fun SettingsScreen(
                 onValueChange = viewModel::updatePassword,
                 placeholder = stringResource(R.string.settings_password_placeholder),
                 visualTransformation = PasswordVisualTransformation(),
+                keyboardType = KeyboardType.Password,
                 modifier = Modifier.fillMaxWidth(),
             )
         } else {
@@ -174,6 +178,7 @@ fun SettingsScreen(
                 onValueChange = viewModel::updateApiKey,
                 placeholder = stringResource(R.string.settings_apikey_placeholder),
                 visualTransformation = PasswordVisualTransformation(),
+                keyboardType = KeyboardType.Password,
                 modifier = Modifier.fillMaxWidth(),
             )
         }
