@@ -60,5 +60,25 @@ LEAD_REVIEW §2의 B1~B7 전부와 D1·D2·D3·D4 구조 변경.
 - 이어 읽기: 진입 시 서버 진행도 페이지로 시작.
 - **완료 조건:** `ReaderViewModel` 단위 테스트(방향 반전, 디바운스, 완독). 테스트 통과.
 
-## 이후 (리드가 T1~T4 검토 후 지시)
-홈 캐러셀, 검색(온스크린 키보드 + 음성), 웹툰 세로 스크롤 모드, 두 쪽 보기, 다중 서버, EPUB.
+## T5. 리더 보기 설정 (Komelia 페이지 리더와 같은 옵션) — `task/T5-reader-options`
+사용자 요구: Komelia 등 만화 뷰어에 있는 기본 보기 설정을 그대로 지원한다. 기준은 Komelia `ImageReaderSettings`(Apache-2.0,
+`komelia-infra/database/shared/.../db/ImageReaderSettings.kt`, `komelia-ui/.../reader/image/paged/PagedReaderState.kt`).
+옵션 이름·기본값은 Komelia와 같게 한다. 코드를 옮겨 오면 해당 파일 주석에 출처를 쓰고 `THIRD_PARTY_NOTICES.md`에 Komelia(Apache-2.0)를 적는다.
+
+1. **설정 저장** — `core:datastore`에 `ReaderPreferences`(인터페이스 + DataStore 구현, `ServerPreferences`와 같은 방식). 전역 기본값:
+   - `pageLayout`: `SINGLE_PAGE`(기본) / `DOUBLE_PAGES`(표지는 한 쪽) / `DOUBLE_PAGES_NO_COVER`
+   - `scaleType`: `SCREEN`(기본, 화면에 맞춤) / `FIT_WIDTH` / `FIT_HEIGHT` / `ORIGINAL`
+   - `stretchToFit`: `true`(기본, 화면보다 작은 이미지를 키움)
+   - `readingDirection`: `LEFT_TO_RIGHT`(기본) / `RIGHT_TO_LEFT`
+   - 모델 enum은 `core:model`에 둔다.
+2. **읽기 방향 우선순위** — 시리즈 메타데이터에 방향이 있으면 그것, 없으면 저장된 기본값. 리더에서 방향을 바꾸면 지금 책에 바로 적용하고 기본값으로 저장한다(Komelia와 같음). `RIGHT_TO_LEFT`면 좌/우 키와 두 쪽 배치(첫 쪽이 오른쪽)가 뒤집힌다.
+3. **두 쪽 보기** — 책 페이지 목록의 가로·세로 크기(`bookClient().getBookPages(bookId)`, 크기가 null이면 세로로 본다)로 가로가 긴 페이지(가로 > 세로, 이미 펼침으로 스캔된 쪽)는 혼자 보인다. 나머지는 두 쪽씩. `DOUBLE_PAGES`는 첫 쪽(표지)을 혼자. **쪽 맞춤 밀기(offset)** 토글: 짝이 어긋난 책을 한 쪽 밀어 맞춘다(세션 동안만, Komelia와 같음). 좌/우 = 펼침 단위로 이동.
+4. **크기 맞춤** — 화면보다 큰 페이지(`FIT_WIDTH`, `ORIGINAL`)는 오버레이가 닫힌 상태에서 위/아래로 화면 절반씩 스크롤, 끝에 닿은 상태의 위/아래는 아무것도 안 한다. 좌/우는 항상 페이지 넘김. 디코딩 크기는 화면·맞춤 방식에 맞춘다(원본 그대로 디코딩 금지 — 2GB TV).
+5. **설정 패널** — 오버레이(OK)에 "보기 설정" 버튼 → D-pad로만 조작하는 패널(쪽 배치, 밀기, 읽기 방향, 크기 맞춤, 작은 이미지 키우기). 바꾸면 즉시 반영. Back = 패널 닫기. 열 때 첫 항목에 포커스.
+6. **진행 저장** — 펼침에서 보이는 쪽 중 큰 번호를 저장한다. 마지막 쪽이 보이면 `completed=true`. 진입 시 서버 진행 쪽이 들어 있는 펼침에서 시작.
+7. 프리로드는 펼침 기준 앞뒤 2개.
+- **이번 범위 아님:** 세로 스크롤(웹툰, `CONTINUOUS`) — T6, 패널 읽기, 여백 자르기, 페이지 전환 깜빡임, 다운샘플링 커널·ONNX 업스케일러(TV 성능).
+- **완료 조건:** 단위 테스트 — 펼침 지도(표지 있음/없음/밀기/가로 쪽 단독/홀수 끝), 방향 우선순위(시리즈 > 기본값), 방향 바꾸면 기본값 저장, 펼침에서 저장 쪽·완독, 설정 저장·읽기(가짜 저장소). `./gradlew assembleDebug lint testDebugUnitTest` 통과, 우리 코드 lint 경고 0(결과 파일 확인).
+
+## 이후 (리드가 지시)
+T6 세로 스크롤(웹툰) 모드, 홈 캐러셀, 검색(온스크린 키보드 + 음성), 다중 서버, EPUB.
