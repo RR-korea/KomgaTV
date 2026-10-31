@@ -127,5 +127,7 @@ T5 코드(`ReaderViewModel`, `ReaderScreen`, `ReaderSettingsPanel`, `docs/report
 ## T9. 홈 줄 확장 — ✅ 완료 (docs/reports/T9.md)
 다음 권, 최근 추가된 책·시리즈, 최근 업데이트된 시리즈.
 
+## T10. 책 제목 검색 — ✅ 완료 (docs/reports/T10.md)
+
 ## 이후 (리드가 지시)
-책 제목 검색, 다중 서버, EPUB.
+다중 서버, EPUB.

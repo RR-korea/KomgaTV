@@ -102,6 +102,9 @@ fun KomgaTVNavHost(
                 onNavigateToSeries = { seriesId ->
                     navController.navigate(Screen.SeriesDetail.createRoute(seriesId))
                 },
+                onNavigateToReader = { bookId ->
+                    navController.navigate(Screen.Reader.createRoute(bookId))
+                },
             )
         }
 
