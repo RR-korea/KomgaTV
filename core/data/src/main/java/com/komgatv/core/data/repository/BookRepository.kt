@@ -43,6 +43,7 @@ data class BookPageResult(
 @Singleton
 class BookRepositoryImpl @Inject constructor(
     private val sessionManager: ServerSessionManager,
+    private val progressEvents: ReadProgressEvents,
 ) : BookRepository {
 
     override fun getBooks(seriesId: String, page: Int, size: Int): Flow<BookPageResult> = flow {
@@ -80,6 +81,7 @@ class BookRepositoryImpl @Inject constructor(
             bookId = KomgaBookId(bookId),
             request = KomgaBookReadProgressUpdateRequest(page = page, completed = completed),
         )
+        progressEvents.notifyUpdated(bookId)
     }
 }
 

@@ -3,6 +3,7 @@ package com.komgatv.feature.library
 import com.komgatv.core.model.LoadError
 import com.komgatv.core.data.repository.BookPageResult
 import com.komgatv.core.data.repository.BookRepository
+import com.komgatv.core.data.repository.ReadProgressEvents
 import com.komgatv.core.data.repository.SeriesPageResult
 import com.komgatv.core.data.repository.SeriesRepository
 import com.komgatv.core.model.Book
@@ -15,6 +16,7 @@ import com.komgatv.core.model.SeriesMetadata
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -30,11 +32,13 @@ class SeriesDetailViewModelTest {
 
     private val fakeSeriesRepository = FakeSeriesRepository()
     private val fakeBookRepository = FakeBookRepository()
+    private val progressEvents = ReadProgressEvents()
 
     private fun createViewModel(): SeriesDetailViewModel {
         return SeriesDetailViewModel(
             seriesRepository = fakeSeriesRepository,
             bookRepository = fakeBookRepository,
+            progressEvents = progressEvents,
             imageUrls = FakeImageUrls,
         )
     }
@@ -90,6 +94,30 @@ class SeriesDetailViewModelTest {
         assertEquals(0, successState.currentPage)
         assertFalse(successState.isLastPage)
         assertFalse(successState.isLoadingMore)
+    }
+
+    @Test
+    fun `이 시리즈 책의 진행 저장 알림이 오면 진행 표시를 다시 읽는다`() = runTest {
+        fakeSeriesRepository.seriesToReturn = Series(
+            id = "series-1", libraryId = "lib-1", name = "테스트 시리즈", booksCount = 2,
+            booksReadCount = 0, booksInProgressCount = 0,
+            metadata = SeriesMetadata("테스트 시리즈", "", "ENDED", "", emptyList(), null),
+        )
+        val books = listOf(createTestBook("book-1", 1), createTestBook("book-2", 2))
+        fakeBookRepository.pages[0] = BookPageResult(books, 1, 2, 0, true)
+        val viewModel = createViewModel()
+        viewModel.loadSeriesDetail("series-1")
+        advanceUntilIdle()
+
+        val updated = books.map { if (it.id == "book-2") it.copy(readProgress = ReadProgress(page = 7, completed = false)) else it }
+        fakeBookRepository.pages[0] = BookPageResult(updated, 1, 2, 0, true)
+        progressEvents.notifyUpdated("other-series-book")
+        advanceUntilIdle()
+        assertEquals(null, (viewModel.uiState.value as SeriesDetailUiState.Success).books[1].readProgress)
+
+        progressEvents.notifyUpdated("book-2")
+        advanceUntilIdle()
+        assertEquals(7, (viewModel.uiState.value as SeriesDetailUiState.Success).books[1].readProgress?.page)
     }
 
     @Test
