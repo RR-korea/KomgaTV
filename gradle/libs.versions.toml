@@ -1,0 +1,115 @@
+# KomgaTV 의존성 버전 카탈로그
+
+[versions]
+# 코틀린 & 안드로이드 빌드 도구
+kotlin = "2.1.0"
+agp = "8.7.3"
+ksp = "2.1.0-1.0.29"
+
+# Compose
+compose-bom = "2025.05.00"
+
+# Android TV 전용 라이브러리
+tv-foundation = "1.0.0"
+tv-material = "1.1.0"
+
+# 이미지 로딩
+coil = "3.1.0"
+
+# 네트워크
+retrofit = "2.11.0"
+okhttp = "4.12.0"
+
+# 직렬화
+kotlinx-serialization = "1.7.3"
+
+# 비동기 처리
+kotlinx-coroutines = "1.9.0"
+
+# 의존성 주입
+hilt = "2.53.1"
+hilt-navigation-compose = "1.2.0"
+
+# 네비게이션
+navigation-compose = "2.8.5"
+
+# 라이프사이클
+lifecycle = "2.8.7"
+
+# 로컬 데이터베이스
+room = "2.6.1"
+
+# 로깅
+timber = "5.0.1"
+
+# 환경설정 저장소
+datastore = "1.1.1"
+
+[libraries]
+# Compose BOM - 모든 Compose 라이브러리 버전 통합 관리
+compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }
+compose-ui = { group = "androidx.compose.ui", name = "ui" }
+compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
+compose-runtime = { group = "androidx.compose.runtime", name = "runtime" }
+
+# Android TV Compose 라이브러리
+tv-foundation = { group = "androidx.tv", name = "tv-foundation", version.ref = "tv-foundation" }
+tv-material = { group = "androidx.tv", name = "tv-material", version.ref = "tv-material" }
+
+# Coil 이미지 로딩
+coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
+
+# Retrofit + OkHttp 네트워크 스택
+retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
+retrofit-converter-kotlinx = { group = "com.squareup.retrofit2", name = "converter-kotlinx-serialization", version.ref = "retrofit" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
+
+# Kotlinx Serialization
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+
+# Kotlinx Coroutines
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
+
+# Hilt 의존성 주입
+hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
+hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
+hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hilt-navigation-compose" }
+
+# Navigation Compose
+navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation-compose" }
+
+# Lifecycle
+lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
+lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
+lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+
+# Room 로컬 데이터베이스
+room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+
+# Timber 로깅
+timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
+
+# DataStore 환경설정 저장소
+datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
+
+# AndroidX 코어
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version = "1.15.0" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version = "1.9.3" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

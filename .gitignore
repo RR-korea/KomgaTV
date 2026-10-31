@@ -1,0 +1,33 @@
+# Built / generated
+build/
+.gradle/
+*.iml
+
+# Android
+*.apk
+*.aar
+*.ap_
+*.aab
+
+# Kotlin
+*.class
+*.log
+*.ctxt
+
+# IDE
+.idea/
+*.iws
+*.ipr
+.DS_Store
+local.properties
+
+# Signing
+*.jks
+*.keystore
+signing.properties
+
+# Generated
+captures/
+.externalNativeBuild/
+.cxx/
+output.json
