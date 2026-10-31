@@ -1,4 +1,4 @@
-// core:datastore — 서버 설정·자격 증명 저장 (다른 core 모듈에 의존하지 않음)
+// core:datastore — 서버 설정·자격 증명 및 리더 보기 설정 저장
 
 plugins {
     alias(libs.plugins.komgatv.android.library)
@@ -10,6 +10,7 @@ android {
 }
 
 dependencies {
+    api(project(":core:model"))
     implementation(libs.datastore.preferences)
     implementation(libs.kotlinx.coroutines.android)
 

@@ -2,12 +2,14 @@ package com.komgatv.core.data.mapper
 
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.BookMetadata
+import com.komgatv.core.model.BookPage
 import com.komgatv.core.model.Library
 import com.komgatv.core.model.ReadProgress
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.Series
 import com.komgatv.core.model.SeriesMetadata
 import snd.komga.client.book.KomgaBook
+import snd.komga.client.book.KomgaBookPage
 import snd.komga.client.common.KomgaReadingDirection
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.series.KomgaSeries
@@ -49,6 +51,15 @@ internal fun KomgaBook.toDomain() = Book(
         number = metadata.number,
     ),
     readProgress = readProgress?.let { ReadProgress(page = it.page, completed = it.completed) },
+)
+
+internal fun KomgaBookPage.toDomain() = BookPage(
+    number = number,
+    fileName = fileName,
+    mediaType = mediaType,
+    width = width,
+    height = height,
+    sizeBytes = sizeBytes,
 )
 
 private fun KomgaReadingDirection.toDomain() = when (this) {

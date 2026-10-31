@@ -14,6 +14,7 @@
 - 이미지 URL은 `core:data`의 `ImageUrls`를 주입받아 만든다. 화면·ViewModel이 `ServerSessionManager`나 baseUrl을 직접 다루지 않는다.
 - 보고서의 "경고 0"은 lint 결과 파일(`*/build/reports/lint-results-debug.txt`)을 실제로 확인한 뒤에만 쓴다.
 - **UI 문자열은 전부 리소스로** — 화면에 보이는 글자를 코드에 쓰지 않는다. `values/strings.xml`(영어, 기본) + `values-ko/strings.xml`(한국어)에 둘 다 넣는다. ViewModel은 오류 문구 대신 오류 종류를 내보내고 화면이 문자열로 바꾼다.
+- **Back 키는 `BackHandler`로** — targetSdk 36은 예측형 뒤로 가기가 기본이라 Back이 `onKeyEvent`/`onPreviewKeyEvent`로 오지 않는다.
 - **화면 포커스** — 들어올 때 첫 항목, 돌아오면 연 항목에 포커스: `core:ui`의 `rememberEntryFocusState`/`EntryFocusEffect`/`OnReturnEffect`를 쓴다.
 
 ---
@@ -62,7 +63,7 @@ LEAD_REVIEW §2의 B1~B7 전부와 D1·D2·D3·D4 구조 변경.
 - 이어 읽기: 진입 시 서버 진행도 페이지로 시작.
 - **완료 조건:** `ReaderViewModel` 단위 테스트(방향 반전, 디바운스, 완독). 테스트 통과.
 
-## T5. 리더 보기 설정 (Komelia 페이지 리더와 같은 옵션) — `task/T5-reader-options`
+## T5. 리더 보기 설정 (Komelia 페이지 리더와 같은 옵션) — `task/T5-reader-options` — ✅ 완료 (docs/reports/T5.md, 리모컨 키 표 포함)
 사용자 요구: Komelia 등 만화 뷰어에 있는 기본 보기 설정을 그대로 지원한다. 기준은 Komelia `ImageReaderSettings`(Apache-2.0,
 `komelia-infra/database/shared/.../db/ImageReaderSettings.kt`, `komelia-ui/.../reader/image/paged/PagedReaderState.kt`).
 옵션 이름·기본값은 Komelia와 같게 한다. 코드를 옮겨 오면 해당 파일 주석에 출처를 쓰고 `THIRD_PARTY_NOTICES.md`에 Komelia(Apache-2.0)를 적는다.
@@ -82,7 +83,7 @@ LEAD_REVIEW §2의 B1~B7 전부와 D1·D2·D3·D4 구조 변경.
 - **이번 범위 아님:** 세로 스크롤(웹툰, `CONTINUOUS`) — T6, 패널 읽기, 여백 자르기, 페이지 전환 깜빡임, 다운샘플링 커널·ONNX 업스케일러(TV 성능).
 - **완료 조건:** 단위 테스트 — 펼침 지도(표지 있음/없음/밀기/가로 쪽 단독/홀수 끝), 방향 우선순위(시리즈 > 기본값), 방향 바꾸면 기본값 저장, 펼침에서 저장 쪽·완독, 설정 저장·읽기(가짜 저장소). `./gradlew assembleDebug lint testDebugUnitTest` 통과, 우리 코드 lint 경고 0(결과 파일 확인).
 
-## T7. 다국어 (영어 기본 + 한국어) — T5 병합 뒤 리드가 직접
+## T7. 다국어 (영어 기본 + 한국어) — 문자열 이전 완료(홈·라이브러리·설정·리더·core:ui), 화면별 두 언어 캡처 검사 남음
 사용자 요구: UI가 한국어도 지원해야 한다. 지금은 한국어가 `values/`(기본)에만 있다.
 - 모든 모듈 `values/strings.xml` → 영어, 지금 한국어는 `values-ko/strings.xml`로. 앱 이름·TV 배너 포함.
 - 코드에 박힌 오류 문구(ViewModel `e.localizedMessage ?: "…"`, `ServerConnectionException` 기본 메시지, `NotConnectedException`)를 오류 종류로 바꾸고 화면에서 리소스로 표시.
