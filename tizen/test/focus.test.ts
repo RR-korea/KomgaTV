@@ -36,9 +36,16 @@ describe('score', () => {
     expect(sameColumn).toBeLessThan(diagonal);
   });
 
-  it('겹치는 후보 중에서는 축에서 덜 벗어난 쪽', () => {
+  it('겹치는 후보 중에서는 시작 가장자리가 맞는 쪽', () => {
     const aligned = score(from, rect(500, 900), 'down')!;
     const shifted = score(from, rect(600, 900), 'down')!;
     expect(aligned).toBeLessThan(shifted);
+  });
+
+  it('넓은 입력칸에서 아래 → 버튼 줄의 첫 버튼', () => {
+    const field = rect(360, 300, 1200, 100);
+    const first = score(field, rect(360, 500, 260, 80), 'down')!;
+    const second = score(field, rect(650, 500, 400, 80), 'down')!;
+    expect(first).toBeLessThan(second);
   });
 });

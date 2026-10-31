@@ -1,8 +1,9 @@
 // Tizen 패키지에 들어갈 dist/ 생성. --serve면 감시 + 로컬 서버(PC 브라우저 개발용).
 import * as esbuild from 'esbuild';
-import { cpSync, mkdirSync, rmSync } from 'node:fs';
+import { cpSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 
 const serve = process.argv.includes('--serve');
+const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
 
 rmSync('dist', { recursive: true, force: true });
 mkdirSync('dist');
@@ -21,6 +22,7 @@ const options = {
   minify: !serve,
   sourcemap: serve ? 'inline' : false,
   legalComments: 'none',
+  define: { APP_VERSION: JSON.stringify(version) },
   logLevel: 'info',
 };
 

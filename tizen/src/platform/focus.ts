@@ -51,9 +51,14 @@ export function score(from: Rect, to: Rect, direction: Direction): number | null
       offAxis = Math.abs(fromCenterX - toCenterX);
       break;
   }
-  // 겹치는 후보(같은 줄·같은 열)를 강하게 우선하고, 아니면 축에서 벗어난 거리를 크게 벌준다
-  const alignedPenalty = overlap > 0 ? 0 : offAxis * 3 + 1000;
-  return Math.max(primary, 0) * 2 + offAxis * 0.5 + alignedPenalty;
+  if (overlap > 0) {
+    // 겹치는 후보(같은 줄·같은 열) 끼리는 시작 가장자리가 맞는 쪽 — 넓은 입력칸 아래 버튼 줄이면 첫 버튼
+    const edge =
+      direction === 'up' || direction === 'down' ? Math.abs(from.left - to.left) : Math.abs(from.top - to.top);
+    return Math.max(primary, 0) * 2 + edge * 0.5;
+  }
+  // 겹치지 않는 후보는 축에서 벗어난 거리를 크게 벌준다
+  return Math.max(primary, 0) * 2 + offAxis * 3.5 + 1000;
 }
 
 function isVisible(element: HTMLElement): boolean {
@@ -75,10 +80,35 @@ export function current(): HTMLElement | null {
   return active && active.classList.contains(FOCUSABLE_CLASS) ? active : null;
 }
 
+/**
+ * `[data-scroll="x"|"y"]` 조상을 직접 스크롤해 요소가 여백(data-scroll-margin, 기본 80px) 안쪽에 오게 한다.
+ * scrollIntoView는 화면 전체를 움직이고 확대된 포커스 카드가 잘리므로 쓰지 않는다.
+ */
+export function reveal(element: HTMLElement): void {
+  let parent = element.parentElement;
+  while (parent) {
+    const axis = parent.dataset.scroll;
+    if (axis === 'x' || axis === 'y') {
+      const margin = Number(parent.dataset.scrollMargin ?? 80);
+      const target = element.getBoundingClientRect();
+      const box = parent.getBoundingClientRect();
+      if (axis === 'x') {
+        if (target.left < box.left + margin) parent.scrollLeft -= box.left + margin - target.left;
+        else if (target.right > box.right - margin) parent.scrollLeft += target.right - (box.right - margin);
+      } else if (target.top < box.top + margin) {
+        parent.scrollTop -= box.top + margin - target.top;
+      } else if (target.bottom > box.bottom - margin) {
+        parent.scrollTop += target.bottom - (box.bottom - margin);
+      }
+    }
+    parent = parent.parentElement;
+  }
+}
+
 /** 포커스를 주고 보이도록 스크롤한다. */
 export function focusElement(element: HTMLElement): void {
   element.focus({ preventScroll: true });
-  element.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+  reveal(element);
   const section = element.closest<HTMLElement>('[data-section]');
   if (section) section.dataset.lastKey = element.dataset.key ?? '';
 }

@@ -1,0 +1,207 @@
+// 개발용 가짜 Komga 서버. dist/를 / 에서, API를 /komga/api 아래(하위 경로)에서 낸다.
+// 실행: npm run build && node dev/mock-komga.mjs [port]   → http://localhost:8790/
+// 로그인: test@example.com / pw  또는 API 키 test
+// 실제 서버 데이터 형태(긴 폴더 이름, 번호뿐인 책 이름, 가로 펼침 쪽, 표지 없는 시리즈)를 흉내 낸다.
+import { createReadStream, existsSync, statSync } from 'node:fs';
+import { createServer } from 'node:http';
+import { extname, join, normalize } from 'node:path';
+
+const port = Number(process.argv[2] ?? 8790);
+const root = 'dist';
+const BASE = '/komga';
+
+const libraries = [
+  { id: 'L1', name: '만화' },
+  { id: 'L2', name: 'Comics' },
+];
+
+const series = [];
+for (let i = 1; i <= 130; i++) {
+  const libraryId = i <= 120 ? 'L1' : 'L2';
+  const name = i === 1 ? '[만화,연재중] 킹덤(1-72) - 야수히사 하라' : i === 2 ? '원피스' : `시리즈 ${String(i).padStart(3, '0')}`;
+  series.push({
+    id: `S${i}`,
+    libraryId,
+    name,
+    booksCount: 5,
+    booksReadCount: 0,
+    booksUnreadCount: 5,
+    booksInProgressCount: 0,
+    metadata: {
+      title: name,
+      summary: i === 1 ? '중국 춘추전국시대를 배경으로 한 대하 역사 만화. '.repeat(6) : '',
+      status: i % 3 === 0 ? 'ENDED' : 'ONGOING',
+      publisher: i % 2 ? '대원씨아이' : '',
+      readingDirection: i === 2 ? 'RIGHT_TO_LEFT' : null,
+    },
+  });
+}
+
+const PAGES = 24;
+const books = [];
+for (const s of series) {
+  for (let n = 1; n <= 5; n++) {
+    books.push({
+      id: `${s.id}B${n}`,
+      seriesId: s.id,
+      seriesTitle: s.metadata.title,
+      name: String(n).padStart(2, '0'),
+      number: n,
+      media: { pagesCount: PAGES },
+      metadata: { title: String(n).padStart(2, '0'), number: String(n) },
+      readProgress: null,
+      readDate: 0,
+    });
+  }
+}
+// 읽는 중인 책 몇 권
+for (const [id, page] of [['S1B3', 7], ['S2B1', 12], ['S5B2', 3]]) {
+  const book = books.find((b) => b.id === id);
+  book.readProgress = { page, completed: false };
+  book.readDate = Date.now() - books.indexOf(book);
+}
+
+/** 8쪽·9쪽은 가로(펼침 스캔), 나머지 세로 */
+const pageSize = (n) => (n === 8 || n === 15 ? { width: 1600, height: 1200 } : { width: 800, height: 1200 });
+
+const json = (res, body, status = 200) => {
+  res.writeHead(status, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(body));
+};
+
+const svg = (res, width, height, label, hue) => {
+  res.writeHead(200, { 'Content-Type': 'image/svg+xml' });
+  res.end(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">` +
+      `<rect width="100%" height="100%" fill="hsl(${hue},45%,35%)"/>` +
+      `<rect x="20" y="20" width="${width - 40}" height="${height - 40}" fill="none" stroke="#fff" stroke-width="6"/>` +
+      `<text x="50%" y="50%" fill="#fff" font-size="${Math.round(height / 10)}" font-family="sans-serif" text-anchor="middle" dominant-baseline="middle">${label}</text>` +
+      `</svg>`,
+  );
+};
+
+function authorized(req) {
+  if (req.headers['x-api-key'] === 'test') return true;
+  const header = req.headers.authorization ?? '';
+  return header === `Basic ${Buffer.from('test@example.com:pw').toString('base64')}`;
+}
+
+function paged(res, items, url) {
+  const page = Number(url.searchParams.get('page') ?? 0);
+  const size = Number(url.searchParams.get('size') ?? 20);
+  const content = items.slice(page * size, page * size + size);
+  json(res, {
+    content,
+    totalElements: items.length,
+    totalPages: Math.ceil(items.length / size),
+    number: page,
+    last: (page + 1) * size >= items.length,
+  });
+}
+
+function conditionValue(condition, field) {
+  if (!condition) return undefined;
+  if (condition[field]) return condition[field].value;
+  for (const child of condition.allOf ?? []) {
+    const value = conditionValue(child, field);
+    if (value !== undefined) return value;
+  }
+  return undefined;
+}
+
+const readBody = (req) =>
+  new Promise((resolve) => {
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', () => resolve(body ? JSON.parse(body) : {}));
+  });
+
+async function api(req, res, path, url) {
+  if (!authorized(req)) return json(res, { error: 'Unauthorized' }, 401);
+  let m;
+  if (path === 'api/v2/users/me') return json(res, { id: 'U1', email: 'test@example.com' });
+  if (path === 'api/v1/libraries') return json(res, libraries);
+  if (path === 'api/v1/series/list' && req.method === 'POST') {
+    const { condition } = await readBody(req);
+    const libraryId = conditionValue(condition, 'libraryId');
+    const list = series.filter((s) => !libraryId || s.libraryId === libraryId);
+    list.sort((a, b) => a.metadata.title.localeCompare(b.metadata.title));
+    return paged(res, list, url);
+  }
+  if ((m = path.match(/^api\/v1\/series\/([^/]+)$/))) {
+    const found = series.find((s) => s.id === m[1]);
+    return found ? json(res, found) : json(res, {}, 404);
+  }
+  if ((m = path.match(/^api\/v1\/series\/([^/]+)\/thumbnail$/))) {
+    if (m[1] === 'S4') return json(res, {}, 404); // 표지 없는 시리즈
+    return svg(res, 300, 450, m[1], (Number(m[1].slice(1)) * 37) % 360);
+  }
+  if (path === 'api/v1/books/list' && req.method === 'POST') {
+    const { condition } = await readBody(req);
+    const seriesId = conditionValue(condition, 'seriesId');
+    const status = conditionValue(condition, 'readStatus');
+    let list = books.filter((b) => !seriesId || b.seriesId === seriesId);
+    if (status === 'IN_PROGRESS') {
+      list = list.filter((b) => b.readProgress && !b.readProgress.completed);
+      list.sort((a, b) => b.readDate - a.readDate);
+    } else {
+      list.sort((a, b) => a.number - b.number);
+    }
+    return paged(res, list, url);
+  }
+  if ((m = path.match(/^api\/v1\/books\/([^/]+)$/))) {
+    const found = books.find((b) => b.id === m[1]);
+    return found ? json(res, found) : json(res, {}, 404);
+  }
+  if ((m = path.match(/^api\/v1\/books\/([^/]+)\/thumbnail$/))) {
+    return svg(res, 300, 450, m[1], (m[1].length * 53) % 360);
+  }
+  if ((m = path.match(/^api\/v1\/books\/([^/]+)\/pages$/))) {
+    return json(
+      res,
+      Array.from({ length: PAGES }, (_, i) => ({ number: i + 1, mediaType: 'image/svg+xml', ...pageSize(i + 1) })),
+    );
+  }
+  if ((m = path.match(/^api\/v1\/books\/([^/]+)\/pages\/(\d+)$/))) {
+    const n = Number(m[2]);
+    const { width, height } = pageSize(n);
+    return svg(res, width, height, `${m[1]} p${n}`, (n * 29) % 360);
+  }
+  if ((m = path.match(/^api\/v1\/books\/([^/]+)\/read-progress$/)) && req.method === 'PATCH') {
+    const book = books.find((b) => b.id === m[1]);
+    const { page, completed } = await readBody(req);
+    book.readProgress = { page, completed };
+    book.readDate = Date.now();
+    console.log(`PATCH read-progress ${book.id} page=${page} completed=${completed}`);
+    res.writeHead(204);
+    return res.end();
+  }
+  return json(res, {}, 404);
+}
+
+const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.xml': 'text/xml' };
+
+createServer((req, res) => {
+  const url = new URL(req.url, `http://localhost:${port}`);
+  // 패키지 앱(file://)과 같은 교차 출처 상황도 흉내 낼 수 있게 CORS를 연다
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Authorization, X-API-Key, Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    return res.end();
+  }
+  if (url.pathname.startsWith(`${BASE}/`)) {
+    return api(req, res, url.pathname.slice(BASE.length + 1), url).catch((error) => {
+      console.error(error);
+      json(res, {}, 500);
+    });
+  }
+  const file = normalize(join(root, url.pathname === '/' ? 'index.html' : url.pathname));
+  if (!file.startsWith(normalize(root)) || !existsSync(file) || !statSync(file).isFile()) {
+    res.writeHead(404);
+    return res.end();
+  }
+  res.writeHead(200, { 'Content-Type': types[extname(file)] ?? 'application/octet-stream' });
+  createReadStream(file).pipe(res);
+}).listen(port, () => console.log(`mock Komga: http://localhost:${port}${BASE}  app: http://localhost:${port}/`));

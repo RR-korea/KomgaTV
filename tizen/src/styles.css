@@ -1,4 +1,5 @@
-/* Chromium 69(2020년형)에서 되는 CSS만 쓴다: flex gap·aspect-ratio·inset·:is() 금지 (docs/PLAN.md Z1) */
+/* Chromium 69(2020년형)에서 되는 CSS만 쓴다: flex gap·aspect-ratio·inset·:is() 금지 (docs/PLAN.md Z1).
+   화면은 1920×1080 고정 (index.html viewport). 스크롤은 platform/focus의 reveal()이 직접 한다. */
 
 html,
 body {
@@ -8,35 +9,560 @@ body {
   overflow: hidden;
   background: #15181f;
   color: #e6e8ee;
-  font-family: 'SamsungOne', 'Samsung Sans', sans-serif;
+  font-family: 'SamsungOne', 'Samsung Sans', 'Noto Sans KR', sans-serif;
+  font-size: 28px;
 }
 
-.diag {
-  padding: 96px 120px;
+* {
+  box-sizing: border-box;
 }
 
-.diag h1 {
-  margin: 0 0 8px;
-  font-size: 64px;
+.app,
+.screen {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
 }
 
-.diag p {
-  margin: 0 0 48px;
-  font-size: 32px;
+.screen.hidden {
+  display: none;
+}
+
+.focusable {
+  outline: none;
+  cursor: pointer;
+}
+
+/* ---------- 공통 ---------- */
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 140px;
+  padding: 0 96px;
+}
+
+.app-name {
+  font-size: 44px;
+  font-weight: bold;
+  color: #ffb547;
+}
+
+.screen-title {
+  margin: 0;
+  font-size: 44px;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.section-title {
+  margin: 48px 0 16px;
+  font-size: 30px;
   color: #9aa1b2;
 }
 
-.diag dl {
-  margin: 0;
+.center-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 800px;
+  font-size: 32px;
+  color: #9aa1b2;
+  text-align: center;
+}
+
+.error-title {
+  font-size: 40px;
+  color: #e6e8ee;
+  margin-bottom: 16px;
+}
+
+.error-text {
+  margin-bottom: 40px;
+  max-width: 1200px;
+}
+
+.empty {
+  font-size: 28px;
+  color: #9aa1b2;
+  padding: 40px 0;
+}
+
+.button {
+  display: inline-block;
+  padding: 18px 36px;
+  border-radius: 12px;
+  background: #262b36;
+  border: 3px solid transparent;
+  font-size: 28px;
+  white-space: nowrap;
+}
+
+.button + .button {
+  margin-left: 24px;
+}
+
+.button.selected {
+  background: #3a4252;
+  color: #ffb547;
+}
+
+.button.primary {
+  background: #a8681a;
+}
+
+.button:focus {
+  border-color: #ffffff;
+  background: #ffb547;
+  color: #15181f;
+}
+
+.progress {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #ffb547;
+}
+
+/* ---------- 카드·행·그리드 ---------- */
+
+.row {
+  margin-bottom: 24px;
+}
+
+.row-title {
+  margin: 0 0 8px;
+  padding: 0 96px;
+  font-size: 32px;
+}
+
+.row-track {
+  overflow: hidden;
+  padding: 20px 0 12px;
+}
+
+.row-items {
+  display: flex;
+  padding: 0 96px;
+}
+
+.row-items > * {
+  flex: 0 0 auto;
+  margin-right: 32px;
+}
+
+.card {
+  width: 240px;
+  border-radius: 12px;
+  transition: transform 0.12s ease-out;
+}
+
+.card-poster {
+  position: relative;
+  width: 240px;
+  height: 360px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #262b36;
+  border: 4px solid transparent;
+}
+
+.card:focus {
+  transform: scale(1.06);
+}
+
+.card:focus .card-poster {
+  border-color: #ffffff;
+}
+
+.card-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 96px;
+  color: #4a5162;
+}
+
+.card-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.card-progress-fill {
+  height: 100%;
+  background: #ffb547;
+}
+
+.card-title {
+  margin-top: 12px;
+  font-size: 24px;
+  line-height: 1.3;
+  max-height: 2.6em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.card-subtitle {
+  margin-top: 4px;
+  font-size: 21px;
+  color: #9aa1b2;
+}
+
+.text-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 400px;
+  height: 160px;
+  padding: 24px;
+  border-radius: 12px;
+  background: #262b36;
+  border: 4px solid transparent;
+  text-align: center;
+  transition: transform 0.12s ease-out;
+}
+
+.text-card:focus {
+  border-color: #ffffff;
+  background: #3a4252;
+  transform: scale(1.06);
+}
+
+.text-card-title {
+  font-size: 32px;
+  overflow: hidden;
+  max-height: 2.6em;
+  line-height: 1.3;
+}
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 24px 96px 0;
+}
+
+.grid > .card {
+  margin: 0 32px 48px 0;
+}
+
+/* ---------- 화면 ---------- */
+
+.home,
+.series,
+.settings {
+  height: 1080px;
+  overflow: hidden;
+}
+
+.library {
+  height: 1080px;
+}
+
+.grid-scroll {
+  height: 940px;
+  overflow: hidden;
+}
+
+.loading-more {
+  padding: 0 96px 48px;
+  color: #9aa1b2;
+}
+
+.series-header {
+  display: flex;
+  padding: 72px 96px 24px;
+}
+
+.series-cover {
+  flex: 0 0 auto;
+  width: 280px;
+  height: 420px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #262b36;
+  margin-right: 56px;
+}
+
+.series-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.series-title {
+  margin: 0 0 20px;
+  font-size: 48px;
+  line-height: 1.25;
+}
+
+.series-meta span {
+  display: inline-block;
+  margin: 0 32px 12px 0;
+  color: #9aa1b2;
+}
+
+.series-summary {
+  margin: 16px 0 0;
+  font-size: 26px;
+  line-height: 1.5;
+  max-height: 6em;
+  overflow: hidden;
+  color: #c3c8d4;
+}
+
+.settings {
+  padding: 72px 360px 120px;
+}
+
+.settings .screen-title {
+  margin-bottom: 16px;
+}
+
+.field {
+  margin-bottom: 20px;
+  padding: 16px 24px;
+  border-radius: 12px;
+  background: #262b36;
+  border: 3px solid transparent;
+}
+
+.field:focus,
+.field.editing {
+  border-color: #ffffff;
+}
+
+.field.editing {
+  background: #323846;
+}
+
+.field-label {
+  font-size: 22px;
+  color: #9aa1b2;
+  margin-bottom: 8px;
+}
+
+.field-label.standalone {
+  margin: 8px 0 12px;
+}
+
+.field-input {
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #e6e8ee;
+  font: inherit;
   font-size: 30px;
 }
 
-.diag dt {
-  margin-top: 28px;
+.choice-row,
+.button-row {
+  display: flex;
+  margin-bottom: 24px;
+}
+
+.choice-row .button,
+.button-row .button {
+  margin-left: 0;
+  margin-right: 24px;
+}
+
+.status {
+  min-height: 40px;
+  font-size: 26px;
+}
+
+.status-error {
+  color: #ff7b7b;
+}
+
+.status-success {
+  color: #7bdc9a;
+}
+
+.status-busy {
   color: #9aa1b2;
 }
 
-.diag dd {
-  margin: 6px 0 0;
+.about {
+  color: #9aa1b2;
+}
+
+.about.small {
+  margin-top: 8px;
+  font-size: 18px;
   word-break: break-all;
+}
+
+/* ---------- 리더 ---------- */
+
+.reader {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: #000000;
+}
+
+.reader-spread {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  white-space: nowrap;
+}
+
+.reader-page {
+  flex: 0 0 auto;
+  position: relative;
+  background: #0b0b0b;
+}
+
+.reader-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.reader-page-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #6b7280;
+}
+
+.reader-overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.reader-overlay-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 32px 96px 40px;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.reader-overlay-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.reader-title {
+  font-size: 34px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 32px;
+}
+
+.reader-help {
+  margin-top: 16px;
+  font-size: 22px;
+  color: #9aa1b2;
+}
+
+.reader-panel-backdrop {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.reader-panel {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 620px;
+  height: 1080px;
+  padding: 56px 48px;
+  background: #1e1e1e;
+}
+
+.reader-panel-title {
+  margin: 0 0 32px;
+  font-size: 36px;
+}
+
+.panel-option {
+  margin-bottom: 18px;
+  padding: 16px 24px;
+  border-radius: 12px;
+  background: #262626;
+  border: 3px solid transparent;
+}
+
+.panel-option:focus {
+  background: #2f2f2f;
+  border-color: #ffffff;
+}
+
+.panel-option.disabled {
+  opacity: 0.4;
+}
+
+.panel-option-label {
+  font-size: 22px;
+  color: #9aa1b2;
+  margin-bottom: 6px;
+}
+
+.panel-option-value {
+  display: flex;
+  justify-content: space-between;
+  font-size: 30px;
+}
+
+.panel-option-arrows {
+  color: #9aa1b2;
+}
+
+.panel-option:focus .panel-option-arrows {
+  color: #ffffff;
+}
+
+.panel-close {
+  display: block;
+  margin-top: 32px;
+  text-align: center;
 }

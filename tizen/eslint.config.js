@@ -15,7 +15,7 @@ export default tseslint.config(
     languageOptions: { globals: { ...globals.browser } },
   },
   {
-    files: ['test/**/*.ts', 'build.mjs', 'vitest.config.ts'],
+    files: ['test/**/*.ts', 'dev/**/*.mjs', 'build.mjs', 'vitest.config.ts'],
     languageOptions: { globals: { ...globals.node } },
     // 테스트·빌드 스크립트는 PC(Node)에서만 돈다
     rules: { 'compat/compat': 'off' },

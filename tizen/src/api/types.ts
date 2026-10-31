@@ -24,6 +24,9 @@ export interface KomgaSeries {
   metadata: {
     title: string;
     summary: string;
+    /** ENDED | ONGOING | ABANDONED | HIATUS */
+    status: string;
+    publisher: string;
     readingDirection: ReadingDirection | null;
   };
 }

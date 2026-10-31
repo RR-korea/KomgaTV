@@ -14,7 +14,9 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "check": "npm run typecheck && npm run lint && npm run test && npm run build"
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "mock": "node build.mjs && node dev/mock-komga.mjs",
+    "smoke": "node build.mjs && node dev/smoke.mjs"
   },
   "dependencies": {
     "preact": "^11.1.1"
@@ -25,6 +27,7 @@
     "eslint": "^10.14.0",
     "eslint-plugin-compat": "^7.0.2",
     "globals": "^17.13.0",
+    "playwright-core": "^1.64.1",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.1",
     "vitest": "^5.0.5"
