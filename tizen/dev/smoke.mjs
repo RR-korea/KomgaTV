@@ -196,6 +196,7 @@ try {
   await page.waitForTimeout(1000);
   results.push(`${patches.some((p) => p.includes('S5B2 page=4')) ? 'PASS' : 'FAIL'} 세로 스크롤 진행 저장 4쪽: ${patches.filter((p) => p.includes('S5B2')).join(' | ')}`);
   await expectFocus('세로 스크롤 책에서 돌아오면 그 책', 'reading-book-S5B2');
+  await page.waitForTimeout(1500); // 돌아온 뒤 조용한 새로고침이 끝나기를 기다린다
 
   // 5-3. 홈 줄 (Android T9): 읽는 중 아래에 다음 권·최근 추가 책·최근 추가/업데이트 시리즈
   const rows = await page.evaluate(() => Array.from(document.querySelectorAll('.home .row-title')).map((el) => el.textContent));
@@ -205,8 +206,20 @@ try {
   await shot('home-rows');
 
   // 5-4. 검색 (Android T8): 위로 올라가 검색 버튼 → 입력 → 400ms 뒤 결과
-  await key('ArrowUp', 2);
+  const trail = [];
+  for (let i = 0; i < 2; i++) {
+    await key('ArrowUp');
+    trail.push(
+      await page.evaluate(() => {
+        const a = document.activeElement;
+        const r = a?.getBoundingClientRect();
+        const s = document.querySelector('[data-key="search"]')?.getBoundingClientRect();
+        return `${a?.dataset?.key}@${r ? [r.left, r.top, r.width, r.height].map(Math.round) : '-'} search@${s ? [s.left, s.top, s.width, s.height].map(Math.round) : '-'} homeScroll=${document.querySelector('.screen:not(.hidden) .home')?.scrollTop}`;
+      }),
+    );
+  }
   await expectFocus('위 → 검색 버튼', 'search');
+  if ((await focused()) !== 'search') results.push(`  diag: ${trail.join(' → ')}`);
   await key('Enter');
   await page.waitForTimeout(500);
   await expectFocus('검색 화면 → 입력칸', 'query');

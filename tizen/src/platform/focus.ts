@@ -15,6 +15,12 @@ export interface Rect {
 export const FOCUSABLE_CLASS = 'focusable';
 const SELECTOR = `.${FOCUSABLE_CLASS}`;
 
+/**
+ * 후보의 중심이 지금 항목의 가장자리 너머에 있어야 그 방향으로 친다 (중심끼리 비교하면
+ * 확대(1.06)된 포커스 카드 옆 카드가 몇 px 위에 있는 것으로 보여 위 키가 옆 카드로 가던 문제 — TV·스모크에서 확인).
+ */
+const EDGE_SLACK = 4;
+
 /** 방향 기준 거리 점수. 작을수록 좋다. 그 방향에 없으면 null. */
 export function score(from: Rect, to: Rect, direction: Direction): number | null {
   const fromCenterX = (from.left + from.right) / 2;
@@ -28,25 +34,25 @@ export function score(from: Rect, to: Rect, direction: Direction): number | null
   switch (direction) {
     case 'left':
       primary = from.left - to.right;
-      if (toCenterX >= fromCenterX) return null;
+      if (toCenterX > from.left + EDGE_SLACK) return null;
       overlap = Math.min(from.bottom, to.bottom) - Math.max(from.top, to.top);
       offAxis = Math.abs(fromCenterY - toCenterY);
       break;
     case 'right':
       primary = to.left - from.right;
-      if (toCenterX <= fromCenterX) return null;
+      if (toCenterX < from.right - EDGE_SLACK) return null;
       overlap = Math.min(from.bottom, to.bottom) - Math.max(from.top, to.top);
       offAxis = Math.abs(fromCenterY - toCenterY);
       break;
     case 'up':
       primary = from.top - to.bottom;
-      if (toCenterY >= fromCenterY) return null;
+      if (toCenterY > from.top + EDGE_SLACK) return null;
       overlap = Math.min(from.right, to.right) - Math.max(from.left, to.left);
       offAxis = Math.abs(fromCenterX - toCenterX);
       break;
     case 'down':
       primary = to.top - from.bottom;
-      if (toCenterY <= fromCenterY) return null;
+      if (toCenterY < from.bottom - EDGE_SLACK) return null;
       overlap = Math.min(from.right, to.right) - Math.max(from.left, to.left);
       offAxis = Math.abs(fromCenterX - toCenterX);
       break;
@@ -57,7 +63,10 @@ export function score(from: Rect, to: Rect, direction: Direction): number | null
       direction === 'up' || direction === 'down' ? Math.abs(from.left - to.left) : Math.abs(from.top - to.top);
     return Math.max(primary, 0) * 2 + edge * 0.5;
   }
-  // 겹치지 않는 후보는 축에서 벗어난 거리를 크게 벌준다
+  // 좌/우는 같은 줄(세로로 겹치는 후보)에서만 움직인다 — 위 버튼 줄에서 왼쪽을 눌러 아래 카드로 떨어지지 않게
+  // (TV 에뮬레이터: 홈 "검색" 버튼에서 왼쪽 → 첫 책으로 내려가던 문제)
+  if (direction === 'left' || direction === 'right') return null;
+  // 위/아래는 겹치지 않는 후보도 받되(카드 줄 → 위 버튼) 축에서 벗어난 거리를 크게 벌준다
   return Math.max(primary, 0) * 2 + offAxis * 3.5 + 1000;
 }
 
