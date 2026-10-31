@@ -1,5 +1,7 @@
 package com.komgatv.feature.library
 
+import com.komgatv.core.model.EpubPosition
+import com.komgatv.core.model.EpubChapter
 import com.komgatv.core.model.LoadError
 import com.komgatv.core.data.repository.BookPageResult
 import com.komgatv.core.data.repository.BookRepository
@@ -269,5 +271,11 @@ class SeriesDetailViewModelTest {
         override suspend fun getLatestBooks(size: Int): List<Book> = emptyList()
 
         override fun searchBooks(query: String, page: Int, size: Int): Flow<BookPageResult> = throw NotImplementedError()
+
+        override suspend fun getEpubChapters(bookId: String): List<EpubChapter> = throw NotImplementedError()
+
+        override suspend fun getEpubPosition(bookId: String): EpubPosition? = null
+
+        override suspend fun saveEpubPosition(bookId: String, position: EpubPosition) = Unit
     }
 }

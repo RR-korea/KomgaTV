@@ -37,6 +37,7 @@ interface ReaderPreferences {
     suspend fun saveReadingDirection(direction: ReadingDirection)
     suspend fun saveContinuousPadding(padding: Float)
     suspend fun saveContinuousPageSpacing(spacing: Int)
+    suspend fun saveEpubTextZoom(zoom: Int)
 }
 
 /**
@@ -55,6 +56,7 @@ class DefaultReaderPreferences @Inject constructor(
         val KEY_READING_DIRECTION = stringPreferencesKey("reading_direction")
         val KEY_CONTINUOUS_PADDING = floatPreferencesKey("continuous_padding")
         val KEY_CONTINUOUS_PAGE_SPACING = intPreferencesKey("continuous_page_spacing")
+        val KEY_EPUB_TEXT_ZOOM = intPreferencesKey("epub_text_zoom")
         val DEFAULTS = ReaderSettings()
     }
 
@@ -68,6 +70,7 @@ class DefaultReaderPreferences @Inject constructor(
                 ?: DEFAULTS.readingDirection,
             continuousPadding = prefs[KEY_CONTINUOUS_PADDING] ?: DEFAULTS.continuousPadding,
             continuousPageSpacing = prefs[KEY_CONTINUOUS_PAGE_SPACING] ?: DEFAULTS.continuousPageSpacing,
+            epubTextZoom = prefs[KEY_EPUB_TEXT_ZOOM] ?: DEFAULTS.epubTextZoom,
         )
     }
 
@@ -93,6 +96,10 @@ class DefaultReaderPreferences @Inject constructor(
 
     override suspend fun saveContinuousPadding(padding: Float) {
         context.readerDataStore.edit { it[KEY_CONTINUOUS_PADDING] = padding }
+    }
+
+    override suspend fun saveEpubTextZoom(zoom: Int) {
+        context.readerDataStore.edit { it[KEY_EPUB_TEXT_ZOOM] = zoom }
     }
 
     override suspend fun saveContinuousPageSpacing(spacing: Int) {

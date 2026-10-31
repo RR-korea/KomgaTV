@@ -4,6 +4,7 @@ import com.komgatv.core.model.Book
 import com.komgatv.core.model.BookMetadata
 import com.komgatv.core.model.BookPage
 import com.komgatv.core.model.Library
+import com.komgatv.core.model.MediaProfile
 import com.komgatv.core.model.ReadProgress
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.Series
@@ -51,6 +52,11 @@ internal fun KomgaBook.toDomain() = Book(
         number = metadata.number,
     ),
     readProgress = readProgress?.let { ReadProgress(page = it.page, completed = it.completed) },
+    mediaProfile = when (media.mediaProfile) {
+        snd.komga.client.book.MediaProfile.EPUB -> MediaProfile.EPUB
+        snd.komga.client.book.MediaProfile.PDF -> MediaProfile.PDF
+        else -> MediaProfile.DIVINA
+    },
 )
 
 internal fun KomgaBookPage.toDomain() = BookPage(

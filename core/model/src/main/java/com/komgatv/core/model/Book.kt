@@ -11,6 +11,7 @@ data class Book(
     val pageCount: Int,
     val metadata: BookMetadata,
     val readProgress: ReadProgress?,
+    val mediaProfile: MediaProfile = MediaProfile.DIVINA,
 )
 
 data class BookMetadata(
@@ -49,3 +50,28 @@ data class BookPage(
      */
     fun isLandscape(): Boolean = if (width == null || height == null) false else width > height
 }
+
+/** 책 형식 — Komga MediaProfile과 같은 값. EPUB은 글 리더로, 나머지는 페이지 이미지 리더로 연다. */
+enum class MediaProfile {
+    DIVINA,
+    PDF,
+    EPUB,
+}
+
+/** EPUB 읽기 순서의 한 장 (WebPub readingOrder) */
+data class EpubChapter(
+    val href: String,
+    val title: String?,
+)
+
+/**
+ * EPUB 읽은 자리 (Readium progression)
+ *
+ * @property progression 그 장 안에서의 위치 0~1
+ * @property totalProgression 책 전체에서의 위치 0~1
+ */
+data class EpubPosition(
+    val href: String,
+    val progression: Float,
+    val totalProgression: Float,
+)

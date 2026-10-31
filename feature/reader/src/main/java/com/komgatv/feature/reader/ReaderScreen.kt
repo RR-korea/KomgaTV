@@ -61,6 +61,7 @@ import com.komgatv.core.model.ScaleType
 import com.komgatv.core.ui.components.ProgressBar
 import com.komgatv.core.ui.components.loadErrorText
 import com.komgatv.feature.reader.continuous.ContinuousPages
+import com.komgatv.feature.reader.epub.EpubReaderScreen
 import kotlinx.coroutines.launch
 import coil3.size.Size as CoilSize
 
@@ -112,6 +113,8 @@ fun ReaderScreen(
             stringResource(R.string.reader_error_prefix, loadErrorText(state.error)),
             Color.Red,
         )
+
+        ReaderUiState.Epub -> EpubReaderScreen(bookId = bookId, onNavigateBack = onNavigateBack)
 
         is ReaderUiState.Reading -> {
             ReaderContent(

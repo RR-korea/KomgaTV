@@ -67,4 +67,6 @@ data class ReaderSettings(
     val readingDirection: ReadingDirection = ReadingDirection.LEFT_TO_RIGHT,
     val continuousPadding: Float = 0f,
     val continuousPageSpacing: Int = 0,
+    /** EPUB 글자 크기 (WebView textZoom, %) */
+    val epubTextZoom: Int = 100,
 )
