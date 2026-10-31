@@ -121,10 +121,17 @@ async function api(req, res, path, url) {
   let m;
   if (path === 'api/v2/users/me') return json(res, { id: 'U1', email: 'test@example.com' });
   if (path === 'api/v1/libraries') return json(res, libraries);
+  // 홈 줄
+  if (path === 'api/v1/books/ondeck') return paged(res, books.filter((b) => b.number === 2 && !b.readProgress).slice(0, 7), url);
+  if (path === 'api/v1/books/latest') return paged(res, books.slice().reverse(), url);
+  if (path === 'api/v1/series/new') return paged(res, series.slice().reverse(), url);
+  if (path === 'api/v1/series/updated') return paged(res, series.slice(10, 30), url);
   if (path === 'api/v1/series/list' && req.method === 'POST') {
-    const { condition } = await readBody(req);
+    const { condition, fullTextSearch } = await readBody(req);
     const libraryId = conditionValue(condition, 'libraryId');
-    const list = series.filter((s) => !libraryId || s.libraryId === libraryId);
+    const list = series.filter(
+      (s) => (!libraryId || s.libraryId === libraryId) && (!fullTextSearch || s.metadata.title.includes(fullTextSearch)),
+    );
     list.sort((a, b) => a.metadata.title.localeCompare(b.metadata.title));
     return paged(res, list, url);
   }
@@ -137,10 +144,12 @@ async function api(req, res, path, url) {
     return svg(res, 300, 450, m[1], (Number(m[1].slice(1)) * 37) % 360);
   }
   if (path === 'api/v1/books/list' && req.method === 'POST') {
-    const { condition } = await readBody(req);
+    const { condition, fullTextSearch } = await readBody(req);
     const seriesId = conditionValue(condition, 'seriesId');
     const status = conditionValue(condition, 'readStatus');
-    let list = books.filter((b) => !seriesId || b.seriesId === seriesId);
+    let list = books.filter(
+      (b) => (!seriesId || b.seriesId === seriesId) && (!fullTextSearch || `${b.seriesTitle} ${b.name}`.includes(fullTextSearch)),
+    );
     if (status === 'IN_PROGRESS') {
       list = list.filter((b) => b.readProgress && !b.readProgress.completed);
       list.sort((a, b) => b.readDate - a.readDate);

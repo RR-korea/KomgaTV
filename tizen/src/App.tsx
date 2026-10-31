@@ -8,6 +8,7 @@ import { pop, type RouteEntry, useRouter } from './platform/router';
 import { HomeScreen } from './screens/HomeScreen';
 import { LibraryScreen } from './screens/LibraryScreen';
 import { ReaderScreen } from './screens/ReaderScreen';
+import { SearchScreen } from './screens/SearchScreen';
 import { SeriesScreen } from './screens/SeriesScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 
@@ -42,6 +43,8 @@ function Screen({ entry, active }: { entry: RouteEntry; active: boolean }) {
       return <SeriesScreen entry={entry} active={active} />;
     case 'reader':
       return <ReaderScreen entry={entry} active={active} />;
+    case 'search':
+      return <SearchScreen entry={entry} active={active} />;
   }
 }
 

@@ -92,10 +92,10 @@ try {
   await page.waitForTimeout(800);
 
   // 2. 홈
-  await expectFocus('홈 진입 → 이어 읽기 첫 책', 'book-S1B3');
+  await expectFocus('홈 진입 → 이어 읽기 첫 책', 'reading-book-S1B3');
   await shot('home');
   await key('ArrowRight');
-  await expectFocus('오른쪽 → 둘째 책', 'book-S2B1');
+  await expectFocus('오른쪽 → 둘째 책', 'reading-book-S2B1');
   await key('ArrowLeft');
   await key('Enter');
   await page.waitForTimeout(800);
@@ -136,9 +136,9 @@ try {
   await page.waitForTimeout(1200);
 
   // 4. 홈 복귀: 새로고침 + 연 책 포커스
-  await expectFocus('리더에서 돌아오면 연 책', 'book-S1B3');
+  await expectFocus('리더에서 돌아오면 연 책', 'reading-book-S1B3');
   results.push(`${patches.some((p) => p.includes('S1B3 page=10')) ? 'PASS' : 'FAIL'} 나갈 때 진행 저장 (보이는 쪽 중 큰 번호 10): ${patches.join(' | ')}`);
-  await expectText('홈 진행도 갱신', '[data-key="book-S1B3"] .card-subtitle', /10\/24/);
+  await expectText('홈 진행도 갱신', '[data-key="reading-book-S1B3"] .card-subtitle', /10\/24/);
   await shot('home-after-reader');
 
   // 5. 오른쪽→왼쪽 시리즈(원피스): 왼쪽 키가 다음
@@ -152,12 +152,12 @@ try {
   await key('Escape');
   await key('Escape');
   await page.waitForTimeout(800);
-  await expectFocus('RTL 책에서 돌아오면 그 책', 'book-S2B1');
+  await expectFocus('RTL 책에서 돌아오면 그 책', 'reading-book-S2B1');
 
   // 5-2. 세로 스크롤(웹툰): 진행 3쪽인 책을 열어 리더 종류를 바꾼다.
   // 이어 읽기는 최근 읽은 순이라 지금 순서는 S2B1, S1B3, S5B2
   await key('ArrowRight', 2);
-  await expectFocus('셋째 책', 'book-S5B2');
+  await expectFocus('셋째 책', 'reading-book-S5B2');
   await key('Enter');
   await page.waitForTimeout(800);
   await key('Enter');
@@ -195,11 +195,43 @@ try {
   await key('Escape');
   await page.waitForTimeout(1000);
   results.push(`${patches.some((p) => p.includes('S5B2 page=4')) ? 'PASS' : 'FAIL'} 세로 스크롤 진행 저장 4쪽: ${patches.filter((p) => p.includes('S5B2')).join(' | ')}`);
-  await expectFocus('세로 스크롤 책에서 돌아오면 그 책', 'book-S5B2');
+  await expectFocus('세로 스크롤 책에서 돌아오면 그 책', 'reading-book-S5B2');
+
+  // 5-3. 홈 줄 (Android T9): 읽는 중 아래에 다음 권·최근 추가 책·최근 추가/업데이트 시리즈
+  const rows = await page.evaluate(() => Array.from(document.querySelectorAll('.home .row-title')).map((el) => el.textContent));
+  results.push(`${rows.join('|') === '읽는 중|다음 권|최근 추가된 책|최근 추가된 시리즈|최근 업데이트된 시리즈|라이브러리' ? 'PASS' : 'FAIL'} 홈 줄 순서: ${rows.join(' | ')}`);
+  await key('ArrowDown');
+  await expectFocus('아래 → 다음 권 줄', (k) => k?.startsWith('ondeck-book-'));
+  await shot('home-rows');
+
+  // 5-4. 검색 (Android T8): 위로 올라가 검색 버튼 → 입력 → 400ms 뒤 결과
+  await key('ArrowUp', 2);
+  await expectFocus('위 → 검색 버튼', 'search');
+  await key('Enter');
+  await page.waitForTimeout(500);
+  await expectFocus('검색 화면 → 입력칸', 'query');
+  await typeInto('원피');
+  await page.waitForTimeout(900);
+  await expectText('검색 결과: 시리즈 1', '.search .row-title', /시리즈 \(1\)/);
+  await key('ArrowDown');
+  await expectFocus('입력칸 아래 → 첫 결과', 'search-series-S2');
+  await shot('search');
+  await key('Enter');
+  await page.waitForTimeout(800);
+  await key('Escape');
+  await page.waitForTimeout(400);
+  await expectFocus('시리즈에서 돌아오면 검색 결과 카드', 'search-series-S2');
+  await key('ArrowUp');
+  await typeInto('없는제목');
+  await page.waitForTimeout(900);
+  await expectText('결과 없음 문구', '.search-message', /에 맞는 시리즈나 책이 없습니다/);
+  await key('Escape');
+  await page.waitForTimeout(400);
+  await expectFocus('검색에서 돌아오면 검색 버튼', 'search');
 
   // 6. 라이브러리 → 시리즈 → 뒤로
-  await key('ArrowDown');
-  await expectFocus('아래 → 라이브러리', 'library-L1');
+  for (let i = 0; i < 8 && !(await focused())?.startsWith('library-'); i++) await key('ArrowDown');
+  await expectFocus('아래로 → 라이브러리', 'library-L1');
   await key('Enter');
   await page.waitForTimeout(800);
   await expectFocus('라이브러리 진입 → 첫 시리즈', (k) => k?.startsWith('series-'));

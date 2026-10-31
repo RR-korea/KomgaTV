@@ -92,6 +92,23 @@ export class KomgaClient {
     return this.postJson('api/v1/books/list', search, page);
   }
 
+  // 홈 줄 (Komelia 홈과 같음, Android T9)
+  getBooksOnDeck(page?: PageRequest): Promise<Page<KomgaBook>> {
+    return this.json('api/v1/books/ondeck', { query: page });
+  }
+
+  getLatestBooks(page?: PageRequest): Promise<Page<KomgaBook>> {
+    return this.json('api/v1/books/latest', { query: page });
+  }
+
+  getNewSeries(page?: PageRequest): Promise<Page<KomgaSeries>> {
+    return this.json('api/v1/series/new', { query: page });
+  }
+
+  getUpdatedSeries(page?: PageRequest): Promise<Page<KomgaSeries>> {
+    return this.json('api/v1/series/updated', { query: page });
+  }
+
   getBook(bookId: string): Promise<KomgaBook> {
     return this.json(`api/v1/books/${encodeURIComponent(bookId)}`);
   }

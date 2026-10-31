@@ -6,7 +6,8 @@ export type Route =
   | { name: 'home' }
   | { name: 'library'; libraryId: string; title: string }
   | { name: 'series'; seriesId: string }
-  | { name: 'reader'; bookId: string };
+  | { name: 'reader'; bookId: string }
+  | { name: 'search' };
 
 export interface RouteEntry {
   id: number;

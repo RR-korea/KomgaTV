@@ -1,28 +1,63 @@
-// 홈: 이어 읽기 행 + 라이브러리 행 (Android T3). 돌아오면 조용히 새로고침하고 연 항목에 포커스.
+// 홈 (Android T3·T9, Komelia 홈과 같은 줄): 읽는 중 → 다음 권 → 최근 추가된 책 → 최근 추가된 시리즈
+// → 최근 업데이트된 시리즈 → 라이브러리. 빈 줄은 그리지 않는다.
+// 읽는 중·라이브러리는 필수(실패하면 오류 화면), 나머지 줄은 실패하면 그 줄만 빈다.
+// 돌아오면 진행 저장을 기다렸다가 조용히 새로고침하고 연 항목에 포커스.
+import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { readStatusIs } from '../api/conditions';
-import { bookDisplayTitle, bookProgress } from '../api/display';
-import { BookSort, type KomgaBook, type KomgaLibrary } from '../api/types';
-import { ImagePaths } from '../api/url';
-import { fmt, t } from '../i18n';
+import { BookSort, type KomgaBook, type KomgaLibrary, type KomgaSeries, type Page } from '../api/types';
+import { t } from '../i18n';
 import { push, type RouteEntry } from '../platform/router';
 import { awaitWrites, type LoadError, requireSession, toLoadError } from '../state/session';
-import { Button, ErrorView, LoadingView, PosterCard, Row, TextCard } from '../ui/components';
+import { BookCard, SeriesCard } from '../ui/cards';
+import { Button, ErrorView, LoadingView, Row, TextCard } from '../ui/components';
 import { useEntryFocus } from '../ui/entryFocus';
 
+const ROW_SIZE = 20;
+
 interface HomeData {
-  books: KomgaBook[];
+  reading: KomgaBook[];
+  onDeck: KomgaBook[];
+  latestBooks: KomgaBook[];
+  newSeries: KomgaSeries[];
+  updatedSeries: KomgaSeries[];
   libraries: KomgaLibrary[];
 }
+
+const optional = <T,>(request: Promise<Page<T>>): Promise<T[]> => request.then((page) => page.content, () => []);
 
 async function loadHome(): Promise<HomeData> {
   const { client } = requireSession();
   await awaitWrites();
-  const [books, libraries] = await Promise.all([
-    client.getBookList({ condition: readStatusIs('IN_PROGRESS') }, { page: 0, size: 20, sort: BookSort.readDateDesc }),
+  const page = { page: 0, size: ROW_SIZE };
+  const [reading, libraries, onDeck, latestBooks, newSeries, updatedSeries] = await Promise.all([
+    client.getBookList({ condition: readStatusIs('IN_PROGRESS') }, { ...page, sort: BookSort.readDateDesc }),
     client.getLibraries(),
+    optional(client.getBooksOnDeck(page)),
+    optional(client.getLatestBooks(page)),
+    optional(client.getNewSeries(page)),
+    optional(client.getUpdatedSeries(page)),
   ]);
-  return { books: books.content, libraries };
+  return { reading: reading.content, onDeck, latestBooks, newSeries, updatedSeries, libraries };
+}
+
+/** 첫 줄의 첫 카드 키 (처음 들어올 때 포커스) */
+function firstKey(data: HomeData): string {
+  if (data.reading.length) return `reading-book-${data.reading[0].id}`;
+  if (data.onDeck.length) return `ondeck-book-${data.onDeck[0].id}`;
+  if (data.latestBooks.length) return `latest-book-${data.latestBooks[0].id}`;
+  if (data.newSeries.length) return `new-series-${data.newSeries[0].id}`;
+  if (data.updatedSeries.length) return `updated-series-${data.updatedSeries[0].id}`;
+  if (data.libraries.length) return `library-${data.libraries[0].id}`;
+  return 'search';
+}
+
+function HomeRow({ id, title, children, show }: { id: string; title: string; children: ComponentChildren; show: boolean }) {
+  return show ? (
+    <Row section={id} title={title}>
+      {children}
+    </Row>
+  ) : null;
 }
 
 export function HomeScreen({ entry, active }: { entry: RouteEntry; active: boolean }) {
@@ -54,16 +89,26 @@ export function HomeScreen({ entry, active }: { entry: RouteEntry; active: boole
     if (entry.returns > 0) load(true);
   }, [entry.returns]);
 
-  const defaultKey = data?.books.length ? `book-${data.books[0].id}` : data?.libraries.length ? `library-${data.libraries[0].id}` : 'settings';
-  useEntryFocus(root, entry, active, data || error ? version + (error ? 0.5 : 0) : null, error ? 'retry' : defaultKey);
+  useEntryFocus(
+    root,
+    entry,
+    active,
+    data || error ? version + (error ? 0.5 : 0) : null,
+    error ? 'retry' : data ? firstKey(data) : undefined,
+  );
 
   return (
     <div ref={root} class="home" data-scroll="y" data-scroll-margin="60">
       <header class="top-bar">
         <div class="app-name">{t.appName}</div>
-        <Button focusKey="settings" onClick={() => push({ name: 'settings', first: false })}>
-          {t.homeServerSettings}
-        </Button>
+        <div class="button-row top-actions">
+          <Button focusKey="search" onClick={() => push({ name: 'search' })}>
+            {t.homeSearch}
+          </Button>
+          <Button focusKey="settings" onClick={() => push({ name: 'settings', first: false })}>
+            {t.homeServerSettings}
+          </Button>
+        </div>
       </header>
       {error ? (
         <ErrorView error={error} onRetry={() => load(false)} />
@@ -71,24 +116,31 @@ export function HomeScreen({ entry, active }: { entry: RouteEntry; active: boole
         <LoadingView />
       ) : (
         <>
-          <Row section="continue" title={t.homeContinueReading}>
-            {data.books.length === 0 && <div class="empty">{t.homeEmpty}</div>}
-            {data.books.map((book) => (
-              <PosterCard
-                key={book.id}
-                focusKey={`book-${book.id}`}
-                imagePath={ImagePaths.bookThumbnail(book.id)}
-                title={bookDisplayTitle(book)}
-                subtitle={
-                  book.readProgress?.completed
-                    ? t.homeBookCompleted
-                    : fmt(t.homeBookProgress, book.readProgress?.page ?? 0, book.media.pagesCount)
-                }
-                progress={bookProgress(book)}
-                onClick={() => push({ name: 'reader', bookId: book.id })}
-              />
+          <HomeRow id="reading" title={t.homeContinueReading} show={data.reading.length > 0}>
+            {data.reading.map((book) => (
+              <BookCard key={book.id} book={book} row="reading" />
             ))}
-          </Row>
+          </HomeRow>
+          <HomeRow id="ondeck" title={t.homeOnDeck} show={data.onDeck.length > 0}>
+            {data.onDeck.map((book) => (
+              <BookCard key={book.id} book={book} row="ondeck" />
+            ))}
+          </HomeRow>
+          <HomeRow id="latest" title={t.homeLatestBooks} show={data.latestBooks.length > 0}>
+            {data.latestBooks.map((book) => (
+              <BookCard key={book.id} book={book} row="latest" />
+            ))}
+          </HomeRow>
+          <HomeRow id="new" title={t.homeNewSeries} show={data.newSeries.length > 0}>
+            {data.newSeries.map((series) => (
+              <SeriesCard key={series.id} series={series} row="new" />
+            ))}
+          </HomeRow>
+          <HomeRow id="updated" title={t.homeUpdatedSeries} show={data.updatedSeries.length > 0}>
+            {data.updatedSeries.map((series) => (
+              <SeriesCard key={series.id} series={series} row="updated" />
+            ))}
+          </HomeRow>
           <Row section="libraries" title={t.homeLibraries}>
             {data.libraries.map((library) => (
               <TextCard

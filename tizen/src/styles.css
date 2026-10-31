@@ -285,6 +285,26 @@ body {
   height: 1080px;
 }
 
+.top-actions {
+  margin-bottom: 0;
+}
+
+.search {
+  height: 1080px;
+  overflow: hidden;
+}
+
+.search-field {
+  padding: 0 96px 24px;
+  width: 1100px;
+}
+
+.search-message {
+  padding: 48px 96px;
+  font-size: 30px;
+  color: #9aa1b2;
+}
+
 .grid-scroll {
   height: 940px;
   overflow: hidden;
