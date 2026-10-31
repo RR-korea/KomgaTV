@@ -13,6 +13,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.tv.material3.OutlinedButton
+import androidx.tv.material3.Button
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -42,6 +51,7 @@ import com.komgatv.core.ui.components.TVRow
 fun HomeScreen(
     onNavigateToLibrary: (String) -> Unit,
     onNavigateToReader: (String) -> Unit,
+    onNavigateToSettings: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -77,6 +87,17 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp),
                     )
+                    // 서버에 닿지 않을 때 리모컨만으로 설정을 고칠 수 있게 버튼에 포커스를 준다.
+                    val focusRequester = remember { FocusRequester() }
+                    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+                    Button(
+                        onClick = onNavigateToSettings,
+                        modifier = Modifier
+                            .padding(top = 24.dp)
+                            .focusRequester(focusRequester),
+                    ) {
+                        Text(stringResource(R.string.home_server_settings))
+                    }
                 }
             }
         }
@@ -88,6 +109,7 @@ fun HomeScreen(
                 imageUrls = viewModel.imageUrls,
                 onNavigateToLibrary = onNavigateToLibrary,
                 onNavigateToReader = onNavigateToReader,
+                onNavigateToSettings = onNavigateToSettings,
             )
         }
     }
@@ -103,6 +125,7 @@ private fun HomeContent(
     imageUrls: ImageUrls,
     onNavigateToLibrary: (String) -> Unit,
     onNavigateToReader: (String) -> Unit,
+    onNavigateToSettings: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier
@@ -110,6 +133,19 @@ private fun HomeContent(
             .focusRestorer(),
         contentPadding = PaddingValues(top = 32.dp, bottom = 48.dp),
     ) {
+        item(key = "home_header") {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 48.dp),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                OutlinedButton(onClick = onNavigateToSettings) {
+                    Text(stringResource(R.string.home_server_settings))
+                }
+            }
+        }
+
         // ========== "읽는 중" 행 ==========
         if (continueReading.isNotEmpty()) {
             item(key = "home_continue_reading_row") {
