@@ -10,6 +10,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.komgatv.feature.home.HomeScreen
 import com.komgatv.feature.library.LibraryScreen
+import com.komgatv.feature.library.SeriesDetailScreen
 import com.komgatv.feature.reader.ReaderScreen
 import com.komgatv.feature.settings.SettingsScreen
 
@@ -69,17 +70,8 @@ fun KomgaTVNavHost(
                 onNavigateToLibrary = { libraryId ->
                     navController.navigate(Screen.Library.createRoute(libraryId))
                 },
-                onNavigateToSeries = { seriesId ->
-                    navController.navigate(Screen.SeriesDetail.createRoute(seriesId))
-                },
                 onNavigateToReader = { bookId ->
                     navController.navigate(Screen.Reader.createRoute(bookId))
-                },
-                onNavigateToSearch = {
-                    navController.navigate(Screen.Search.route)
-                },
-                onNavigateToSettings = {
-                    navController.navigate(Screen.Settings.route)
                 },
             )
         }
@@ -109,7 +101,13 @@ fun KomgaTVNavHost(
             ),
         ) { backStackEntry ->
             val seriesId = backStackEntry.arguments?.getString("seriesId") ?: return@composable
-            // TODO: SeriesDetailScreen 구현
+            SeriesDetailScreen(
+                seriesId = seriesId,
+                onNavigateToReader = { bookId ->
+                    navController.navigate(Screen.Reader.createRoute(bookId))
+                },
+                onNavigateBack = { navController.popBackStack() },
+            )
         }
 
         // 리더 화면

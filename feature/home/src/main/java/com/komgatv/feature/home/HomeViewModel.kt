@@ -4,17 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.komgatv.core.data.repository.BookRepository
 import com.komgatv.core.data.repository.LibraryRepository
-import com.komgatv.core.data.repository.SeriesRepository
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.Library
-import com.komgatv.core.model.Series
 import com.komgatv.core.network.ServerSessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -31,16 +29,12 @@ sealed interface HomeUiState {
     /**
      * 데이터 로딩 성공
      *
-     * @property continueReading 계속 읽기 목록 (진행 중인 책)
-     * @property recentlyAdded 최근 추가된 시리즈
+     * @property continueReading 읽는 중인 책 목록 (read status: IN_PROGRESS, 최근 읽은 순)
      * @property libraries 라이브러리 목록
-     * @property featuredSeries 추천 시리즈 (히어로 배너용)
      */
     data class Success(
         val continueReading: List<Book> = emptyList(),
-        val recentlyAdded: List<Series> = emptyList(),
         val libraries: List<Library> = emptyList(),
-        val featuredSeries: List<Series> = emptyList(),
     ) : HomeUiState
 
     /**
@@ -54,13 +48,11 @@ sealed interface HomeUiState {
 /**
  * 홈 화면 ViewModel
  *
- * MVI 패턴에 기반하여 홈 화면의 데이터를 로드하고 UI 상태를 관리합니다.
- * 계속 읽기, 최근 추가, 라이브러리 데이터를 병렬로 로드합니다.
+ * MVI 패턴에 기반하여 라이브러리 목록과 읽는 중인 책 목록을 병렬로 로드하고 UI 상태를 관리합니다.
  */
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val libraryRepository: LibraryRepository,
-    private val seriesRepository: SeriesRepository,
     private val bookRepository: BookRepository,
     private val sessionManager: ServerSessionManager,
 ) : ViewModel() {
@@ -84,28 +76,23 @@ class HomeViewModel @Inject constructor(
             _uiState.value = HomeUiState.Loading
 
             try {
-                // 병렬 데이터 로딩
-                val librariesDeferred = async { loadLibraries() }
-                val recentSeriesDeferred = async { loadRecentlyAdded() }
-                val continueReadingDeferred = async { loadContinueReading() }
+                // coroutineScope로 묶어 자식 비동기 작업의 실패가 structured concurrency로 바깥 try-catch에 안전하게 전달되도록 함
+                coroutineScope {
+                    val librariesDeferred = async { loadLibraries() }
+                    val continueReadingDeferred = async { loadContinueReading() }
 
-                val libraries = librariesDeferred.await()
-                val recentSeries = recentSeriesDeferred.await()
-                val continueReading = continueReadingDeferred.await()
+                    val libraries = librariesDeferred.await()
+                    val continueReading = continueReadingDeferred.await()
 
-                // 추천 시리즈: 최근 추가에서 상위 5개 선택
-                val featuredSeries = recentSeries.take(5)
-
-                _uiState.value = HomeUiState.Success(
-                    continueReading = continueReading,
-                    recentlyAdded = recentSeries,
-                    libraries = libraries,
-                    featuredSeries = featuredSeries,
-                )
+                    _uiState.value = HomeUiState.Success(
+                        continueReading = continueReading,
+                        libraries = libraries,
+                    )
+                }
             } catch (e: Exception) {
                 Timber.e(e, "홈 데이터 로드 실패")
                 _uiState.value = HomeUiState.Error(
-                    message = e.localizedMessage ?: "알 수 없는 오류가 발생했습니다"
+                    message = e.localizedMessage ?: "홈 화면 데이터를 불러올 수 없습니다"
                 )
             }
         }
@@ -113,46 +100,12 @@ class HomeViewModel @Inject constructor(
 
     /** 라이브러리 목록 로드 */
     private suspend fun loadLibraries(): List<Library> {
-        return try {
-            libraryRepository.getLibraries()
-                .catch { e ->
-                    Timber.e(e, "라이브러리 로드 실패")
-                    emit(emptyList())
-                }
-                .first()
-        } catch (e: Exception) {
-            Timber.e(e, "라이브러리 로드 예외")
-            emptyList()
-        }
+        return libraryRepository.getLibraries().first()
     }
 
-    /** 최근 추가된 시리즈 로드 */
-    private suspend fun loadRecentlyAdded(): List<Series> {
-        return try {
-            seriesRepository.getSeries(page = 0, size = 20)
-                .catch { e ->
-                    Timber.e(e, "최근 시리즈 로드 실패")
-                    emit(
-                        com.komgatv.core.data.repository.SeriesPageResult(
-                            series = emptyList(),
-                            totalPages = 0,
-                            totalElements = 0,
-                            currentPage = 0,
-                            isLast = true,
-                        )
-                    )
-                }
-                .first()
-                .series
-        } catch (e: Exception) {
-            Timber.e(e, "최근 시리즈 로드 예외")
-            emptyList()
-        }
-    }
-
-    /** 계속 읽기 목록 로드 */
+    /** 읽는 중인 책 목록 로드 (IN_PROGRESS, 최근 읽은 순) */
     private suspend fun loadContinueReading(): List<Book> {
-        return emptyList()
+        return bookRepository.getBooksInProgress(page = 0, size = 20).first().books
     }
 
     /** 데이터 새로고침 */
