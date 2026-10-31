@@ -2,6 +2,7 @@ package com.komgatv.feature.reader
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.compose.ui.graphics.ImageBitmap
 import com.komgatv.core.data.error.toLoadError
 import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.data.repository.BookRepository
@@ -11,8 +12,14 @@ import com.komgatv.core.model.Book
 import com.komgatv.core.model.BookPage
 import com.komgatv.core.model.LoadError
 import com.komgatv.core.model.PageLayout
+import com.komgatv.core.model.ReaderType
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.ScaleType
+import com.komgatv.feature.reader.continuous.ContinuousProgressHelper
+import com.komgatv.feature.reader.continuous.ContinuousTilePlanner
+import com.komgatv.feature.reader.continuous.PageTile
+import com.komgatv.feature.reader.continuous.ReaderTypeResolver
+import com.komgatv.feature.reader.continuous.TileSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -38,32 +45,44 @@ sealed interface ReaderUiState {
      * 읽기 상태
      *
      * @property bookTitle 책 제목
-     * @property currentSpread 현재 펼침
-     * @property currentSpreadIndex 현재 펼침 인덱스 (0-based)
-     * @property totalSpreads 전체 펼침 수
      * @property totalPages 전체 페이지 수
-     * @property spreadPageUrls 현재 펼침의 페이지 이미지 절대 URL 목록 (1개 또는 2개)
-     * @property preloadSpreads 프리로드할 앞뒤 2개 펼침, 펼침마다 이미지 URL 목록 (화면이 펼침 쪽 수로 디코딩 크기를 정한다)
+     * @property readerType 리더 종류 (PAGED 또는 CONTINUOUS)
+     * @property currentSpread 현재 펼침 (Paged 모드)
+     * @property currentSpreadIndex 현재 펼침 인덱스 (0-based, Paged 모드)
+     * @property totalSpreads 전체 펼침 수 (Paged 모드)
+     * @property spreadPageUrls 현재 펼침의 페이지 이미지 절대 URL 목록 (Paged 모드)
+     * @property preloadSpreads 프리로드할 앞뒤 2개 펼침 (Paged 모드)
      * @property readingDirection 현재 적용된 읽기 방향
      * @property pageLayout 현재 적용된 페이지 배치 레이아웃
      * @property layoutOffset 쪽 맞춤 밀기 적용 여부
      * @property scaleType 페이지 크기 맞춤 방식
+     * @property continuousTiles 세로 스크롤 타일 목록 (Continuous 모드)
+     * @property continuousPadding 세로 스크롤 좌우 여백 (화면 너비 비율)
+     * @property continuousPageSpacing 세로 스크롤 쪽 사이 간격 dp
+     * @property currentContinuousPage 화면에 보이는 쪽 중 가장 큰 번호 (Continuous 모드, 진행 표시·저장용)
+     * @property scrollToTileIndex 화면이 스크롤해야 할 타일 인덱스 (처음 열 때, 쪽 이동, 점프). 스크롤한 뒤 onTileScrolled
      * @property stretchToFit 작은 이미지 확대 여부
      * @property showOverlay 정보 오버레이 표시 여부
      * @property showSettingsPanel 보기 설정 패널 표시 여부
      */
     data class Reading(
         val bookTitle: String,
+        val totalPages: Int,
+        val readerType: ReaderType,
         val currentSpread: PageSpread,
         val currentSpreadIndex: Int,
         val totalSpreads: Int,
-        val totalPages: Int,
         val spreadPageUrls: List<String>,
         val preloadSpreads: List<List<String>>,
         val readingDirection: ReadingDirection,
         val pageLayout: PageLayout,
         val layoutOffset: Boolean,
         val scaleType: ScaleType,
+        val continuousTiles: List<PageTile>,
+        val continuousPadding: Float,
+        val continuousPageSpacing: Int,
+        val currentContinuousPage: Int,
+        val scrollToTileIndex: Int? = null,
         val stretchToFit: Boolean,
         val showOverlay: Boolean = false,
         val showSettingsPanel: Boolean = false,
@@ -76,11 +95,11 @@ sealed interface ReaderUiState {
 /**
  * 리더 화면 ViewModel
  *
- * Komelia 페이지 리더 옵션(쪽 배치, 밀기, 읽기 방향 우선순위, 크기 맞춤, 작은 이미지 키우기)을 지원합니다.
- * - 읽기 방향 우선순위: 시리즈 메타데이터 > ReaderPreferences 전역 기본값
- * - 리더에서 방향 변경 시 현재 책 즉시 반영 및 전역 기본값 저장
- * - 두 쪽 보기: 펼침(Spread) 단위 이동 및 프리로드(앞뒤 2개 펼침)
- * - 진행 저장: 펼침 내 가장 큰 페이지 번호 저장, 마지막 페이지 포함 시 completed=true
+ * Komelia(Apache-2.0, Snd-R/Komelia)와 동일한 규칙을 따릅니다:
+ * - 리더 종류 우선순위: 시리즈 방향 LTR/RTL -> PAGED, WEBTOON -> CONTINUOUS, VERTICAL/없음 -> 저장된 readerType
+ * - 이어 읽기: 진행이 없거나 completed면 1쪽부터, 아니면 저장된 쪽부터 (완독 책은 1쪽부터)
+ * - 설정 변경 시 즉시 반영 및 전역 기본값 저장
+ * - 페이지 또는 타일 단위 탐색 및 진행 저장 (2초 디바운스 + 종료 시 즉시)
  */
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
@@ -88,6 +107,7 @@ class ReaderViewModel @Inject constructor(
     private val seriesRepository: SeriesRepository,
     private val imageUrls: ImageUrls,
     private val readerPreferences: ReaderPreferences,
+    private val tileSource: TileSource,
 ) : ViewModel() {
 
     companion object {
@@ -101,22 +121,51 @@ class ReaderViewModel @Inject constructor(
     private var currentBook: Book? = null
     private var currentBookId: String = ""
     private var currentBookPages: List<BookPage> = emptyList()
+
+    // Paged 모드 상태
     private var currentSpreads: List<PageSpread> = emptyList()
     private var currentSpreadIndex: Int = 0
 
+    // Continuous 모드 상태
+    private var currentTiles: List<PageTile> = emptyList()
+    private var currentContinuousPage: Int = 1
+    private var firstVisibleTile: PageTile? = null
+    private var continuousCompleted = false
+    private val boundsRequested = mutableSetOf<Int>()
+    private var screenWidthPx: Int = 1920
+    private var screenHeightPx: Int = 1080
+    private var scrollToTileIndex: Int? = null
+
+    // 설정 상태
+    private var currentReaderType: ReaderType = ReaderType.PAGED
     private var currentLayout: PageLayout = PageLayout.SINGLE_PAGE
     private var currentScaleType: ScaleType = ScaleType.SCREEN
     private var currentStretchToFit: Boolean = true
     private var currentReadingDirection: ReadingDirection = ReadingDirection.LEFT_TO_RIGHT
     private var layoutOffset: Boolean = false
+    private var currentContinuousPadding: Float = 0f
+    private var currentContinuousPageSpacing: Int = 0
 
     private var saveProgressJob: Job? = null
     private var hasProgressChanged = false
     private var lastSavedPage: Int? = null
 
     /**
-     * 책 및 시리즈 데이터를 로드하고 시작 펼침을 설정합니다.
-     * 이어 읽기: 서버의 이전 진행도 페이지가 포함된 펼침에서 시작합니다.
+     * 화면 크기를 갱신하고 타일 목록을 재계획합니다.
+     */
+    fun setScreenSize(widthPx: Int, heightPx: Int) {
+        if (screenWidthPx == widthPx && screenHeightPx == heightPx) return
+        screenWidthPx = widthPx.coerceAtLeast(1)
+        screenHeightPx = heightPx.coerceAtLeast(1)
+        if (currentBookPages.isNotEmpty()) {
+            rebuildContinuousTiles()
+            updateReadingState()
+        }
+    }
+
+    /**
+     * 책 및 시리즈 데이터를 로드하고 시작 위치를 설정합니다.
+     * 이어 읽기: 완독(completed)이거나 진행이 없으면 1쪽, 아니면 저장된 쪽부터 시작합니다.
      */
     fun loadBook(bookId: String) {
         if (currentBookId == bookId && _uiState.value is ReaderUiState.Reading) {
@@ -136,23 +185,34 @@ class ReaderViewModel @Inject constructor(
                 currentBook = book
 
                 val series = seriesRepository.getSeriesById(book.seriesId)
-                // 읽기 방향 우선순위: 시리즈 메타데이터 > 저장된 기본값.
-                // 페이지 리더는 LTR/RTL만 다룬다. VERTICAL·WEBTOON은 세로 스크롤 모드(T6) 전까지 기본값으로 읽는다.
+
+                // 1. 리더 종류 우선순위
+                currentReaderType = ReaderTypeResolver.resolveReaderType(
+                    seriesReadingDirection = series.metadata.readingDirection,
+                    savedReaderType = savedSettings.readerType,
+                )
+
+                // 2. Paged 읽기 방향
                 currentReadingDirection = series.metadata.readingDirection
                     ?.takeIf { it == ReadingDirection.LEFT_TO_RIGHT || it == ReadingDirection.RIGHT_TO_LEFT }
                     ?: savedSettings.readingDirection
 
+                // 3. 설정값 적용
                 currentLayout = savedSettings.pageLayout
                 currentScaleType = savedSettings.scaleType
                 currentStretchToFit = savedSettings.stretchToFit
-                layoutOffset = false // 세션 동안만 적용되므로 책 로드 시 false 초기화
+                currentContinuousPadding = savedSettings.continuousPadding
+                currentContinuousPageSpacing = savedSettings.continuousPageSpacing
+                layoutOffset = false // 세션 동안만 적용
 
-                // 페이지 크기 목록. 못 받으면 크기 없이(모두 세로로 보고) 쪽 수만큼 만든다.
+                // 4. 페이지 크기 목록 로드
                 val fetchedPages = try {
                     bookRepository.getBookPages(bookId)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // 쪽 수도 모르면 읽을 수 없다 (서버에서 책 분석 실패 등) — 오류로 보여 준다
+                    if (book.pageCount <= 0) throw e
                     Timber.w(e, "페이지 목록 조회 실패, 크기 없이 진행: $bookId")
                     emptyList()
                 }
@@ -164,22 +224,26 @@ class ReaderViewModel @Inject constructor(
                     (1..totalPages).map { BookPage(number = it) }
                 }
 
+                // 5. Paged 펼침 및 Continuous 타일 계획 구성
                 currentSpreads = SpreadMapBuilder.buildSpreadMap(
                     pages = currentBookPages,
                     layout = currentLayout,
                     offset = layoutOffset,
                 )
+                rebuildContinuousTiles()
 
-                // 이전 읽기 진행이 있으면 해당 페이지가 포함된 펼침에서 시작
-                val progressPage = book.readProgress?.page
-                val startSpreadIndex = if (progressPage != null) {
-                    currentSpreads.indexOfFirst { it.containsPage(progressPage) }.takeIf { it >= 0 } ?: 0
-                } else {
-                    0
-                }
+                // 6. 이어 읽기: 완독(completed)이거나 진행이 없으면 1쪽, 아니면 저장된 쪽부터 시작
+                val isCompleted = book.readProgress?.completed == true
+                val progressPage = if (!isCompleted) book.readProgress?.page else null
+                val startPageNumber = progressPage?.coerceIn(1, currentBookPages.size.coerceAtLeast(1)) ?: 1
 
-                currentSpreadIndex = startSpreadIndex.coerceIn(0, (currentSpreads.size - 1).coerceAtLeast(0))
-                lastSavedPage = book.readProgress?.page
+                currentSpreadIndex = currentSpreads.indexOfFirst { it.containsPage(startPageNumber) }.coerceAtLeast(0)
+                currentContinuousPage = startPageNumber
+                firstVisibleTile = null
+                continuousCompleted = false
+                boundsRequested.clear()
+                scrollToTileIndex = if (startPageNumber > 1) firstTileIndexOf(startPageNumber) else null
+                lastSavedPage = progressPage
 
                 updateReadingState()
             } catch (e: CancellationException) {
@@ -193,53 +257,95 @@ class ReaderViewModel @Inject constructor(
 
     /**
      * D-pad 왼쪽 키 입력 처리
-     * RIGHT_TO_LEFT면 다음 펼침, 그 외는 이전 펼침으로 이동합니다.
      */
     fun onDpadLeft() {
-        if (currentReadingDirection == ReadingDirection.RIGHT_TO_LEFT) {
-            nextSpread()
+        if (currentReaderType == ReaderType.PAGED) {
+            if (currentReadingDirection == ReadingDirection.RIGHT_TO_LEFT) {
+                nextSpread()
+            } else {
+                previousSpread()
+            }
         } else {
-            previousSpread()
+            // Continuous 모드: 이전 쪽의 첫 타일로 이동
+            previousContinuousPage()
         }
     }
 
     /**
      * D-pad 오른쪽 키 입력 처리
-     * RIGHT_TO_LEFT면 이전 펼침, 그 외는 다음 펼침으로 이동합니다.
      */
     fun onDpadRight() {
-        if (currentReadingDirection == ReadingDirection.RIGHT_TO_LEFT) {
-            previousSpread()
+        if (currentReaderType == ReaderType.PAGED) {
+            if (currentReadingDirection == ReadingDirection.RIGHT_TO_LEFT) {
+                previousSpread()
+            } else {
+                nextSpread()
+            }
         } else {
-            nextSpread()
+            // Continuous 모드: 다음 쪽의 첫 타일로 이동
+            nextContinuousPage()
         }
     }
 
-    /** 다음 펼침으로 이동 */
+    /** Paged: 다음 펼침으로 이동 */
     fun nextSpread() {
         if (currentSpreadIndex >= currentSpreads.lastIndex) return
         applySpreadChange(currentSpreadIndex + 1)
     }
 
-    /** 이전 펼침으로 이동 */
+    /** Paged: 이전 펼침으로 이동 */
     fun previousSpread() {
         if (currentSpreadIndex <= 0) return
         applySpreadChange(currentSpreadIndex - 1)
     }
 
+    /** Continuous: 맨 위 타일이 쪽 중간이면 그 쪽 처음, 쪽 처음이면 이전 쪽 처음으로 */
+    private fun previousContinuousPage() {
+        val top = firstVisibleTile ?: return
+        val target = if (top.tileIndex > 0) top.pageNumber else top.pageNumber - 1
+        if (target >= 1) scrollToPage(target)
+    }
+
+    /** Continuous: 맨 위에 보이는 쪽의 다음 쪽 처음으로 */
+    private fun nextContinuousPage() {
+        val top = firstVisibleTile?.pageNumber ?: currentContinuousPage
+        if (top < currentBookPages.size) scrollToPage(top + 1)
+    }
+
+    private fun scrollToPage(pageNumber: Int) {
+        scrollToTileIndex = firstTileIndexOf(pageNumber)
+        updateReadingState()
+    }
+
+    private fun firstTileIndexOf(pageNumber: Int): Int =
+        currentTiles.indexOfFirst { it.pageNumber == pageNumber }.coerceAtLeast(0)
+
+    /** 스크롤 요청 소비 */
+    fun onTileScrolled() {
+        if (scrollToTileIndex != null) {
+            scrollToTileIndex = null
+            val state = _uiState.value as? ReaderUiState.Reading ?: return
+            _uiState.value = state.copy(scrollToTileIndex = null)
+        }
+    }
+
     /**
-     * 페이지 단위 점프 (오버레이 조작 등)
+     * 페이지 단위 점프 (오버레이 등)
      *
      * @param delta 이동할 페이지 수 (+면 다음, -면 이전)
      */
     fun jumpPages(delta: Int) {
         val state = _uiState.value as? ReaderUiState.Reading ?: return
-        val currentPageNumber = state.currentSpread.pages.firstOrNull()?.number ?: 1
-        val targetPageNumber = (currentPageNumber + delta).coerceIn(1, state.totalPages)
-
-        val targetSpreadIndex = currentSpreads.indexOfFirst { it.containsPage(targetPageNumber) }
-        if (targetSpreadIndex >= 0 && targetSpreadIndex != currentSpreadIndex) {
-            applySpreadChange(targetSpreadIndex)
+        if (currentReaderType == ReaderType.PAGED) {
+            val currentPageNumber = state.currentSpread.pages.firstOrNull()?.number ?: 1
+            val targetPageNumber = (currentPageNumber + delta).coerceIn(1, state.totalPages)
+            val targetSpreadIndex = currentSpreads.indexOfFirst { it.containsPage(targetPageNumber) }
+            if (targetSpreadIndex >= 0 && targetSpreadIndex != currentSpreadIndex) {
+                applySpreadChange(targetSpreadIndex)
+            }
+        } else {
+            val from = firstVisibleTile?.pageNumber ?: currentContinuousPage
+            scrollToPage((from + delta).coerceIn(1, state.totalPages))
         }
     }
 
@@ -253,7 +359,7 @@ class ReaderViewModel @Inject constructor(
         )
     }
 
-    /** 정보 오버레이 닫기 (설정 패널도 함께 닫는다) */
+    /** 정보 오버레이 닫기 */
     fun closeOverlay() {
         val state = _uiState.value as? ReaderUiState.Reading ?: return
         _uiState.value = state.copy(showOverlay = false, showSettingsPanel = false)
@@ -271,6 +377,26 @@ class ReaderViewModel @Inject constructor(
         _uiState.value = state.copy(showSettingsPanel = false)
     }
 
+    /** 리더 종류(ReaderType) 변경 */
+    fun setReaderType(type: ReaderType) {
+        if (currentReaderType == type) return
+        currentReaderType = type
+        // 보던 쪽을 다른 모드에서도 이어서 본다
+        if (type == ReaderType.CONTINUOUS) {
+            val page = currentSpreads.getOrNull(currentSpreadIndex)?.pages?.firstOrNull()?.number ?: 1
+            rebuildContinuousTiles()
+            firstVisibleTile = null
+            scrollToTileIndex = firstTileIndexOf(page)
+        } else {
+            val page = firstVisibleTile?.pageNumber ?: currentContinuousPage
+            currentSpreadIndex = currentSpreads.indexOfFirst { it.containsPage(page) }.coerceAtLeast(0)
+        }
+        updateReadingState()
+        viewModelScope.launch {
+            readerPreferences.saveReaderType(type)
+        }
+    }
+
     /** 쪽 배치(PageLayout) 변경 */
     fun setPageLayout(layout: PageLayout) {
         if (currentLayout == layout) return
@@ -281,7 +407,7 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    /** 쪽 맞춤 밀기(offset) 토글 (세션 동안만 적용) */
+    /** 쪽 맞춤 밀기(offset) 토글 */
     fun setLayoutOffset(offset: Boolean) {
         if (layoutOffset == offset) return
         layoutOffset = offset
@@ -302,17 +428,16 @@ class ReaderViewModel @Inject constructor(
     fun setStretchToFit(stretch: Boolean) {
         if (currentStretchToFit == stretch) return
         currentStretchToFit = stretch
+        if (currentReaderType == ReaderType.CONTINUOUS) {
+            rebuildContinuousTiles()
+        }
         updateReadingState()
         viewModelScope.launch {
             readerPreferences.saveStretchToFit(stretch)
         }
     }
 
-    /**
-     * 읽기 방향(ReadingDirection) 변경
-     *
-     * 지금 책에 바로 적용하고 기본값으로 저장합니다 (Komelia와 동일).
-     */
+    /** 읽기 방향(ReadingDirection) 변경 */
     fun setReadingDirection(direction: ReadingDirection) {
         currentReadingDirection = direction
         updateReadingState()
@@ -321,21 +446,104 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    /** 세로 스크롤 좌우 여백(continuousPadding) 변경 */
+    fun setContinuousPadding(padding: Float) {
+        if (currentContinuousPadding == padding) return
+        currentContinuousPadding = padding
+        rebuildContinuousTiles()
+        updateReadingState()
+        viewModelScope.launch {
+            readerPreferences.saveContinuousPadding(padding)
+        }
+    }
+
+    /** 세로 스크롤 쪽 사이 간격(continuousPageSpacing) 변경 */
+    fun setContinuousPageSpacing(spacing: Int) {
+        if (currentContinuousPageSpacing == spacing) return
+        currentContinuousPageSpacing = spacing
+        rebuildContinuousTiles()
+        updateReadingState()
+        viewModelScope.launch {
+            readerPreferences.saveContinuousPageSpacing(spacing)
+        }
+    }
+
+    /** Continuous: 타일 이미지 (화면이 보이는 타일마다 요청) */
+    suspend fun loadTile(tile: PageTile): ImageBitmap = tileSource.tile(currentBookId, tile)
+
+    /**
+     * Continuous: 화면에 보이는 타일이 바뀜 (PageTile.key 목록, 위에서부터).
+     * 보이는 쪽 중 가장 큰 번호를 2초 뒤 저장하고, 마지막 쪽의 마지막 타일이 보이면 완독.
+     */
+    fun onContinuousVisibleTilesChanged(visibleKeys: List<String>) {
+        if (currentReaderType != ReaderType.CONTINUOUS) return
+        val visible = visibleKeys.mapNotNull { key -> currentTiles.firstOrNull { it.key == key } }
+        if (visible.isEmpty()) return
+        firstVisibleTile = visible.first()
+        visible.filter { it.isPlaceholder }.forEach { requestBounds(it.pageNumber) }
+        val totalPages = currentBookPages.size.coerceAtLeast(1)
+        val progress = ContinuousProgressHelper.calculateProgress(visible, totalPages) ?: return
+
+        if (currentContinuousPage == progress.pageNumber && continuousCompleted == progress.completed) return
+        currentContinuousPage = progress.pageNumber
+        continuousCompleted = progress.completed
+        hasProgressChanged = true
+        (_uiState.value as? ReaderUiState.Reading)?.let {
+            _uiState.value = it.copy(currentContinuousPage = progress.pageNumber)
+        }
+        preloadNextContinuousPages(currentBookId, progress.pageNumber)
+        scheduleProgressSave(progress.pageNumber, totalPages, progress.completed)
+    }
+
+    /** 크기를 모르는 쪽이 보이면 파일을 받아 크기를 알아내고 그 쪽 타일을 다시 계획한다 */
+    private fun requestBounds(pageNumber: Int) {
+        if (!boundsRequested.add(pageNumber)) return
+        val bookId = currentBookId
+        viewModelScope.launch {
+            val size = try {
+                tileSource.bounds(bookId, pageNumber)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.w(e, "쪽 크기 확인 실패: $bookId, $pageNumber")
+                null
+            } ?: return@launch
+            if (bookId != currentBookId) return@launch
+            currentBookPages = currentBookPages.map {
+                if (it.number == pageNumber) it.copy(width = size.first, height = size.second) else it
+            }
+            rebuildContinuousTiles()
+            updateReadingState()
+        }
+    }
+
+    override fun onCleared() {
+        tileSource.clear()
+    }
+
     /**
      * 리더 종료 시 즉시 진행 상태를 저장합니다.
-     * 대기 중인 2초 디바운스를 취소하고 동기화합니다.
      */
     fun saveProgressOnExit(): Job {
         saveProgressJob?.cancel()
         val state = _uiState.value as? ReaderUiState.Reading ?: return Job().apply { complete() }
         val bookId = currentBookId.ifEmpty { return Job().apply { complete() } }
 
-        val pageToSave = state.currentSpread.highestPageNumber
+        val pageToSave: Int
+        val completed: Boolean
+
+        if (currentReaderType == ReaderType.CONTINUOUS) {
+            pageToSave = currentContinuousPage
+            completed = continuousCompleted
+        } else {
+            pageToSave = state.currentSpread.highestPageNumber
+            completed = state.currentSpread.containsPage(state.totalPages) || pageToSave >= state.totalPages
+        }
+
         if (!hasProgressChanged || lastSavedPage == pageToSave) {
             return Job().apply { complete() }
         }
 
-        val completed = state.currentSpread.containsPage(state.totalPages) || pageToSave >= state.totalPages
         return viewModelScope.launch(NonCancellable) {
             saveProgressInternal(bookId, pageToSave, state.totalPages, completed)
         }
@@ -354,9 +562,6 @@ class ReaderViewModel @Inject constructor(
         scheduleProgressSave(pageToSave, state.totalPages, isCompleted)
     }
 
-    /**
-     * 2초 디바운스로 읽기 진행 상태 저장을 예약합니다.
-     */
     private fun scheduleProgressSave(page: Int, totalPages: Int, completed: Boolean) {
         saveProgressJob?.cancel()
         val bookId = currentBookId.ifEmpty { return }
@@ -367,10 +572,6 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    /**
-     * 서버에 읽기 진행 상태를 저장합니다.
-     * 펼침에서 보이는 쪽 중 큰 번호를 저장하고, 마지막 쪽이 보이면 completed=true로 설정합니다.
-     */
     private suspend fun saveProgressInternal(bookId: String, page: Int, totalPages: Int, completed: Boolean) {
         try {
             bookRepository.updateReadProgress(
@@ -385,9 +586,6 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    /**
-     * 레이아웃이나 오프셋 변경 시 현재 보고 있던 페이지를 유지하면서 펼침 맵을 재계산합니다.
-     */
     private fun rebuildSpreadsAndRetainPage() {
         val currentPageNumber = currentSpreads.getOrNull(currentSpreadIndex)
             ?.pages?.firstOrNull()?.number ?: 1
@@ -405,8 +603,34 @@ class ReaderViewModel @Inject constructor(
     }
 
     /**
-     * 읽기 UI 상태를 갱신하고 현재 펼침 및 프리로드(앞뒤 2개 펼침) URL을 계산합니다.
+     * 타일을 다시 계획한다. 세로 스크롤 중이면 타일 번호가 바뀌어도 보던 자리(같은 쪽의 같은 높이)로 다시 스크롤한다.
      */
+    private fun rebuildContinuousTiles() {
+        val anchor = firstVisibleTile
+        currentTiles = ContinuousTilePlanner.planPages(
+            currentBookPages,
+            ContinuousTilePlanner.PlanParams(
+                screenWidthPx = screenWidthPx,
+                screenHeightPx = screenHeightPx,
+                sidePaddingFraction = currentContinuousPadding,
+                pageSpacingDp = currentContinuousPageSpacing,
+                stretchToFit = currentStretchToFit,
+            ),
+        )
+        if (currentReaderType == ReaderType.CONTINUOUS && anchor != null) {
+            scrollToTileIndex = tileIndexAt(anchor)
+        }
+    }
+
+    /** 새 타일 목록에서 [anchor]의 윗부분이 들어 있는 타일 */
+    private fun tileIndexAt(anchor: PageTile): Int {
+        val top = anchor.region?.top ?: 0
+        val index = currentTiles.indexOfFirst {
+            it.pageNumber == anchor.pageNumber && (it.region?.bottom ?: Int.MAX_VALUE) > top
+        }
+        return if (index >= 0) index else firstTileIndexOf(anchor.pageNumber)
+    }
+
     private fun updateReadingState() {
         val book = currentBook ?: return
         val currentSpread = currentSpreads.getOrNull(currentSpreadIndex)
@@ -421,25 +645,28 @@ class ReaderViewModel @Inject constructor(
 
         _uiState.value = ReaderUiState.Reading(
             bookTitle = book.metadata.title.ifEmpty { book.name },
+            totalPages = totalPages,
+            readerType = currentReaderType,
             currentSpread = currentSpread,
             currentSpreadIndex = currentSpreadIndex,
             totalSpreads = currentSpreads.size,
-            totalPages = totalPages,
             spreadPageUrls = spreadUrls,
             preloadSpreads = preloadSpreads,
             readingDirection = currentReadingDirection,
             pageLayout = currentLayout,
             layoutOffset = layoutOffset,
             scaleType = currentScaleType,
+            continuousTiles = currentTiles,
+            continuousPadding = currentContinuousPadding,
+            continuousPageSpacing = currentContinuousPageSpacing,
+            currentContinuousPage = currentContinuousPage,
+            scrollToTileIndex = scrollToTileIndex,
             stretchToFit = currentStretchToFit,
             showOverlay = existingOverlay,
             showSettingsPanel = existingSettings,
         )
     }
 
-    /**
-     * 앞뒤 2개 펼침의 페이지 절대 URL 목록 (펼침 단위).
-     */
     private fun buildPreloadSpreads(
         bookId: String,
         spreadIndex: Int,
@@ -455,6 +682,22 @@ class ReaderViewModel @Inject constructor(
         return targetIndices.map { idx ->
             spreads[idx].pages.mapNotNull { page ->
                 imageUrls.page(bookId, page.number)
+            }
+        }
+    }
+
+    private fun preloadNextContinuousPages(bookId: String, currentVisibleMaxPage: Int) {
+        val targetPages = listOf(currentVisibleMaxPage + 1, currentVisibleMaxPage + 2)
+            .filter { it in 1..currentBookPages.size }
+        viewModelScope.launch {
+            for (page in targetPages) {
+                try {
+                    tileSource.prefetch(bookId, page)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Timber.w(e, "다음 쪽 미리 받기 실패: $bookId, $page")
+                }
             }
         }
     }

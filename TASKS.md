@@ -83,7 +83,7 @@ LEAD_REVIEW §2의 B1~B7 전부와 D1·D2·D3·D4 구조 변경.
 - **이번 범위 아님:** 세로 스크롤(웹툰, `CONTINUOUS`) — T6, 패널 읽기, 여백 자르기, 페이지 전환 깜빡임, 다운샘플링 커널·ONNX 업스케일러(TV 성능).
 - **완료 조건:** 단위 테스트 — 펼침 지도(표지 있음/없음/밀기/가로 쪽 단독/홀수 끝), 방향 우선순위(시리즈 > 기본값), 방향 바꾸면 기본값 저장, 펼침에서 저장 쪽·완독, 설정 저장·읽기(가짜 저장소). `./gradlew assembleDebug lint testDebugUnitTest` 통과, 우리 코드 lint 경고 0(결과 파일 확인).
 
-## T6. 세로 스크롤 리더 (웹툰, Komelia `CONTINUOUS`) — `task/T6-continuous`
+## T6. 세로 스크롤 리더 (웹툰, Komelia `CONTINUOUS`) — `task/T6-continuous` — ✅ 완료 (docs/reports/T6.md)
 사용자 요구: Komelia처럼 웹툰을 세로로 이어서 읽는다. 기준은 Komelia(Apache-2.0)
 `komelia-infra/database/shared/.../db/ImageReaderSettings.kt`, `komelia-ui/.../reader/image/ReaderState.kt`,
 `komelia-ui/.../reader/image/continuous/ContinuousReaderState.kt`. 이름·기본값은 Komelia와 같게, 옮긴 코드는 출처 주석 + `THIRD_PARTY_NOTICES.md`.
@@ -122,4 +122,4 @@ T5 코드(`ReaderViewModel`, `ReaderScreen`, `ReaderSettingsPanel`, `docs/report
 - **완료 조건:** 에뮬레이터를 영어·한국어로 바꿔 각각 설정→홈→라이브러리→시리즈→리더 화면 캡처, 하드코딩 한글 검사(`grep`) 0.
 
 ## 이후 (리드가 지시)
-홈 캐러셀, 검색(온스크린 키보드 + 음성), 다중 서버, EPUB.
+홈 진행 표시 늦은 갱신(T6 보고서 남은 문제), 홈 캐러셀, 검색(온스크린 키보드 + 음성), 다중 서버, EPUB.

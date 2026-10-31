@@ -14,6 +14,7 @@ fun Throwable.toLoadError(): LoadError {
         when {
             current is NotConnectedException -> return LoadError.NOT_CONNECTED
             current.isHttpUnauthorized() -> return LoadError.UNAUTHORIZED
+            current is HttpStatusException && current.code == 401 -> return LoadError.UNAUTHORIZED
             current is IOException -> return LoadError.UNREACHABLE
         }
         current = current.cause

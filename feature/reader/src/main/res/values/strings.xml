@@ -26,4 +26,11 @@
     <string name="reader_option_on">On</string>
     <string name="reader_option_off">Off</string>
     <string name="reader_settings_hint">▲▼: Choose · ◀▶/OK: Change · Back: Close</string>
+    <string name="reader_type_title">Reader type</string>
+    <string name="reader_type_paged">Paged</string>
+    <string name="reader_type_continuous">Continuous</string>
+    <string name="reader_side_padding_title">Side padding</string>
+    <string name="reader_page_spacing_title">Page spacing</string>
+    <string name="reader_percent_value">%1$d%%</string>
+    <string name="reader_dp_value">%1$d dp</string>
 </resources>
