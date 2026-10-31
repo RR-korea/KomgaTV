@@ -1,5 +1,8 @@
 package com.komgatv.feature.library
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,6 +41,7 @@ import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.model.Book
+import com.komgatv.core.model.displayName
 import com.komgatv.core.model.Series
 import com.komgatv.core.ui.components.PosterCard
 import com.komgatv.core.ui.components.loadErrorText
@@ -74,6 +78,8 @@ fun SeriesDetailScreen(
     val entryFocus = rememberEntryFocusState()
 
     val uiState by viewModel.uiState.collectAsState()
+    val actionMessage by viewModel.actionMessage.collectAsState()
+    var menuBook by remember { mutableStateOf<Book?>(null) }
 
     when (val state = uiState) {
         is SeriesDetailUiState.Loading -> {
@@ -120,9 +126,21 @@ fun SeriesDetailScreen(
                 entryFocus = entryFocus,
                 onNavigateToReader = onNavigateToReader,
                 onLoadMore = { viewModel.loadMoreBooks() },
+                onBookMenu = { menuBook = it },
             )
         }
     }
+
+    menuBook?.let { book ->
+        BookActionsDialog(
+            book = book,
+            onMarkRead = { viewModel.markRead(book.id) },
+            onMarkUnread = { viewModel.markUnread(book.id) },
+            onAnalyze = { viewModel.analyze(book.id) },
+            onDismiss = { menuBook = null },
+        )
+    }
+    actionMessage?.let { BookActionMessage(it, onShown = viewModel::clearActionMessage) }
 }
 
 /**
@@ -138,6 +156,7 @@ private fun SeriesDetailContent(
     entryFocus: EntryFocusState,
     onNavigateToReader: (String) -> Unit,
     onLoadMore: () -> Unit,
+    onBookMenu: (Book) -> Unit,
 ) {
     val gridState = rememberLazyGridState()
     // 처음엔 첫 책, 돌아오면 연 책. 새로고침은 순서를 바꾸지 않고 페이지 덧붙임도 있어 키를 넘기지 않는다.
@@ -213,13 +232,15 @@ private fun SeriesDetailContent(
                 modifier = Modifier
                     .focusRequester(entryFocus.requesterFor(key))
                     .then(if (index == 0) Modifier.focusRequester(entryFocus.fallback) else Modifier),
-                title = book.name,
+                title = book.displayName(),
                 imageUrl = imageUrls.bookThumbnail(book.id).orEmpty(),
                 subtitle = progressText,
                 onClick = {
                     entryFocus.onOpen(key)
                     onNavigateToReader(book.id)
                 },
+                // OK를 길게 — 책 메뉴
+                onLongClick = { onBookMenu(book) },
             )
         }
 

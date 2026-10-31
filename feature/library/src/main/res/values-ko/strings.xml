@@ -18,4 +18,11 @@
     <string name="series_status_ongoing">연재 중</string>
     <string name="series_status_abandoned">연재 중단</string>
     <string name="series_status_hiatus">휴재</string>
+    <string name="book_action_mark_read">읽음으로 표시</string>
+    <string name="book_action_mark_unread">읽지 않음으로 표시</string>
+    <string name="book_action_analyze">분석 (관리자)</string>
+    <string name="book_action_done_read">읽음으로 표시했습니다</string>
+    <string name="book_action_done_unread">읽지 않음으로 표시했습니다</string>
+    <string name="book_action_done_analyze">분석을 요청했습니다 — 서버가 지금 분석합니다</string>
+    <string name="book_action_failed">하지 못했습니다 (관리자만 가능하거나 서버 오류)</string>
 </resources>

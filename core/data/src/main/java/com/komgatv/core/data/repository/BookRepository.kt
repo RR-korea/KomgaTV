@@ -4,6 +4,8 @@ import com.komgatv.core.data.mapper.toDomain
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.BookPage
 import com.komgatv.core.model.EpubChapter
+import com.komgatv.core.model.EpubManifest
+import com.komgatv.core.model.EpubTocEntry
 import com.komgatv.core.model.EpubPosition
 import com.komgatv.core.network.ServerSessionManager
 import kotlinx.coroutines.CancellationException
@@ -18,6 +20,7 @@ import snd.komga.client.book.R2Device
 import snd.komga.client.book.R2Location
 import snd.komga.client.book.R2Locator
 import snd.komga.client.book.R2Progression
+import snd.komga.client.book.WPLink
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.common.KomgaSort.KomgaBooksSort
 import snd.komga.client.common.Page
@@ -48,11 +51,20 @@ interface BookRepository {
     /** 책 제목 전문 검색 */
     fun searchBooks(query: String, page: Int = 0, size: Int = 20): Flow<BookPageResult>
 
-    /** EPUB 읽기 순서 (장 목록) */
-    suspend fun getEpubChapters(bookId: String): List<EpubChapter>
+    /** EPUB 읽기 순서(장 목록)와 목차 */
+    suspend fun getEpubManifest(bookId: String): EpubManifest
 
     /** EPUB 읽은 자리. 읽은 적 없으면 null */
     suspend fun getEpubPosition(bookId: String): EpubPosition?
+
+    /** 다 읽음으로 표시 */
+    suspend fun markRead(bookId: String)
+
+    /** 읽지 않음으로 — 읽기 진행(EPUB 읽은 자리 포함)을 지운다 */
+    suspend fun markUnread(bookId: String)
+
+    /** 서버에 책 분석을 다시 요청한다 (관리자만, 분석은 서버에서 따로 진행) */
+    suspend fun analyze(bookId: String)
 
     /** EPUB 읽은 자리 저장 (Komga가 읽기 진행으로 바꾼다) */
     suspend fun saveEpubPosition(bookId: String, position: EpubPosition)
@@ -121,9 +133,38 @@ class BookRepositoryImpl @Inject constructor(
             .getLatestBooks(KomgaPageRequest(size = size))
             .content.map { it.toDomain() }
 
-    override suspend fun getEpubChapters(bookId: String): List<EpubChapter> =
-        sessionManager.requireClient().bookClient().getWebPubManifest(KomgaBookId(bookId))
-            .readingOrder.mapNotNull { link -> link.href?.let { EpubChapter(href = it, title = link.title) } }
+    override suspend fun getEpubManifest(bookId: String): EpubManifest {
+        val manifest = sessionManager.requireClient().bookClient().getWebPubManifest(KomgaBookId(bookId))
+        return EpubManifest(
+            chapters = manifest.readingOrder.mapNotNull { link -> link.href?.let { EpubChapter(href = it, title = link.title) } },
+            toc = flattenToc(manifest.toc, depth = 0),
+        )
+    }
+
+    /** 목차 나무를 들여쓰기 단계와 함께 한 줄로 편다 (제목이나 주소가 없는 항목은 건너뛰고 아래 항목은 남긴다) */
+    private fun flattenToc(links: List<WPLink>, depth: Int): List<EpubTocEntry> = links.flatMap { link ->
+        val title = link.title?.trim().orEmpty()
+        val href = link.href
+        val self = if (title.isNotEmpty() && href != null) listOf(EpubTocEntry(title, href, depth)) else emptyList()
+        self + flattenToc(link.children, depth + 1)
+    }
+
+    override suspend fun markRead(bookId: String) {
+        sessionManager.requireClient().bookClient().markReadProgress(
+            bookId = KomgaBookId(bookId),
+            request = KomgaBookReadProgressUpdateRequest(completed = true),
+        )
+        progressEvents.notifyUpdated(bookId)
+    }
+
+    override suspend fun markUnread(bookId: String) {
+        sessionManager.requireClient().bookClient().deleteReadProgress(KomgaBookId(bookId))
+        progressEvents.notifyUpdated(bookId)
+    }
+
+    override suspend fun analyze(bookId: String) {
+        sessionManager.requireClient().bookClient().analyze(KomgaBookId(bookId))
+    }
 
     override suspend fun getEpubPosition(bookId: String): EpubPosition? {
         val progression = try {

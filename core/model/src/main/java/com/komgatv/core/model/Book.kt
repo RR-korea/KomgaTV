@@ -58,6 +58,19 @@ enum class MediaProfile {
     EPUB,
 }
 
+/** EPUB 목차 한 줄 (WebPub toc). [depth]는 들여쓰기 단계(0부터), [href]는 #조각이 붙을 수 있다. */
+data class EpubTocEntry(
+    val title: String,
+    val href: String,
+    val depth: Int,
+)
+
+/** EPUB 구성: 읽기 순서(장)와 목차 */
+data class EpubManifest(
+    val chapters: List<EpubChapter>,
+    val toc: List<EpubTocEntry>,
+)
+
 /** EPUB 읽기 순서의 한 장 (WebPub readingOrder) */
 data class EpubChapter(
     val href: String,
@@ -75,3 +88,7 @@ data class EpubPosition(
     val progression: Float,
     val totalProgression: Float,
 )
+
+/** 보여 줄 책 이름 — 이름이 파일 해시처럼 보이면(16자 이상 16진수) 시리즈 제목을 쓴다 */
+fun Book.displayName(): String =
+    if (name.length >= 16 && name.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }) seriesTitle else name

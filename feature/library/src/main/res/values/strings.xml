@@ -19,4 +19,11 @@
     <string name="series_status_ongoing">Ongoing</string>
     <string name="series_status_abandoned">Abandoned</string>
     <string name="series_status_hiatus">On hiatus</string>
+    <string name="book_action_mark_read">Mark as read</string>
+    <string name="book_action_mark_unread">Mark as unread</string>
+    <string name="book_action_analyze">Analyze (admin)</string>
+    <string name="book_action_done_read">Marked as read</string>
+    <string name="book_action_done_unread">Marked as unread</string>
+    <string name="book_action_done_analyze">Analysis requested — the server works on it now</string>
+    <string name="book_action_failed">Could not do that (admin only, or server error)</string>
 </resources>

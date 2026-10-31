@@ -48,6 +48,7 @@ fun PosterCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
+    onLongClick: (() -> Unit)? = null,
 ) {
     // 이미지 요청을 remember하여 불필요한 재생성 방지
     val context = LocalContext.current
@@ -65,6 +66,7 @@ fun PosterCard(
         // 포스터 이미지 카드
         Card(
             onClick = onClick,
+            onLongClick = onLongClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(2f / 3f), // 만화 포스터 비율 (2:3)

@@ -9,7 +9,9 @@ import com.komgatv.core.data.repository.BookRepository
 import com.komgatv.core.datastore.ReaderPreferences
 import com.komgatv.core.model.EpubChapter
 import com.komgatv.core.model.EpubPosition
+import com.komgatv.core.model.EpubTocEntry
 import com.komgatv.core.model.LoadError
+import com.komgatv.core.model.displayName
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -40,7 +42,9 @@ sealed interface EpubUiState {
         val startProgression: Float?,
         val progression: Float,
         val textZoom: Int,
+        val toc: List<EpubTocEntry> = emptyList(),
         val showOverlay: Boolean = false,
+        val showToc: Boolean = false,
     ) : EpubUiState {
         val chapter: EpubChapter get() = chapters[chapterIndex]
 
@@ -83,7 +87,8 @@ class EpubViewModel @Inject constructor(
             _uiState.value = EpubUiState.Loading
             try {
                 val book = bookRepository.getBookById(id)
-                val chapters = bookRepository.getEpubChapters(id)
+                val manifest = bookRepository.getEpubManifest(id)
+                val chapters = manifest.chapters
                 if (chapters.isEmpty()) throw IllegalStateException("EPUB에 장이 없음: $id")
                 val position = if (book.readProgress?.completed == true) null else bookRepository.getEpubPosition(id)
                 // 저장된 장을 못 찾으면(책이 바뀜 등) 처음부터
@@ -91,12 +96,14 @@ class EpubViewModel @Inject constructor(
                 val index = found.coerceAtLeast(0)
                 val start = if (found >= 0) position?.progression ?: 0f else 0f
                 _uiState.value = EpubUiState.Reading(
-                    title = bookTitle(book.metadata.title.ifEmpty { book.name }, book.seriesTitle),
+                    title = book.displayName(),
                     chapters = chapters,
                     chapterIndex = index,
                     startProgression = start,
                     progression = start,
                     textZoom = readerPreferences.readerSettings.first().epubTextZoom,
+                    // 목차가 없거나 한 줄뿐이면("Start"만 있는 책 등) 장 목록으로
+                    toc = manifest.toc.takeIf { it.size >= 2 } ?: chapterToc(chapters),
                 )
             } catch (e: CancellationException) {
                 throw e
@@ -142,7 +149,34 @@ class EpubViewModel @Inject constructor(
 
     fun closeOverlay() {
         val state = _uiState.value as? EpubUiState.Reading ?: return
-        _uiState.value = state.copy(showOverlay = false)
+        _uiState.value = state.copy(showOverlay = false, showToc = false)
+    }
+
+    /** 목차 열기 (오버레이에서 OK) */
+    fun openToc() {
+        val state = _uiState.value as? EpubUiState.Reading ?: return
+        _uiState.value = state.copy(showToc = true)
+    }
+
+    /** 목차 닫기 — 오버레이로 돌아간다 */
+    fun closeToc() {
+        val state = _uiState.value as? EpubUiState.Reading ?: return
+        _uiState.value = state.copy(showToc = false)
+    }
+
+    /** 목차 항목으로 이동 — 그 장 처음에서 연다. 목차와 오버레이는 닫힌다. */
+    fun jumpToToc(entry: EpubTocEntry) {
+        val state = _uiState.value as? EpubUiState.Reading ?: return
+        val index = state.chapters.indexOfFirst { sameResource(it.href, entry.href) }
+        if (index < 0) return
+        _uiState.value = state.copy(
+            chapterIndex = index,
+            startProgression = 0f,
+            progression = 0f,
+            showToc = false,
+            showOverlay = false,
+        )
+        scheduleSave()
     }
 
     /** 글자 크기를 [TEXT_ZOOM_STEP]만큼 키우거나(+1) 줄인다(-1). 기본값으로 저장한다. */
@@ -203,6 +237,15 @@ internal fun sameResource(a: String, b: String): Boolean {
     return key(a) == key(b)
 }
 
-/** 책 제목이 파일 해시처럼 보이면(긴 16진수) 시리즈 제목을 쓴다 */
-internal fun bookTitle(title: String, seriesTitle: String): String =
-    if (title.length >= 16 && title.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }) seriesTitle else title
+/** 목차가 없는 책: 장마다 한 줄 (장 제목, 없으면 null — 화면이 "n장"으로) */
+internal fun chapterToc(chapters: List<EpubChapter>): List<EpubTocEntry> =
+    chapters.map { chapter -> EpubTocEntry(chapter.title?.takeIf { it.isNotBlank() } ?: "", chapter.href, 0) }
+
+/** 지금 장이 목차의 어느 줄인지 — 그 장을 가리키는 마지막 줄 (없으면 그 앞 장의 줄) */
+internal fun currentTocIndex(toc: List<EpubTocEntry>, chapters: List<EpubChapter>, chapterIndex: Int): Int {
+    for (i in chapterIndex downTo 0) {
+        val at = toc.indexOfLast { sameResource(it.href, chapters[i].href) }
+        if (at >= 0) return at
+    }
+    return 0
+}

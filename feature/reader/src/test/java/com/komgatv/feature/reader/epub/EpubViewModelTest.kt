@@ -12,6 +12,8 @@ import com.komgatv.core.model.Book
 import com.komgatv.core.model.BookMetadata
 import com.komgatv.core.model.BookPage
 import com.komgatv.core.model.EpubChapter
+import com.komgatv.core.model.EpubManifest
+import com.komgatv.core.model.EpubTocEntry
 import com.komgatv.core.model.EpubPosition
 import com.komgatv.core.model.MediaProfile
 import com.komgatv.core.model.PageLayout
@@ -20,6 +22,7 @@ import com.komgatv.core.model.ReaderSettings
 import com.komgatv.core.model.ReaderType
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.ScaleType
+import com.komgatv.core.model.displayName
 import com.komgatv.core.network.ServerSessionManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -147,9 +150,40 @@ class EpubViewModelTest {
     }
 
     @Test
-    fun `책 제목이 파일 해시면 시리즈 제목을 쓴다`() {
-        assertEquals("걸그룹", bookTitle("a67879a1d4464860c3eedc980bd12118", "걸그룹"))
-        assertEquals("1권", bookTitle("1권", "걸그룹"))
+    fun `목차 항목으로 가면 그 장 처음에서 열고 목차와 오버레이를 닫는다`() = runTest(dispatcher) {
+        books.toc = listOf(EpubTocEntry("1부", "ch1.html", 0), EpubTocEntry("3장", "ch3.html#top", 1))
+        viewModel.loadBook("e1")
+        advanceUntilIdle()
+        viewModel.toggleOverlay()
+        viewModel.openToc()
+        assertTrue(reading.showToc)
+
+        viewModel.jumpToToc(reading.toc[1])
+
+        assertEquals(2, reading.chapterIndex)
+        assertEquals(0f, reading.startProgression)
+        assertEquals(false, reading.showToc)
+        assertEquals(false, reading.showOverlay)
+    }
+
+    @Test
+    fun `목차가 없거나 한 줄뿐인 책은 장마다 한 줄, 지금 장의 줄을 찾는다`() = runTest(dispatcher) {
+        books.toc = listOf(EpubTocEntry("Start", "ch1.html", 0))
+        viewModel.loadBook("e1")
+        advanceUntilIdle()
+        assertEquals(3, reading.toc.size)
+
+        val toc = listOf(EpubTocEntry("1부", "ch1.html", 0), EpubTocEntry("1부 2", "ch1.html#b", 1), EpubTocEntry("3장", "ch3.html", 0))
+        // 2장은 목차에 없다 — 그 앞 장(1장)을 가리키는 마지막 줄
+        assertEquals(1, currentTocIndex(toc, chapters, chapterIndex = 1))
+        assertEquals(2, currentTocIndex(toc, chapters, chapterIndex = 2))
+    }
+
+    @Test
+    fun `책 제목이 파일 해시면 시리즈 제목을 쓴다`() = runTest(dispatcher) {
+        val book = books.getBookById("e1")
+        assertEquals("시리즈", book.copy(name = "a67879a1d4464860c3eedc980bd12118").displayName())
+        assertEquals("1권", book.displayName())
     }
 
     @Test
@@ -170,7 +204,9 @@ class EpubViewModelTest {
             mediaProfile = MediaProfile.EPUB,
         )
 
-        override suspend fun getEpubChapters(bookId: String) = chapters
+        var toc = listOf<EpubTocEntry>()
+
+        override suspend fun getEpubManifest(bookId: String) = EpubManifest(chapters, toc)
         override suspend fun getEpubPosition(bookId: String) = position
         override suspend fun saveEpubPosition(bookId: String, position: EpubPosition) {
             saved += position
@@ -183,6 +219,12 @@ class EpubViewModelTest {
         override suspend fun getBooksOnDeck(size: Int): List<Book> = emptyList()
         override suspend fun getLatestBooks(size: Int): List<Book> = emptyList()
         override fun searchBooks(query: String, page: Int, size: Int): Flow<BookPageResult> = throw NotImplementedError()
+
+        override suspend fun markRead(bookId: String) = Unit
+
+        override suspend fun markUnread(bookId: String) = Unit
+
+        override suspend fun analyze(bookId: String) = Unit
     }
 
     private class FakeReaderPreferences : ReaderPreferences {

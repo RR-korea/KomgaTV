@@ -12,6 +12,7 @@ import com.komgatv.core.model.Book
 import com.komgatv.core.model.BookPage
 import com.komgatv.core.model.LoadError
 import com.komgatv.core.model.MediaProfile
+import com.komgatv.core.model.displayName
 import com.komgatv.core.model.PageLayout
 import com.komgatv.core.model.ReaderType
 import com.komgatv.core.model.ReadingDirection
@@ -652,7 +653,7 @@ class ReaderViewModel @Inject constructor(
         val existingSettings = (_uiState.value as? ReaderUiState.Reading)?.showSettingsPanel ?: false
 
         _uiState.value = ReaderUiState.Reading(
-            bookTitle = book.metadata.title.ifEmpty { book.name },
+            bookTitle = book.displayName(),
             totalPages = totalPages,
             readerType = currentReaderType,
             currentSpread = currentSpread,

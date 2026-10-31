@@ -33,6 +33,8 @@
     <string name="reader_percent_value">%1$d%%</string>
     <string name="reader_dp_value">%1$d dp</string>
     <string name="epub_chapter_format">%2$d장 중 %1$d장 · %3$s</string>
-    <string name="epub_overlay_hint">▲▼: 글자 크기 (%1$d%%) · ◀▶: 장 이동 · Back: 닫기</string>
+    <string name="epub_overlay_hint">OK: 목차 · ▲▼: 글자 크기 (%1$d%%) · ◀▶: 장 이동 · Back: 닫기</string>
     <string name="epub_chapter_number_format">%2$d장 중 %1$d장</string>
+    <string name="epub_toc_title">목차</string>
+    <string name="epub_chapter_short">%1$d장</string>
 </resources>
