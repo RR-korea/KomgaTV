@@ -1,5 +1,8 @@
 package com.komgatv.feature.reader
 
+import com.komgatv.core.model.MediaProfile
+import com.komgatv.core.model.EpubPosition
+import com.komgatv.core.model.EpubChapter
 import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.data.repository.BookPageResult
 import com.komgatv.core.data.repository.BookRepository
@@ -629,6 +632,18 @@ class ReaderViewModelTest {
     }
 
     @Test
+    fun `EPUB 책은 EPUB 리더로 넘긴다`() = runTest(testDispatcher) {
+        seriesRepository.seriesMap["s1"] = createTestSeries(id = "s1")
+        bookRepository.books["e1"] = createTestBook(id = "e1", seriesId = "s1", pageCount = 0)
+            .copy(mediaProfile = MediaProfile.EPUB)
+
+        viewModel.loadBook("e1")
+        advanceUntilIdle()
+
+        assertEquals(ReaderUiState.Epub, viewModel.uiState.value)
+    }
+
+    @Test
     fun `세로 스크롤 설정 - 여백과 간격은 바로 반영되고 저장된다`() = runTest(testDispatcher) {
         readerPreferences.saveReaderType(ReaderType.CONTINUOUS)
         openBook()
@@ -717,6 +732,12 @@ class ReaderViewModelTest {
         override suspend fun getLatestBooks(size: Int): List<Book> = emptyList()
 
         override fun searchBooks(query: String, page: Int, size: Int): Flow<BookPageResult> = throw NotImplementedError()
+
+        override suspend fun getEpubChapters(bookId: String): List<EpubChapter> = throw NotImplementedError()
+
+        override suspend fun getEpubPosition(bookId: String): EpubPosition? = null
+
+        override suspend fun saveEpubPosition(bookId: String, position: EpubPosition) = Unit
     }
 
     private class FakeSeriesRepository : SeriesRepository {
@@ -772,6 +793,10 @@ class ReaderViewModelTest {
 
         override suspend fun saveContinuousPageSpacing(spacing: Int) {
             _settings.value = _settings.value.copy(continuousPageSpacing = spacing)
+        }
+
+        override suspend fun saveEpubTextZoom(zoom: Int) {
+            _settings.value = _settings.value.copy(epubTextZoom = zoom)
         }
     }
 

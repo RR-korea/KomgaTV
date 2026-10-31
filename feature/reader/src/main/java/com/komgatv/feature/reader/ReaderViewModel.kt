@@ -11,6 +11,7 @@ import com.komgatv.core.datastore.ReaderPreferences
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.BookPage
 import com.komgatv.core.model.LoadError
+import com.komgatv.core.model.MediaProfile
 import com.komgatv.core.model.PageLayout
 import com.komgatv.core.model.ReaderType
 import com.komgatv.core.model.ReadingDirection
@@ -90,6 +91,9 @@ sealed interface ReaderUiState {
 
     /** 책을 불러오지 못함 — 화면이 오류 종류를 문구로 바꾼다 */
     data class Error(val error: LoadError) : ReaderUiState
+
+    /** EPUB — 페이지 이미지가 아니라 글 리더로 연다 */
+    data object Epub : ReaderUiState
 }
 
 /**
@@ -182,6 +186,10 @@ class ReaderViewModel @Inject constructor(
             try {
                 val savedSettings = readerPreferences.readerSettings.first()
                 val book = bookRepository.getBookById(bookId)
+                if (book.mediaProfile == MediaProfile.EPUB) {
+                    _uiState.value = ReaderUiState.Epub
+                    return@launch
+                }
                 currentBook = book
 
                 val series = seriesRepository.getSeriesById(book.seriesId)

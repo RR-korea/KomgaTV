@@ -32,4 +32,7 @@
     <string name="reader_page_spacing_title">쪽 간격</string>
     <string name="reader_percent_value">%1$d%%</string>
     <string name="reader_dp_value">%1$d dp</string>
+    <string name="epub_chapter_format">%2$d장 중 %1$d장 · %3$s</string>
+    <string name="epub_overlay_hint">▲▼: 글자 크기 (%1$d%%) · ◀▶: 장 이동 · Back: 닫기</string>
+    <string name="epub_chapter_number_format">%2$d장 중 %1$d장</string>
 </resources>

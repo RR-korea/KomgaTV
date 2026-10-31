@@ -131,5 +131,7 @@ T5 코드(`ReaderViewModel`, `ReaderScreen`, `ReaderSettingsPanel`, `docs/report
 
 ## T11. 서버 여러 개 등록 — ✅ 완료 (docs/reports/T11.md)
 
+## T12. EPUB 리더 — ✅ 완료 (docs/reports/T12.md)
+
 ## 이후 (리드가 지시)
-EPUB.
+EPUB 목차 화면, Tizen 이식(KomgaTV-tizen).
