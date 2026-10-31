@@ -245,6 +245,19 @@ try {
   await typeInto('없는제목');
   await page.waitForTimeout(900);
   await expectText('결과 없음 문구', '.search-message', /에 맞는 시리즈나 책이 없습니다/);
+  // 줄마다 이어 불러오기 (Android T10): "시리즈"는 가짜 서버에서 128개
+  await key('Enter');
+  await page.keyboard.press('Control+A');
+  await page.keyboard.type('시리즈');
+  await key('Enter');
+  await page.waitForTimeout(900);
+  await key('ArrowDown');
+  await key('ArrowRight', 46);
+  await page.waitForTimeout(500);
+  const searchCount = await page.evaluate(
+    () => document.querySelectorAll('[data-section="search-series"] .card').length,
+  );
+  results.push(`${searchCount > 50 ? 'PASS' : 'FAIL'} 검색 줄 이어 불러오기: 시리즈 카드 ${searchCount}개`);
   await key('Escape');
   await page.waitForTimeout(400);
   await expectFocus('검색에서 돌아오면 검색 버튼', 'search');
