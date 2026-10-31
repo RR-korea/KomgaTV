@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_loading_page">페이지 로딩 중…</string>
+    <string name="reader_error_prefix">오류: %1$s</string>
+    <string name="reader_error_load_failed">책을 불러올 수 없습니다</string>
+    <string name="reader_page_content_description">%1$d/%2$d 페이지</string>
+    <string name="reader_page_progress_format">%1$d / %2$d</string>
+    <string name="reader_page_percent_format">%1$d%%</string>
+</resources>
