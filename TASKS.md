@@ -124,5 +124,8 @@ T5 코드(`ReaderViewModel`, `ReaderScreen`, `ReaderSettingsPanel`, `docs/report
 ## T8. 시리즈 검색 — ✅ 완료 (docs/reports/T8.md)
 홈의 검색 버튼, 입력(디바운스 400ms) + 음성 인식, 결과 그리드·이어 불러오기, 포커스 복원.
 
+## T9. 홈 줄 확장 — ✅ 완료 (docs/reports/T9.md)
+다음 권, 최근 추가된 책·시리즈, 최근 업데이트된 시리즈.
+
 ## 이후 (리드가 지시)
-홈 캐러셀, 책 제목 검색, 다중 서버, EPUB.
+책 제목 검색, 다중 서버, EPUB.

@@ -29,6 +29,15 @@ interface BookRepository {
 
     /** page는 1부터 시작한다. */
     suspend fun updateReadProgress(bookId: String, page: Int, completed: Boolean)
+
+    /** 다음에 읽을 책 — 읽던 시리즈의 다음 권 (Komga on deck) */
+    suspend fun getBooksOnDeck(size: Int = 20): List<Book>
+
+    /** 최근 추가된 책 */
+    suspend fun getLatestBooks(size: Int = 20): List<Book>
+
+    /** 책 제목 전문 검색 */
+    fun searchBooks(query: String, page: Int = 0, size: Int = 20): Flow<BookPageResult>
 }
 
 /** 책 목록 한 페이지. currentPage는 0부터 시작한다. */
@@ -82,6 +91,24 @@ class BookRepositoryImpl @Inject constructor(
             request = KomgaBookReadProgressUpdateRequest(page = page, completed = completed),
         )
         progressEvents.notifyUpdated(bookId)
+    }
+
+    override suspend fun getBooksOnDeck(size: Int): List<Book> =
+        sessionManager.requireClient().bookClient()
+            .getBooksOnDeck(libraryIds = emptyList(), pageRequest = KomgaPageRequest(size = size))
+            .content.map { it.toDomain() }
+
+    override suspend fun getLatestBooks(size: Int): List<Book> =
+        sessionManager.requireClient().bookClient()
+            .getLatestBooks(KomgaPageRequest(size = size))
+            .content.map { it.toDomain() }
+
+    override fun searchBooks(query: String, page: Int, size: Int): Flow<BookPageResult> = flow {
+        val result = sessionManager.requireClient().bookClient().getBookList(
+            search = KomgaBookSearch(fullTextSearch = query),
+            pageRequest = KomgaPageRequest(pageIndex = page, size = size),
+        )
+        emit(result.toBookPageResult())
     }
 }
 

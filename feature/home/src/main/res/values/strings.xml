@@ -8,4 +8,12 @@
     <string name="home_book_completed">Finished</string>
     <string name="home_server_settings">Server settings</string>
     <string name="home_search">Search</string>
+    <string name="home_on_deck">On deck</string>
+    <string name="home_latest_books">Recently added books</string>
+    <string name="home_new_series">Recently added series</string>
+    <string name="home_updated_series">Recently updated series</string>
+    <plurals name="home_series_books_count">
+        <item quantity="one">%1$d book</item>
+        <item quantity="other">%1$d books</item>
+    </plurals>
 </resources>

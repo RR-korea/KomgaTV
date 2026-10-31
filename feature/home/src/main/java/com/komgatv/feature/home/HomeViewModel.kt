@@ -7,9 +7,11 @@ import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.data.repository.BookRepository
 import com.komgatv.core.data.repository.LibraryRepository
 import com.komgatv.core.data.repository.ReadProgressEvents
+import com.komgatv.core.data.repository.SeriesRepository
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.Library
 import com.komgatv.core.model.LoadError
+import com.komgatv.core.model.Series
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
@@ -31,13 +33,21 @@ sealed interface HomeUiState {
     data object Loading : HomeUiState
 
     /**
-     * 데이터 로딩 성공
+     * 데이터 로딩 성공 (Komelia 홈과 같은 줄)
      *
-     * @property continueReading 읽는 중인 책 목록 (read status: IN_PROGRESS, 최근 읽은 순)
+     * @property continueReading 읽는 중인 책 (IN_PROGRESS, 최근 읽은 순)
+     * @property onDeck 다음에 읽을 책 (읽던 시리즈의 다음 권)
+     * @property latestBooks 최근 추가된 책
+     * @property newSeries 최근 추가된 시리즈
+     * @property updatedSeries 최근에 책이 더해진 시리즈
      * @property libraries 라이브러리 목록
      */
     data class Success(
         val continueReading: List<Book> = emptyList(),
+        val onDeck: List<Book> = emptyList(),
+        val latestBooks: List<Book> = emptyList(),
+        val newSeries: List<Series> = emptyList(),
+        val updatedSeries: List<Series> = emptyList(),
         val libraries: List<Library> = emptyList(),
     ) : HomeUiState
 
@@ -48,25 +58,30 @@ sealed interface HomeUiState {
 /**
  * 홈 화면 ViewModel
  *
- * MVI 패턴에 기반하여 라이브러리 목록과 읽는 중인 책 목록을 병렬로 로드하고 UI 상태를 관리합니다.
+ * 줄들을 한꺼번에 읽는다. 라이브러리·읽는 중은 꼭 필요하고(실패하면 오류 화면),
+ * 나머지 줄은 실패하면 빈 줄로 둔다 (오래된 Komga에 없는 API일 수도 있다).
  */
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val libraryRepository: LibraryRepository,
     private val bookRepository: BookRepository,
+    private val seriesRepository: SeriesRepository,
     private val progressEvents: ReadProgressEvents,
     val imageUrls: ImageUrls,
 ) : ViewModel() {
 
+    companion object {
+        const val ROW_SIZE = 20
+    }
+
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-
     init {
         loadHomeData()
-        // 리더를 나올 때의 저장이 돌아온 뒤에 끝나도 "읽는 중" 줄을 맞춘다
+        // 리더를 나올 때의 저장이 돌아온 뒤에 끝나도 "읽는 중"·"다음 권" 줄을 맞춘다
         viewModelScope.launch {
-            progressEvents.updates.collect { refreshContinueReading() }
+            progressEvents.updates.collect { refreshReadingRows() }
         }
     }
 
@@ -80,17 +95,23 @@ class HomeViewModel @Inject constructor(
             if (showing == null) _uiState.value = HomeUiState.Loading
 
             try {
-                // coroutineScope로 묶어 자식 비동기 작업의 실패가 structured concurrency로 바깥 try-catch에 안전하게 전달되도록 함
                 coroutineScope {
-                    val librariesDeferred = async { loadLibraries() }
-                    val continueReadingDeferred = async { loadContinueReading() }
-
-                    val libraries = librariesDeferred.await()
-                    val continueReading = continueReadingDeferred.await()
+                    val libraries = async { libraryRepository.getLibraries().first() }
+                    val continueReading = async { loadContinueReading() }
+                    val onDeck = async { optionalRow("다음 권") { bookRepository.getBooksOnDeck(ROW_SIZE) } }
+                    val latestBooks = async { optionalRow("최근 추가된 책") { bookRepository.getLatestBooks(ROW_SIZE) } }
+                    val newSeries = async { optionalRow("최근 추가된 시리즈") { seriesRepository.getNewSeries(ROW_SIZE) } }
+                    val updatedSeries = async {
+                        optionalRow("최근 업데이트된 시리즈") { seriesRepository.getUpdatedSeries(ROW_SIZE) }
+                    }
 
                     _uiState.value = HomeUiState.Success(
-                        continueReading = continueReading,
-                        libraries = libraries,
+                        continueReading = continueReading.await(),
+                        onDeck = onDeck.await(),
+                        latestBooks = latestBooks.await(),
+                        newSeries = newSeries.await(),
+                        updatedSeries = updatedSeries.await(),
+                        libraries = libraries.await(),
                     )
                 }
             } catch (e: CancellationException) {
@@ -104,22 +125,32 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /** 라이브러리 목록 로드 */
-    private suspend fun loadLibraries(): List<Library> {
-        return libraryRepository.getLibraries().first()
+    /** 실패해도 홈 전체를 막지 않는 줄 */
+    private suspend fun <T> optionalRow(name: String, load: suspend () -> List<T>): List<T> = try {
+        load()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Timber.w(e, "홈 줄 불러오기 실패: $name")
+        emptyList()
     }
 
     /** 읽는 중인 책 목록 로드 (IN_PROGRESS, 최근 읽은 순) */
     private suspend fun loadContinueReading(): List<Book> {
-        return bookRepository.getBooksInProgress(page = 0, size = 20).first().books
+        return bookRepository.getBooksInProgress(page = 0, size = ROW_SIZE).first().books
     }
 
-    /** "읽는 중" 줄만 다시 읽는다 (내용이 보일 때만) */
-    private suspend fun refreshContinueReading() {
+    /** 읽기 진행이 바뀌면 달라지는 줄("읽는 중", "다음 권")만 다시 읽는다 (내용이 보일 때만) */
+    private suspend fun refreshReadingRows() {
         if (_uiState.value !is HomeUiState.Success) return
         try {
-            val books = loadContinueReading()
-            (_uiState.value as? HomeUiState.Success)?.let { _uiState.value = it.copy(continueReading = books) }
+            coroutineScope {
+                val continueReading = async { loadContinueReading() }
+                val onDeck = async { optionalRow("다음 권") { bookRepository.getBooksOnDeck(ROW_SIZE) } }
+                (_uiState.value as? HomeUiState.Success)?.let {
+                    _uiState.value = it.copy(continueReading = continueReading.await(), onDeck = onDeck.await())
+                }
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

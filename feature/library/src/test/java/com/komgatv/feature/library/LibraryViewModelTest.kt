@@ -174,5 +174,9 @@ class LibraryViewModelTest {
         override fun searchSeries(query: String, page: Int, size: Int): Flow<SeriesPageResult> = flow {
             emit(SeriesPageResult(emptyList(), 0, 0, page, true))
         }
+
+        override suspend fun getNewSeries(size: Int): List<Series> = emptyList()
+
+        override suspend fun getUpdatedSeries(size: Int): List<Series> = emptyList()
     }
 }
