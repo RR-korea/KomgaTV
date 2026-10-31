@@ -223,7 +223,14 @@ try {
   await key('Enter');
   await page.waitForTimeout(500);
   await expectFocus('검색 화면 → 입력칸', 'query');
-  await typeInto('원피');
+  // TV처럼 천천히: 한 글자 치고 결과가 온 뒤에도 입력이 이어져야 한다 (포커스를 빼앗아 키보드가 닫히면 안 됨)
+  await key('Enter');
+  await page.keyboard.type('원');
+  await page.waitForTimeout(900);
+  const stillTyping = await page.evaluate(() => document.activeElement?.tagName === 'INPUT');
+  results.push(`${stillTyping ? 'PASS' : 'FAIL'} 결과가 와도 입력칸 유지 (키보드 안 닫힘)`);
+  await page.keyboard.type('피');
+  await key('Enter');
   await page.waitForTimeout(900);
   await expectText('검색 결과: 시리즈 1', '.search .row-title', /시리즈 \(1\)/);
   await key('ArrowDown');

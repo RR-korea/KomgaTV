@@ -28,6 +28,9 @@ export function useEntryFocus(
   useEffect(() => {
     const element = root.current;
     if (!active || !ready || !element) return;
+    // 입력 중이면 건드리지 않는다 — 검색 결과가 도착할 때 포커스를 옮겨 TV 화면 키보드가 닫히던 문제 (에뮬레이터)
+    const typing = document.activeElement;
+    if (typing instanceof HTMLInputElement && element.contains(typing)) return;
     const focused = current();
     if (focused && element.contains(focused)) reveal(focused);
     else focusKeyOrFirst(element, entry.focusKey ?? defaultKey);
