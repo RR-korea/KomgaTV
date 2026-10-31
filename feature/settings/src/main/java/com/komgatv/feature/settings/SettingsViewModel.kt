@@ -3,6 +3,7 @@ package com.komgatv.feature.settings
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.komgatv.core.datastore.SavedServer
 import com.komgatv.core.datastore.ServerPreferences
 import com.komgatv.core.network.AuthMode
 import com.komgatv.core.network.ServerConnectionException
@@ -10,10 +11,13 @@ import com.komgatv.core.network.ServerSessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 import java.io.File
 import javax.inject.Inject
@@ -48,6 +52,8 @@ data class SettingsUiState(
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
     val cacheCleared: Boolean = false,
+    /** 저장된 서버로 바꿨다 — 화면이 홈부터 다시 연다 */
+    val serverSwitched: Boolean = false,
 )
 
 /**
@@ -64,6 +70,15 @@ class SettingsViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+
+    /** 연결에 성공했던 서버들 (지금 서버 포함) */
+    val savedServers: StateFlow<List<SavedServer>> = serverPreferences.savedServers
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    companion object {
+        /** 서버를 바꾼 뒤 세션이 새 서버를 가리킬 때까지 기다리는 최대 시간 */
+        const val SWITCH_WAIT_MILLIS = 5_000L
+    }
 
     init {
         loadSettings()
@@ -234,6 +249,41 @@ class SettingsViewModel @Inject constructor(
             is ServerConnectionException.SslError -> ConnectionResult.Failed.SslError
             is ServerConnectionException.Other -> ConnectionResult.Failed.Other(ex.message)
         }
+    }
+
+    /**
+     * 저장된 서버로 바꾼다. 세션이 새 서버를 가리키면(또는 잠시 뒤) 화면이 홈부터 다시 연다.
+     */
+    fun switchServer(serverId: String) {
+        viewModelScope.launch {
+            val target = savedServers.value.firstOrNull { it.id == serverId } ?: return@launch
+            if (!serverPreferences.switchTo(serverId)) return@launch
+            // 옛 서버로 홈을 불러오지 않게, 세션이 바뀔 때까지 기다린다
+            withTimeoutOrNull(SWITCH_WAIT_MILLIS) {
+                sessionManager.session.first { it?.baseUrl == target.url.trimEnd('/') }
+            }
+            _uiState.value = _uiState.value.copy(serverSwitched = true)
+        }
+    }
+
+    /** 저장된 서버를 지운다 (지금 서버는 저장소가 거절한다) */
+    fun removeServer(serverId: String) {
+        viewModelScope.launch {
+            serverPreferences.removeServer(serverId)
+        }
+    }
+
+    /** 새 서버를 입력할 수 있게 입력칸을 비운다 */
+    fun startNewServer() {
+        _uiState.value = _uiState.value.copy(
+            serverUrl = "",
+            authMethod = "basic",
+            username = "",
+            password = "",
+            apiKey = "",
+            connectionResult = ConnectionResult.None,
+            saveSuccess = false,
+        )
     }
 
     /**

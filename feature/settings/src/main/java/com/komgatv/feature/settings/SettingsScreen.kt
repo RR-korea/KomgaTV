@@ -37,7 +37,9 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.RadioButton
+import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
+import com.komgatv.core.datastore.SavedServer
 import com.komgatv.core.ui.components.TvTextField
 
 /**
@@ -54,9 +56,16 @@ import com.komgatv.core.ui.components.TvTextField
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onConnectSuccess: () -> Unit = onNavigateBack,
+    onServerSwitched: () -> Unit = onConnectSuccess,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val savedServers by viewModel.savedServers.collectAsState()
+
+    // 다른 서버로 바꾸면 홈부터 다시 연다 (옛 서버 내용이 남지 않게)
+    LaunchedEffect(uiState.serverSwitched) {
+        if (uiState.serverSwitched) onServerSwitched()
+    }
     val scrollState = rememberScrollState()
     val firstFocusRequester = remember { FocusRequester() }
 
@@ -86,6 +95,20 @@ fun SettingsScreen(
         )
 
         Spacer(modifier = Modifier.height(24.dp))
+
+        // ========== 저장된 서버 ==========
+        if (savedServers.isNotEmpty()) {
+            SavedServersSection(
+                servers = savedServers,
+                onSwitch = viewModel::switchServer,
+                onRemove = viewModel::removeServer,
+                onAddNew = {
+                    viewModel.startNewServer()
+                    firstFocusRequester.requestFocus()
+                },
+            )
+            Spacer(modifier = Modifier.height(32.dp))
+        }
 
         // ========== 서버 URL ==========
         Text(
@@ -240,6 +263,67 @@ fun SettingsScreen(
         }
 
         Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+/**
+ * 저장된 서버 목록. 지금 서버는 "사용 중", 다른 서버는 [바꾸기]·[삭제].
+ */
+@Composable
+private fun SavedServersSection(
+    servers: List<SavedServer>,
+    onSwitch: (String) -> Unit,
+    onRemove: (String) -> Unit,
+    onAddNew: () -> Unit,
+) {
+    Text(
+        text = stringResource(R.string.settings_saved_servers),
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.onSurface,
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        servers.forEach { server ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = server.url,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = if (server.authMethod == "apikey") {
+                            stringResource(R.string.settings_auth_method_apikey)
+                        } else {
+                            server.username
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (server.isActive) {
+                    Text(
+                        text = stringResource(R.string.settings_server_active),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                } else {
+                    OutlinedButton(onClick = { onSwitch(server.id) }) {
+                        Text(stringResource(R.string.settings_server_switch))
+                    }
+                    OutlinedButton(onClick = { onRemove(server.id) }) {
+                        Text(stringResource(R.string.settings_server_remove))
+                    }
+                }
+            }
+        }
+        OutlinedButton(onClick = onAddNew) {
+            Text(stringResource(R.string.settings_server_add))
+        }
     }
 }
 

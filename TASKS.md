@@ -129,5 +129,7 @@ T5 코드(`ReaderViewModel`, `ReaderScreen`, `ReaderSettingsPanel`, `docs/report
 
 ## T10. 책 제목 검색 — ✅ 완료 (docs/reports/T10.md)
 
+## T11. 서버 여러 개 등록 — ✅ 완료 (docs/reports/T11.md)
+
 ## 이후 (리드가 지시)
-다중 서버, EPUB.
+EPUB.

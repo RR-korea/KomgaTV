@@ -4,6 +4,7 @@ import com.komgatv.core.data.error.HttpStatusException
 import com.komgatv.core.data.image.SessionImageUrls
 import com.komgatv.core.datastore.AuthConfig
 import com.komgatv.core.datastore.ServerConfig
+import com.komgatv.core.datastore.SavedServer
 import com.komgatv.core.datastore.ServerPreferences
 import com.komgatv.core.network.AuthMode
 import com.komgatv.core.network.ServerSessionManager
@@ -75,6 +76,12 @@ private class FakeServerPreferences : ServerPreferences {
         authMethodFlow.value = "basic"
         defaultLibraryFlow.value = ""
     }
+
+    override val savedServers: Flow<List<SavedServer>> = MutableStateFlow(emptyList())
+
+    override suspend fun switchTo(serverId: String): Boolean = false
+
+    override suspend fun removeServer(serverId: String) = Unit
 }
 
 class DefaultPageFileCacheTest {
