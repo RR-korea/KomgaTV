@@ -67,6 +67,15 @@ MVP는 앱 전용 `localStorage`(Tizen 앱마다 격리). 스토어 전에 Tizen
 - `npm run mock` — 가짜 Komga 서버(하위 경로 `/komga`, test@example.com / pw 또는 API 키 test) + 앱 → http://localhost:8790/
 - `npm run smoke [폴더]` — Edge(headless, 1920×1080)로 리모컨 키만 써서 설정 → 홈 → 리더(두 쪽·RTL·진행 저장) → 라이브러리 → 시리즈 → 뒤로를 돌고 PASS/FAIL과 스크린샷을 남긴다
 
+## TV 에뮬레이터 (2026-10-31)
+- Tizen Studio 6.1 CLI를 `D:\tizen-studio`(데이터 `D:\tizen-studio-data`)에 관리자 권한 없이 설치: 설치 파일 안의 zip을 풀고 `sdk.info`를 직접 쓴 뒤,
+  패키지 관리자는 `__COMPAT_LAYER=RunAsInvoker`로 실행. **`NoDefaultCurrentDirectoryInExePath` 환경 변수를 지워야** 패키지 설치 스크립트가 돈다.
+- 받을 수 있는 TV 확장은 **10.0(2026년형)뿐** — 웹 엔진이 2020년형(M69)보다 훨씬 새로워 호환성은 실기에서만 확인된다.
+- 에뮬레이터는 WHPX(Hyper-V)로 돌아 Android 에뮬레이터와 함께 쓸 수 있다. `em-cli launch -n T-samsung-10.0-x86_64`, 리모컨 키는 `ecp-cli --target emulator-26101 keycode <코드>` (VM 이름을 target으로 주면 조용히 실패).
+- **설치는 삼성 인증서가 있어야 한다.** Tizen 작성자 인증서(배포자 new 인증서 포함)로 서명하면 `Invalid certificate chain`으로 거절. 삼성 인증서는 삼성 계정 로그인(사용자)이 필요하다 — 실기 TV용과 같은 단계.
+- 에뮬레이터 언어: `ecp-cli menu language`는 이 이미지에서 효과가 없고, `sdb shell`·`root`는 막혀 있으며 Menu 키로 여는 시스템 설정 앱도 없다. 영어 UI 그대로.
+- 패키징: `node dev/package-wgt.mjs <보안 프로필>` (TIZEN_STUDIO 환경 변수).
+
 ## Android와 다른 점
 - 리더: 정보가 열린 상태에서 OK = 보기 설정 열기, 정보 닫기는 Back. (Android는 OK가 정보 토글, 설정은 정보의 버튼) TV 웹앱에서 숨은 버튼으로 포커스를 옮기는 단계를 줄였다.
 - 리더: 채널 위/아래 = 10쪽 이동 (정보를 열지 않고).
