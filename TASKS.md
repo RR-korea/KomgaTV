@@ -10,6 +10,9 @@
 - 작업 끝에 `docs/reports/T<n>.md`에 기록: 바꾼 것, 실행한 명령과 결과(마지막 30줄), 남은 문제.
 - 코드 주석은 한국어, 기존 스타일 유지. 쓰지 않는 코드·의존성은 남기지 않는다.
 - 비밀번호·API Key·서버 주소를 저장소에 커밋하지 않는다.
+- 테스트 때문에 운영 코드를 바꾸지 않는다 (테스트 전용 생성자, nullable 의존성 금지). 인터페이스를 주입받고 테스트에서는 가짜 구현을 쓴다.
+- 이미지 URL은 `core:data`의 `ImageUrls`를 주입받아 만든다. 화면·ViewModel이 `ServerSessionManager`나 baseUrl을 직접 다루지 않는다.
+- 보고서의 "경고 0"은 lint 결과 파일(`*/build/reports/lint-results-debug.txt`)을 실제로 확인한 뒤에만 쓴다.
 
 ---
 
