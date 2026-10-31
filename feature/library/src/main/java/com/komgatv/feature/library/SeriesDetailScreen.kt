@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -38,6 +39,11 @@ import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.Series
 import com.komgatv.core.ui.components.PosterCard
+import com.komgatv.core.ui.focus.EntryFocusEffect
+import com.komgatv.core.ui.focus.EntryFocusState
+import com.komgatv.core.ui.focus.OnReturnEffect
+import com.komgatv.core.ui.focus.rememberEntryFocusState
+import com.komgatv.core.ui.focus.requesterFor
 
 /**
  * 시리즈 상세 화면
@@ -61,6 +67,9 @@ fun SeriesDetailScreen(
     LaunchedEffect(seriesId) {
         viewModel.loadSeriesDetail(seriesId)
     }
+    // 리더에서 돌아오면 읽은 진행도를 다시 읽는다
+    OnReturnEffect { viewModel.refreshProgress() }
+    val entryFocus = rememberEntryFocusState()
 
     val uiState by viewModel.uiState.collectAsState()
 
@@ -106,6 +115,7 @@ fun SeriesDetailScreen(
                 isLoadingMore = state.isLoadingMore,
                 isLastPage = state.isLastPage,
                 imageUrls = viewModel.imageUrls,
+                entryFocus = entryFocus,
                 onNavigateToReader = onNavigateToReader,
                 onLoadMore = { viewModel.loadMoreBooks() },
             )
@@ -123,10 +133,13 @@ private fun SeriesDetailContent(
     isLoadingMore: Boolean,
     isLastPage: Boolean,
     imageUrls: ImageUrls,
+    entryFocus: EntryFocusState,
     onNavigateToReader: (String) -> Unit,
     onLoadMore: () -> Unit,
 ) {
     val gridState = rememberLazyGridState()
+    // 처음엔 첫 책, 돌아오면 연 책. 새로고침은 순서를 바꾸지 않고 페이지 덧붙임도 있어 키를 넘기지 않는다.
+    EntryFocusEffect(entryFocus)
 
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 150.dp),
@@ -193,11 +206,18 @@ private fun SeriesDetailContent(
                 }
             }
 
+            val key = "book:${book.id}"
             PosterCard(
+                modifier = Modifier
+                    .focusRequester(entryFocus.requesterFor(key))
+                    .then(if (index == 0) Modifier.focusRequester(entryFocus.fallback) else Modifier),
                 title = book.name,
                 imageUrl = imageUrls.bookThumbnail(book.id).orEmpty(),
                 subtitle = progressText,
-                onClick = { onNavigateToReader(book.id) },
+                onClick = {
+                    entryFocus.onOpen(key)
+                    onNavigateToReader(book.id)
+                },
             )
         }
 

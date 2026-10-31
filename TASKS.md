@@ -13,6 +13,8 @@
 - 테스트 때문에 운영 코드를 바꾸지 않는다 (테스트 전용 생성자, nullable 의존성 금지). 인터페이스를 주입받고 테스트에서는 가짜 구현을 쓴다.
 - 이미지 URL은 `core:data`의 `ImageUrls`를 주입받아 만든다. 화면·ViewModel이 `ServerSessionManager`나 baseUrl을 직접 다루지 않는다.
 - 보고서의 "경고 0"은 lint 결과 파일(`*/build/reports/lint-results-debug.txt`)을 실제로 확인한 뒤에만 쓴다.
+- **UI 문자열은 전부 리소스로** — 화면에 보이는 글자를 코드에 쓰지 않는다. `values/strings.xml`(영어, 기본) + `values-ko/strings.xml`(한국어)에 둘 다 넣는다. ViewModel은 오류 문구 대신 오류 종류를 내보내고 화면이 문자열로 바꾼다.
+- **화면 포커스** — 들어올 때 첫 항목, 돌아오면 연 항목에 포커스: `core:ui`의 `rememberEntryFocusState`/`EntryFocusEffect`/`OnReturnEffect`를 쓴다.
 
 ---
 
@@ -79,6 +81,12 @@ LEAD_REVIEW §2의 B1~B7 전부와 D1·D2·D3·D4 구조 변경.
 7. 프리로드는 펼침 기준 앞뒤 2개.
 - **이번 범위 아님:** 세로 스크롤(웹툰, `CONTINUOUS`) — T6, 패널 읽기, 여백 자르기, 페이지 전환 깜빡임, 다운샘플링 커널·ONNX 업스케일러(TV 성능).
 - **완료 조건:** 단위 테스트 — 펼침 지도(표지 있음/없음/밀기/가로 쪽 단독/홀수 끝), 방향 우선순위(시리즈 > 기본값), 방향 바꾸면 기본값 저장, 펼침에서 저장 쪽·완독, 설정 저장·읽기(가짜 저장소). `./gradlew assembleDebug lint testDebugUnitTest` 통과, 우리 코드 lint 경고 0(결과 파일 확인).
+
+## T7. 다국어 (영어 기본 + 한국어) — T5 병합 뒤 리드가 직접
+사용자 요구: UI가 한국어도 지원해야 한다. 지금은 한국어가 `values/`(기본)에만 있다.
+- 모든 모듈 `values/strings.xml` → 영어, 지금 한국어는 `values-ko/strings.xml`로. 앱 이름·TV 배너 포함.
+- 코드에 박힌 오류 문구(ViewModel `e.localizedMessage ?: "…"`, `ServerConnectionException` 기본 메시지, `NotConnectedException`)를 오류 종류로 바꾸고 화면에서 리소스로 표시.
+- **완료 조건:** 에뮬레이터를 영어·한국어로 바꿔 각각 설정→홈→라이브러리→시리즈→리더 화면 캡처, 하드코딩 한글 검사(`grep`) 0.
 
 ## 이후 (리드가 지시)
 T6 세로 스크롤(웹툰) 모드, 홈 캐러셀, 검색(온스크린 키보드 + 음성), 다중 서버, EPUB.

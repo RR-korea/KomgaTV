@@ -8,6 +8,7 @@ import com.komgatv.core.data.repository.SeriesRepository
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.Series
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -123,6 +124,30 @@ class SeriesDetailViewModel @Inject constructor(
             } catch (e: Exception) {
                 Timber.e(e, "추가 도서 로드 실패")
                 _uiState.value = currentState.copy(isLoadingMore = false)
+            }
+        }
+    }
+
+    /**
+     * 진행도 새로고침 (리더에서 돌아왔을 때)
+     *
+     * 이미 불러온 페이지까지 다시 읽어 책 목록만 바꾼다. 로딩 화면으로 바꾸지 않아 포커스·스크롤이 유지된다.
+     */
+    fun refreshProgress() {
+        val current = _uiState.value as? SeriesDetailUiState.Success ?: return
+        viewModelScope.launch {
+            try {
+                val books = (0..current.currentPage).flatMap { page ->
+                    bookRepository.getBooks(seriesId = currentSeriesId, page = page, size = PAGE_SIZE).first().books
+                }
+                val latest = _uiState.value as? SeriesDetailUiState.Success ?: return@launch
+                // 그사이 다음 페이지가 덧붙었으면 덮어쓰지 않는다
+                if (latest.currentPage != current.currentPage) return@launch
+                _uiState.value = latest.copy(books = books)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.w(e, "진행도 새로고침 실패")
             }
         }
     }
