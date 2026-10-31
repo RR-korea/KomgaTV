@@ -133,5 +133,7 @@ T5 코드(`ReaderViewModel`, `ReaderScreen`, `ReaderSettingsPanel`, `docs/report
 
 ## T12. EPUB 리더 — ✅ 완료 (docs/reports/T12.md)
 
+## T13. EPUB 목차, 책 메뉴 — ✅ 완료 (docs/reports/T13.md)
+
 ## 이후 (리드가 지시)
-EPUB 목차 화면, Tizen 이식(KomgaTV-tizen).
+Tizen 이식(KomgaTV-tizen, 별도 세션).
