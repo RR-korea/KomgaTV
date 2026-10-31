@@ -83,6 +83,38 @@ LEAD_REVIEW §2의 B1~B7 전부와 D1·D2·D3·D4 구조 변경.
 - **이번 범위 아님:** 세로 스크롤(웹툰, `CONTINUOUS`) — T6, 패널 읽기, 여백 자르기, 페이지 전환 깜빡임, 다운샘플링 커널·ONNX 업스케일러(TV 성능).
 - **완료 조건:** 단위 테스트 — 펼침 지도(표지 있음/없음/밀기/가로 쪽 단독/홀수 끝), 방향 우선순위(시리즈 > 기본값), 방향 바꾸면 기본값 저장, 펼침에서 저장 쪽·완독, 설정 저장·읽기(가짜 저장소). `./gradlew assembleDebug lint testDebugUnitTest` 통과, 우리 코드 lint 경고 0(결과 파일 확인).
 
+## T6. 세로 스크롤 리더 (웹툰, Komelia `CONTINUOUS`) — `task/T6-continuous`
+사용자 요구: Komelia처럼 웹툰을 세로로 이어서 읽는다. 기준은 Komelia(Apache-2.0)
+`komelia-infra/database/shared/.../db/ImageReaderSettings.kt`, `komelia-ui/.../reader/image/ReaderState.kt`,
+`komelia-ui/.../reader/image/continuous/ContinuousReaderState.kt`. 이름·기본값은 Komelia와 같게, 옮긴 코드는 출처 주석 + `THIRD_PARTY_NOTICES.md`.
+T5 코드(`ReaderViewModel`, `ReaderScreen`, `ReaderSettingsPanel`, `docs/reports/T5.md`의 리모컨 키 표)를 먼저 읽는다.
+
+1. **설정** — `ReaderSettings`/`ReaderPreferences`에 추가 (Komelia 기본값):
+   - `readerType`: `PAGED`(기본) / `CONTINUOUS` (`PANELS`는 범위 아님 — enum에 넣지 않는다)
+   - `continuousPadding`: `0f` (좌우 여백, 화면 너비 비율. 패널에서 0%~45%, 5% 단위)
+   - `continuousPageSpacing`: `0` (쪽 사이 간격 dp. 패널에서 0~64, 8 단위)
+   - 세로 스크롤 방향은 위→아래(`TOP_TO_BOTTOM`)만 구현한다. 가로 연속 보기는 범위 아님.
+2. **리더 종류 우선순위 (Komelia `ReaderState`와 같음)** — 시리즈 방향 `LEFT_TO_RIGHT`/`RIGHT_TO_LEFT` → `PAGED`, `WEBTOON` → `CONTINUOUS`,
+   `VERTICAL`/없음 → 저장된 `readerType`. 리더에서 종류를 바꾸면 지금 책에 바로 적용하고 기본값으로 저장.
+3. **이어 읽기 (두 모드 공통, Komelia와 같음)** — 진행이 없거나 `completed`면 1쪽부터, 아니면 저장된 쪽부터. (지금 T5는 완독한 책을 마지막 쪽에서 연다 — 고친다.)
+4. **화면** — `LazyColumn`, 쪽 너비 = 화면 너비 × (1 − 2 × padding), 쪽 사이 간격, 작은 이미지 키우기(`stretchToFit`) 적용.
+   - **큰 이미지는 타일로** — 웹툰 한 쪽은 세로 1만 px가 넘기도 하고 싼 TV 박스는 텍스처 한도가 4096px다. 한 비트맵으로 그리지 않는다.
+     페이지 파일을 받아 `BitmapRegionDecoder`로 세로 조각(그렸을 때 높이 ≤ 화면 높이)만 `inSampleSize`·RGB_565로 디코딩한다.
+     `LazyColumn` 항목 = 타일, 보이는 타일 앞뒤만 메모리에 둔다(LruCache, 크기 상한). 타일 계획(쪽 크기·화면·여백 → 타일 목록)은 순수 함수로 분리해 테스트.
+   - 쪽 크기는 `getBookPages`의 가로·세로. null이면 파일을 받은 뒤 bounds로 알아내고 그 쪽의 타일을 다시 계획한다(그동안은 화면 높이 자리표시).
+   - **페이지 파일 캐시** — `core:data`에 인터페이스 + 구현: 세션 `OkHttpClient`(인증 헤더 포함)로 `ImageUrls.page` URL을 받아 `cacheDir`에 저장, 크기 상한 LRU(200MB). 화면·ViewModel은 OkHttp를 직접 쓰지 않는다.
+   - 프리로드: 화면 아래쪽 다음 2쪽 파일을 미리 받는다.
+5. **리모컨 키** — 위/아래 = 화면 높이만큼 부드럽게 스크롤(Komelia `scrollScreenForward/Backward`), 좌/우 = 이전/다음 쪽 첫 타일로 이동,
+   OK·Back·오버레이·보기 설정은 T5와 같다(Back은 `BackHandler`). 오버레이의 위/아래 10쪽 점프도 같다.
+6. **보기 설정 패널** — 첫 줄에 "리더 종류"(Paged/Continuous). 종류에 따라 줄이 바뀐다: Paged = T5 줄들, Continuous = 좌우 여백, 쪽 간격, 작은 이미지 키우기.
+   이름은 Komelia 영어 이름(Reader type, Paged, Continuous, Side padding, Page spacing) + `values-ko` 한국어.
+7. **진행 저장** — 화면에 보이는 쪽 중 가장 큰 번호, 2초 디바운스 + 종료 시 즉시. 마지막 쪽의 마지막 타일이 보이면 `completed=true`.
+- **이번 범위 아님:** 가로 연속 보기, 패널 읽기, 여백 자르기, 확대/축소(핀치), 다운샘플링 커널.
+- **완료 조건:** 단위 테스트 — 리더 종류 우선순위(4가지), 완독 책은 1쪽부터, 타일 계획(작은 쪽 / 화면보다 긴 쪽 / 크기 null / 여백·간격), 보이는 타일 → 저장 쪽·완독,
+  페이지 파일 캐시(MockWebServer: 인증 헤더, 캐시 적중 시 재요청 없음, 상한 넘으면 오래된 파일 삭제). `./gradlew assembleDebug lint testDebugUnitTest` 통과, 우리 코드 lint 경고 0(결과 파일 확인).
+  **에뮬레이터 확인:** TV 에뮬레이터(`emulator-5556`, `adb -s emulator-5556`)에 설치해 보기 설정에서 Continuous로 바꾸고 위/아래 스크롤·좌우 쪽 이동·Back 순서를
+  `adb exec-out screencap -p`로 캡처해 `docs/reports/T6/`에 넣는다. 서버 연결은 이미 저장돼 있다 — 앱 데이터를 지우지 않는다(`pm clear` 금지).
+
 ## T7. 다국어 (영어 기본 + 한국어) — 문자열 이전 완료(홈·라이브러리·설정·리더·core:ui), 화면별 두 언어 캡처 검사 남음
 사용자 요구: UI가 한국어도 지원해야 한다. 지금은 한국어가 `values/`(기본)에만 있다.
 - 모든 모듈 `values/strings.xml` → 영어, 지금 한국어는 `values-ko/strings.xml`로. 앱 이름·TV 배너 포함.
@@ -90,4 +122,4 @@ LEAD_REVIEW §2의 B1~B7 전부와 D1·D2·D3·D4 구조 변경.
 - **완료 조건:** 에뮬레이터를 영어·한국어로 바꿔 각각 설정→홈→라이브러리→시리즈→리더 화면 캡처, 하드코딩 한글 검사(`grep`) 0.
 
 ## 이후 (리드가 지시)
-T6 세로 스크롤(웹툰) 모드, 홈 캐러셀, 검색(온스크린 키보드 + 음성), 다중 서버, EPUB.
+홈 캐러셀, 검색(온스크린 키보드 + 음성), 다중 서버, EPUB.
