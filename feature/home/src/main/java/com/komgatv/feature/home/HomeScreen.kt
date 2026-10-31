@@ -59,6 +59,7 @@ fun HomeScreen(
     onNavigateToLibrary: (String) -> Unit,
     onNavigateToReader: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToSearch: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -122,6 +123,7 @@ fun HomeScreen(
                 onNavigateToLibrary = onNavigateToLibrary,
                 onNavigateToReader = onNavigateToReader,
                 onNavigateToSettings = onNavigateToSettings,
+                onNavigateToSearch = onNavigateToSearch,
             )
         }
     }
@@ -139,6 +141,7 @@ private fun HomeContent(
     onNavigateToLibrary: (String) -> Unit,
     onNavigateToReader: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToSearch: () -> Unit,
 ) {
     // 새로고침하면 읽는 중 순서가 바뀌므로 내용이 바뀔 때도 연 항목으로 포커스를 다시 준다.
     // 처음이거나 그 항목이 없어졌으면 첫 행.
@@ -155,8 +158,11 @@ private fun HomeContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 48.dp),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.End),
             ) {
+                OutlinedButton(onClick = onNavigateToSearch) {
+                    Text(stringResource(R.string.home_search))
+                }
                 OutlinedButton(onClick = onNavigateToSettings) {
                     Text(stringResource(R.string.home_server_settings))
                 }

@@ -121,5 +121,8 @@ T5 코드(`ReaderViewModel`, `ReaderScreen`, `ReaderSettingsPanel`, `docs/report
 - 코드에 박힌 오류 문구(ViewModel `e.localizedMessage ?: "…"`, `ServerConnectionException` 기본 메시지, `NotConnectedException`)를 오류 종류로 바꾸고 화면에서 리소스로 표시.
 - **완료 조건:** 에뮬레이터를 영어·한국어로 바꿔 각각 설정→홈→라이브러리→시리즈→리더 화면 캡처, 하드코딩 한글 검사(`grep`) 0.
 
+## T8. 시리즈 검색 — ✅ 완료 (docs/reports/T8.md)
+홈의 검색 버튼, 입력(디바운스 400ms) + 음성 인식, 결과 그리드·이어 불러오기, 포커스 복원.
+
 ## 이후 (리드가 지시)
-홈 캐러셀, 검색(온스크린 키보드 + 음성), 다중 서버, EPUB.
+홈 캐러셀, 책 제목 검색, 다중 서버, EPUB.

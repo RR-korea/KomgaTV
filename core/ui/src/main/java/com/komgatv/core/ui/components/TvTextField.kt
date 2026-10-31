@@ -68,6 +68,8 @@ fun TvTextField(
 
     fun finishAndMove(direction: FocusDirection): Boolean {
         editing = false
+        // 입력칸 안에서 바로 옮기면 한 번 누름이 입력 끝내기에만 쓰인다 — 바깥 상자로 먼저 돌아온 뒤 옮긴다
+        boxFocus.requestFocus()
         return focusManager.moveFocus(direction)
     }
 

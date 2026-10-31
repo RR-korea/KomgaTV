@@ -11,6 +11,7 @@ import com.komgatv.feature.home.HomeScreen
 import com.komgatv.feature.library.LibraryScreen
 import com.komgatv.feature.library.SeriesDetailScreen
 import com.komgatv.feature.reader.ReaderScreen
+import com.komgatv.feature.search.SearchScreen
 import com.komgatv.feature.settings.SettingsScreen
 
 /**
@@ -37,6 +38,9 @@ sealed class Screen(val route: String) {
     data object Reader : Screen("reader/{bookId}") {
         fun createRoute(bookId: String) = "reader/$bookId"
     }
+
+    /** 검색 화면 - 시리즈 제목 검색 */
+    data object Search : Screen("search")
 
     /** 설정 화면 - 서버 연결 및 캐시 관리 */
     data object Settings : Screen("settings")
@@ -82,6 +86,18 @@ fun KomgaTVNavHost(
                 },
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
+                },
+                onNavigateToSearch = {
+                    navController.navigate(Screen.Search.route)
+                },
+            )
+        }
+
+        // 검색 화면
+        composable(Screen.Search.route) {
+            SearchScreen(
+                onNavigateToSeries = { seriesId ->
+                    navController.navigate(Screen.SeriesDetail.createRoute(seriesId))
                 },
             )
         }
