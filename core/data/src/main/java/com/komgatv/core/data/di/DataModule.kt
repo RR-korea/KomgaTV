@@ -1,5 +1,7 @@
 package com.komgatv.core.data.di
 
+import com.komgatv.core.data.image.ImageUrls
+import com.komgatv.core.data.image.SessionImageUrls
 import com.komgatv.core.data.repository.BookRepository
 import com.komgatv.core.data.repository.BookRepositoryImpl
 import com.komgatv.core.data.repository.LibraryRepository
@@ -38,4 +40,10 @@ abstract class DataModule {
     abstract fun bindBookRepository(
         impl: BookRepositoryImpl,
     ): BookRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindImageUrls(
+        impl: SessionImageUrls,
+    ): ImageUrls
 }

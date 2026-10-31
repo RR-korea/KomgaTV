@@ -1,6 +1,5 @@
 package com.komgatv.app.navigation
 
-import android.view.KeyEvent
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -52,12 +51,10 @@ sealed class Screen(val route: String) {
  * 앱의 모든 화면에 대한 네비게이션 그래프를 구성합니다.
  * D-Pad 네비게이션에 최적화되어 있습니다.
  *
- * @param onRegisterKeyEventHandler 액티비티 레벨 키 이벤트 핸들러 등록 콜백
  * @param navController 네비게이션 컨트롤러
  */
 @Composable
 fun KomgaTVNavHost(
-    onRegisterKeyEventHandler: ((KeyEvent) -> Boolean) -> Unit = {},
     navController: NavHostController = rememberNavController(),
 ) {
     NavHost(
@@ -121,7 +118,6 @@ fun KomgaTVNavHost(
             ReaderScreen(
                 bookId = bookId,
                 onNavigateBack = { navController.popBackStack() },
-                onRegisterKeyEventHandler = onRegisterKeyEventHandler,
             )
         }
 

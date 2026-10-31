@@ -49,7 +49,7 @@ LEAD_REVIEW §2의 B1~B7 전부와 D1·D2·D3·D4 구조 변경.
 - 뒤로 가기 시 이전 화면의 **포커스 위치 복원**.
 - **완료 조건:** 빌드 + 리모컨 조작 시나리오를 `docs/reports/T3.md`에 표로 (키 → 기대 포커스).
 
-## T4. 리더 — `task/T4-reader`
+## T4. 리더 — `task/T4-reader` — ✅ 완료 (docs/reports/T4.md)
 - 좌/우 = 이전/다음 페이지, OK = 오버레이, 위/아래(오버레이) = 10페이지 점프, Back = 종료+진행 저장.
 - 책의 `readingDirection`이 RIGHT_TO_LEFT면 좌/우를 뒤집는다.
 - 이웃 페이지 프리로드(±2), 화면 크기로 디코딩.
