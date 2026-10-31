@@ -1,5 +1,6 @@
 package com.komgatv.core.ui.components
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
@@ -74,6 +75,13 @@ fun TvTextField(
         if (editing) fieldFocus.requestFocus()
     }
 
+    // 키보드가 열려 있으면 Back은 키보드가 먼저 받아 닫는다. 그다음 Back은 화면을 떠나지 않고 입력만 끝낸다.
+    // (targetSdk 36은 예측형 뒤로 가기라 Back이 키 이벤트로 오지 않는다 — BackHandler로 받는다)
+    BackHandler(enabled = editing) {
+        editing = false
+        boxFocus.requestFocus()
+    }
+
     Box(
         modifier = modifier
             .focusRequester(boxFocus)
@@ -108,12 +116,6 @@ fun TvTextField(
                     when (event.key) {
                         Key.DirectionDown -> finishAndMove(FocusDirection.Down)
                         Key.DirectionUp -> finishAndMove(FocusDirection.Up)
-                        // 키보드가 열려 있으면 Back은 키보드가 먼저 받아 닫는다. 그다음 Back은 입력만 끝낸다.
-                        Key.Back -> {
-                            editing = false
-                            boxFocus.requestFocus()
-                            true
-                        }
                         else -> false
                     }
                 },
