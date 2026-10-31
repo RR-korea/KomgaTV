@@ -1,0 +1,42 @@
+/* Chromium 69(2020년형)에서 되는 CSS만 쓴다: flex gap·aspect-ratio·inset·:is() 금지 (docs/PLAN.md Z1) */
+
+html,
+body {
+  margin: 0;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: #15181f;
+  color: #e6e8ee;
+  font-family: 'SamsungOne', 'Samsung Sans', sans-serif;
+}
+
+.diag {
+  padding: 96px 120px;
+}
+
+.diag h1 {
+  margin: 0 0 8px;
+  font-size: 64px;
+}
+
+.diag p {
+  margin: 0 0 48px;
+  font-size: 32px;
+  color: #9aa1b2;
+}
+
+.diag dl {
+  margin: 0;
+  font-size: 30px;
+}
+
+.diag dt {
+  margin-top: 28px;
+  color: #9aa1b2;
+}
+
+.diag dd {
+  margin: 6px 0 0;
+  word-break: break-all;
+}

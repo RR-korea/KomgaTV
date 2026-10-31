@@ -1,0 +1,32 @@
+{
+  "name": "komgatv-tizen",
+  "version": "0.1.0",
+  "private": true,
+  "description": "KomgaTV — 삼성 Tizen TV용 Komga 클라이언트",
+  "license": "MIT",
+  "type": "module",
+  "browserslist": [
+    "chrome 69"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node build.mjs --serve",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build"
+  },
+  "dependencies": {
+    "preact": "^11.1.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.14.0",
+    "eslint-plugin-compat": "^7.0.2",
+    "globals": "^17.13.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^5.0.5"
+  }
+}

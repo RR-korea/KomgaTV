@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.wgt
+# Tizen 서명 인증서·프로필은 절대 커밋하지 않는다
+*.p12
+profiles.xml
+.buildResult/

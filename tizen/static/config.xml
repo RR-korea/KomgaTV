@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets"
+        id="https://github.com/RR-korea/KomgaTV" version="0.1.0" viewmodes="maximized">
+    <tizen:application id="KomgaTVtz0.KomgaTV" package="KomgaTVtz0" required_version="5.5"/>
+    <tizen:profile name="tv-samsung"/>
+    <name>KomgaTV</name>
+    <icon src="icon.png"/>
+    <content src="index.html"/>
+    <feature name="http://tizen.org/feature/screen.size.all"/>
+    <!-- 사용자가 입력하는 Komga 서버 주소는 미리 알 수 없다 (PLAN 위험: 교차 출처) -->
+    <access origin="*" subdomains="true"/>
+    <tizen:privilege name="http://tizen.org/privilege/internet"/>
+    <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
+    <tizen:setting screen-orientation="landscape" context-menu="disable" background-support="disable"
+                   encryption="disable" install-location="auto" hwkey-event="enable"/>
+</widget>
