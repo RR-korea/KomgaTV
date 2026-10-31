@@ -1,4 +1,4 @@
-package com.komgatv.core.data.preferences
+package com.komgatv.core.datastore
 
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -20,11 +20,9 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
 /**
  * 인증 설정 데이터 모델
  *
- * Basic Auth 또는 API Key 방식의 인증 정보를 담습니다.
- *
  * @property username Basic Auth 사용자 이름
  * @property password Basic Auth 비밀번호
- * @property apiKey API Key (X-Auth-Token)
+ * @property apiKey API Key (X-API-Key)
  */
 data class AuthConfig(
     val username: String = "",
@@ -33,13 +31,27 @@ data class AuthConfig(
 )
 
 /**
+ * 서버 전체 설정 데이터 모델
+ */
+data class ServerConfig(
+    val serverUrl: String = "",
+    val authMethod: String = "basic",
+    val username: String = "",
+    val password: String = "",
+    val apiKey: String = "",
+    val defaultLibraryId: String = "",
+) {
+    val isConfigured: Boolean
+        get() = serverUrl.isNotBlank() && (
+            (authMethod == "basic" && username.isNotBlank() && password.isNotBlank()) ||
+                (authMethod == "apikey" && apiKey.isNotBlank())
+            )
+}
+
+/**
  * 서버 연결 설정 관리자
  *
  * DataStore를 사용하여 Komga 서버 연결 정보를 안전하게 저장하고 관리합니다.
- * 인증 정보는 암호화하여 저장합니다.
- *
- * 참고: 실제 프로덕션에서는 EncryptedSharedPreferences 또는
- * AndroidKeyStore를 사용한 암호화가 권장됩니다.
  */
 @Singleton
 class ServerPreferences @Inject constructor(
@@ -47,13 +59,24 @@ class ServerPreferences @Inject constructor(
 ) {
 
     companion object {
-        // 환경 설정 키 정의
         private val KEY_SERVER_URL = stringPreferencesKey("server_url")
         private val KEY_USERNAME = stringPreferencesKey("auth_username")
         private val KEY_PASSWORD = stringPreferencesKey("auth_password")
         private val KEY_API_KEY = stringPreferencesKey("auth_api_key")
         private val KEY_DEFAULT_LIBRARY = stringPreferencesKey("default_library_id")
         private val KEY_AUTH_METHOD = stringPreferencesKey("auth_method")
+    }
+
+    /** 전체 서버 설정 Flow */
+    val serverConfig: Flow<ServerConfig> = context.dataStore.data.map { prefs ->
+        ServerConfig(
+            serverUrl = prefs[KEY_SERVER_URL] ?: "",
+            authMethod = prefs[KEY_AUTH_METHOD] ?: "basic",
+            username = prefs[KEY_USERNAME] ?: "",
+            password = prefs[KEY_PASSWORD] ?: "",
+            apiKey = prefs[KEY_API_KEY] ?: "",
+            defaultLibraryId = prefs[KEY_DEFAULT_LIBRARY] ?: "",
+        )
     }
 
     /** 서버 URL Flow */

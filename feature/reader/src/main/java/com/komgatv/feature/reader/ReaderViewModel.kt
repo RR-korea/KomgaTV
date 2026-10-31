@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.komgatv.core.data.repository.BookRepository
 import com.komgatv.core.model.Book
+import com.komgatv.core.network.ServerSessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,7 +27,7 @@ sealed interface ReaderUiState {
      * @property bookTitle 책 제목
      * @property currentPage 현재 페이지 번호 (1-based)
      * @property totalPages 전체 페이지 수
-     * @property currentPageUrl 현재 페이지 이미지 URL
+     * @property currentPageUrl 현재 페이지 이미지 URL (세션 기준 절대 URL)
      * @property nextPageUrl 다음 페이지 이미지 URL (프리로드용, null이면 마지막 페이지)
      * @property showOverlay 정보 오버레이 표시 여부
      */
@@ -52,6 +53,7 @@ sealed interface ReaderUiState {
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
     private val bookRepository: BookRepository,
+    private val sessionManager: ServerSessionManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ReaderUiState>(ReaderUiState.Loading)
@@ -185,12 +187,14 @@ class ReaderViewModel @Inject constructor(
     }
 
     /**
-     * 페이지 이미지 URL 생성
-     *
-     * Coil이 이 URL을 사용하여 이미지를 로드합니다.
-     * 실제로는 Retrofit의 baseUrl과 결합되어야 합니다.
+     * 페이지 이미지 절대 URL 생성 (F2 해결)
      */
     private fun buildPageUrl(bookId: String, pageNumber: Int): String {
-        return "api/v1/books/$bookId/pages/$pageNumber"
+        val baseUrl = sessionManager.session.value?.baseUrl ?: ""
+        return if (baseUrl.isNotBlank()) {
+            "${baseUrl.trimEnd('/')}/api/v1/books/$bookId/pages/$pageNumber"
+        } else {
+            ""
+        }
     }
 }

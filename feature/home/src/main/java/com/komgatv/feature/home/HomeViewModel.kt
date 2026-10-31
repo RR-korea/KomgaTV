@@ -8,6 +8,7 @@ import com.komgatv.core.data.repository.SeriesRepository
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.Library
 import com.komgatv.core.model.Series
+import com.komgatv.core.network.ServerSessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,8 +22,6 @@ import javax.inject.Inject
 
 /**
  * 홈 화면 UI 상태 (MVI 패턴)
- *
- * sealed interface를 사용하여 가능한 모든 UI 상태를 타입 안전하게 정의합니다.
  */
 sealed interface HomeUiState {
 
@@ -63,10 +62,15 @@ class HomeViewModel @Inject constructor(
     private val libraryRepository: LibraryRepository,
     private val seriesRepository: SeriesRepository,
     private val bookRepository: BookRepository,
+    private val sessionManager: ServerSessionManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    /** 현재 세션의 기본 URL */
+    val baseUrl: String
+        get() = sessionManager.session.value?.baseUrl ?: ""
 
     init {
         loadHomeData()
@@ -74,9 +78,6 @@ class HomeViewModel @Inject constructor(
 
     /**
      * 홈 화면 데이터 로드
-     *
-     * 라이브러리, 최근 추가 시리즈, 계속 읽기 목록을 병렬로 로드합니다.
-     * 어떤 요청이 실패하더라도 가능한 데이터는 표시합니다.
      */
     fun loadHomeData() {
         viewModelScope.launch {
@@ -149,15 +150,8 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /**
-     * 계속 읽기 목록 로드
-     *
-     * 읽기 진행 상태가 있는 (진행 중인) 책을 로드합니다.
-     * TODO: Komga API에서 in-progress 필터를 지원하면 활용
-     */
+    /** 계속 읽기 목록 로드 */
     private suspend fun loadContinueReading(): List<Book> {
-        // 현재는 빈 목록 반환 (서버의 keep-reading API 활용 시 구현)
-        // Komga의 /api/v1/books?read_status=IN_PROGRESS 를 사용 가능
         return emptyList()
     }
 

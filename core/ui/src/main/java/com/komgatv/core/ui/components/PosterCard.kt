@@ -31,13 +31,14 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 
 /**
  * TV에 최적화된 포스터 카드 컴포저블
  *
- * D-Pad 포커스 처리, 스케일 애니메이션, Coil 이미지 로딩을 포함합니다.
+ * D-Pad 포커스 처리, 스케일 애니메이션, Coil 3 이미지 로딩을 포함합니다.
  * 만화/웹툰의 표지 이미지를 표시하는 데 사용됩니다.
  *
  * @param title 카드 하단에 표시될 제목

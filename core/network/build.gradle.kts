@@ -1,53 +1,23 @@
-// core:network 모듈 빌드 스크립트
-// Komga 서버와의 네트워크 통신을 담당하는 모듈 (Retrofit, OkHttp)
+// core:network — Komga 서버 세션 (komga-client + Ktor OkHttp 엔진, OkHttpClient를 Coil과 공유)
 
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.hilt)
-    alias(libs.plugins.ksp)
-    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.komgatv.android.library)
+    alias(libs.plugins.komgatv.hilt)
 }
 
 android {
     namespace = "com.komgatv.core.network"
-    compileSdk = 35
-
-    defaultConfig {
-        minSdk = 30
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = "17"
-    }
 }
 
 dependencies {
-    // 모델 모듈 참조
-    implementation(project(":core:model"))
+    implementation(project(":core:datastore"))
 
-    // Retrofit + OkHttp
-    implementation(libs.retrofit)
-    implementation(libs.retrofit.converter.kotlinx)
-    implementation(libs.okhttp)
+    // komga-client 모델(KomgaBook 등)과 kotlinx-datetime 타입이 core:data에 노출된다.
+    api(libs.komga.client)
+    api(libs.kotlinx.datetime)
+    api(libs.okhttp)
+    implementation(libs.ktor.client.okhttp)
     implementation(libs.okhttp.logging)
-
-    // Kotlinx Serialization
-    implementation(libs.kotlinx.serialization.json)
-
-    // Kotlinx Coroutines
-    implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
-
-    // Hilt 의존성 주입
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
-
-    // Timber 로깅
     implementation(libs.timber)
 }

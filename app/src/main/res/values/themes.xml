@@ -3,18 +3,18 @@
 
     <!--
         KomgaTV 앱 테마
-        TV Leanback 기반 다크 테마로, 어두운 배경과 높은 대비를 사용합니다.
+        Android TV Compose 기반 다크 테마로, 어두운 배경과 높은 대비를 사용합니다.
         10-foot UI (TV 시청 거리) 환경에 최적화되어 있습니다.
     -->
-    <style name="Theme.KomgaTV" parent="Theme.Leanback">
+    <style name="Theme.KomgaTV" parent="@android:style/Theme.Material.NoActionBar">
         <!-- 기본 배경색 (어두운 회색) -->
         <item name="android:windowBackground">@color/tv_background</item>
         <item name="android:colorBackground">@color/tv_background</item>
 
         <!-- 프라이머리 컬러 (Komga 브랜드) -->
-        <item name="colorPrimary">@color/tv_primary</item>
-        <item name="colorPrimaryDark">@color/tv_primary_dark</item>
-        <item name="colorAccent">@color/tv_accent</item>
+        <item name="android:colorPrimary">@color/tv_primary</item>
+        <item name="android:colorPrimaryDark">@color/tv_primary_dark</item>
+        <item name="android:colorAccent">@color/tv_accent</item>
 
         <!-- 상태바/네비게이션바 숨김 (TV 전체 화면) -->
         <item name="android:windowFullscreen">true</item>
@@ -23,12 +23,8 @@
 
     <!-- TV 전용 색상 리소스 -->
     <color name="tv_background">#FF121212</color>
-    <color name="tv_surface">#FF1E1E1E</color>
     <color name="tv_primary">#FF6DB0F6</color>
     <color name="tv_primary_dark">#FF003258</color>
     <color name="tv_accent">#FF80B9FF</color>
-    <color name="tv_on_surface">#FFE3E2E6</color>
-    <color name="tv_on_surface_variant">#FFC3C6CF</color>
-    <color name="tv_error">#FFFFB4AB</color>
 
 </resources>

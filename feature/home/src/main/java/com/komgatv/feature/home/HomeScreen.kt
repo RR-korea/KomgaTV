@@ -8,23 +8,26 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.tv.foundation.lazy.list.TvLazyColumn
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.tv.material3.Carousel
 import androidx.tv.material3.CarouselDefaults
-import androidx.tv.material3.CarouselState
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import androidx.tv.material3.rememberCarouselState
+import coil3.compose.AsyncImage
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.Library
 import com.komgatv.core.model.Series
+import com.komgatv.core.network.ServerSessionManager
 import com.komgatv.core.ui.components.PosterCard
 import com.komgatv.core.ui.components.TVRow
 
@@ -58,7 +61,6 @@ fun HomeScreen(
 
     when (val state = uiState) {
         is HomeUiState.Loading -> {
-            // 로딩 상태 표시
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
@@ -72,7 +74,6 @@ fun HomeScreen(
         }
 
         is HomeUiState.Error -> {
-            // 에러 상태 표시
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
@@ -99,6 +100,7 @@ fun HomeScreen(
                 recentlyAdded = state.recentlyAdded,
                 libraries = state.libraries,
                 featuredSeries = state.featuredSeries,
+                baseUrl = viewModel.baseUrl,
                 onNavigateToLibrary = onNavigateToLibrary,
                 onNavigateToSeries = onNavigateToSeries,
                 onNavigateToReader = onNavigateToReader,
@@ -109,8 +111,6 @@ fun HomeScreen(
 
 /**
  * 홈 화면 콘텐츠
- *
- * 성공 상태에서 표시되는 실제 콘텐츠를 구성합니다.
  */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -119,18 +119,20 @@ private fun HomeContent(
     recentlyAdded: List<Series>,
     libraries: List<Library>,
     featuredSeries: List<Series>,
+    baseUrl: String,
     onNavigateToLibrary: (String) -> Unit,
     onNavigateToSeries: (String) -> Unit,
     onNavigateToReader: (String) -> Unit,
 ) {
-    TvLazyColumn(
+    // D4: 표준 LazyColumn 사용
+    LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 48.dp),
     ) {
         // ========== 히어로 캐러셀 배너 ==========
         if (featuredSeries.isNotEmpty()) {
             item {
-                val carouselState = CarouselState()
+                val carouselState = rememberCarouselState()
                 Carousel(
                     itemCount = featuredSeries.size,
                     carouselState = carouselState,
@@ -149,9 +151,9 @@ private fun HomeContent(
                     },
                 ) { index ->
                     val series = featuredSeries[index]
-                    // 히어로 배너 아이템
                     HeroBannerItem(
                         series = series,
+                        baseUrl = baseUrl,
                         onClick = { onNavigateToSeries(series.id) },
                     )
                 }
@@ -168,7 +170,7 @@ private fun HomeContent(
                 ) { book ->
                     PosterCard(
                         title = book.name,
-                        imageUrl = buildBookThumbnailUrl(book.id),
+                        imageUrl = buildBookThumbnailUrl(baseUrl, book.id),
                         subtitle = "${book.readProgress?.page ?: 0}/${book.pageCount}페이지",
                         onClick = { onNavigateToReader(book.id) },
                     )
@@ -186,7 +188,7 @@ private fun HomeContent(
                 ) { series ->
                     PosterCard(
                         title = series.name,
-                        imageUrl = buildSeriesThumbnailUrl(series.id),
+                        imageUrl = buildSeriesThumbnailUrl(baseUrl, series.id),
                         subtitle = "${series.booksCount}권",
                         onClick = { onNavigateToSeries(series.id) },
                     )
@@ -204,14 +206,13 @@ private fun HomeContent(
                 ) { library ->
                     PosterCard(
                         title = library.name,
-                        imageUrl = "", // 라이브러리는 기본 아이콘 사용
+                        imageUrl = "",
                         onClick = { onNavigateToLibrary(library.id) },
                     )
                 }
             }
         }
 
-        // 하단 여백
         item {
             Spacer(modifier = Modifier.height(48.dp))
         }
@@ -220,28 +221,24 @@ private fun HomeContent(
 
 /**
  * 히어로 배너 아이템
- *
- * 캐러셀에 표시되는 대형 추천 시리즈 배너입니다.
  */
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun HeroBannerItem(
     series: Series,
+    baseUrl: String,
     onClick: () -> Unit,
 ) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomStart,
     ) {
-        // 배경 이미지
-        coil.compose.AsyncImage(
-            model = buildSeriesThumbnailUrl(series.id),
+        AsyncImage(
+            model = buildSeriesThumbnailUrl(baseUrl, series.id),
             contentDescription = series.name,
-            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+            contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
         )
 
-        // 시리즈 정보 오버레이
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -271,17 +268,14 @@ private fun HeroBannerItem(
     }
 }
 
-// ========== 썸네일 URL 빌더 ==========
+// ========== 썸네일 URL 빌더 (세션 baseUrl 기반 절대 경로) ==========
 
-/**
- * 시리즈 썸네일 URL 생성
- * 실제 URL은 Retrofit baseUrl에 상대 경로로 결합됩니다.
- */
-private fun buildSeriesThumbnailUrl(seriesId: String): String {
-    return "api/v1/series/$seriesId/thumbnail"
+private fun buildSeriesThumbnailUrl(baseUrl: String, seriesId: String): String {
+    if (baseUrl.isBlank()) return ""
+    return "${baseUrl.trimEnd('/')}/api/v1/series/$seriesId/thumbnail"
 }
 
-/** 책 썸네일 URL 생성 */
-private fun buildBookThumbnailUrl(bookId: String): String {
-    return "api/v1/books/$bookId/thumbnail"
+private fun buildBookThumbnailUrl(baseUrl: String, bookId: String): String {
+    if (baseUrl.isBlank()) return ""
+    return "${baseUrl.trimEnd('/')}/api/v1/books/$bookId/thumbnail"
 }

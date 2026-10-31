@@ -1,7 +1,7 @@
 # 📋 KomgaTV 기술 사양서 (Tech Spec)
 
 > **문서 버전:** 1.0  
-> **최종 수정:** 2024-10-31  
+> **최종 수정:** 2026-10-31  
 > **상태:** 초기 설계
 
 ---
@@ -57,7 +57,7 @@ TV 리모컨(D-pad)만으로 만화/웹툰/e북 라이브러리를 탐색·열�
 ### 3.1 언어 및 런타임
 
 ```
-Kotlin 2.1.0 / JVM → ART (Android Runtime)
+Kotlin 2.4.21 / JVM → ART (Android Runtime)
 ```
 
 **선택 근거:**
@@ -69,9 +69,8 @@ Kotlin 2.1.0 / JVM → ART (Android Runtime)
 
 | 라이브러리 | 버전 | 용도 |
 |---|---|---|
-| `androidx.tv:tv-foundation` | 1.0.0 | TV 전용 Compose 기반 컴포넌트 |
 | `androidx.tv:tv-material` | 1.1.0 | TV Material Design 컴포넌트 |
-| Compose BOM | 2025.05.00 | Compose 버전 통합 관리 |
+| Compose BOM | 2026.09.00 | Compose 버전 통합 관리 |
 
 **선택 근거:**
 - Google이 기존 Leanback 라이브러리를 **공식 deprecated** 처리
@@ -82,19 +81,18 @@ Kotlin 2.1.0 / JVM → ART (Android Runtime)
 
 | 라이브러리 | 버전 | 용도 |
 |---|---|---|
-| Retrofit | 2.11.0 | HTTP API 인터페이스 정의 |
-| OkHttp | 4.12.0 | HTTP 클라이언트, 인터셉터, 캐싱 |
-| kotlinx.serialization | 1.7.3 | JSON 직렬화/역직렬화 |
+| komga-client | 0.11.0 | Komga REST API 클라이언트 (MIT, Komelia가 쓰는 라이브러리) |
+| Ktor | 3.6.1 | komga-client의 HTTP 계층, OkHttp 엔진 사용 |
+| OkHttp | 5.5.1 | 인증 인터셉터. Coil 이미지 요청과 같은 클라이언트를 쓴다 |
 
 **선택 근거:**
-- TV 전용 → KMP 호환 불필요 → Retrofit이 가장 성숙하고 안정적
-- kotlinx.serialization은 코드 생성 기반으로 리플렉션 없이 빠른 파싱
+- API 계층을 직접 쓰지 않는다 (LEAD_REVIEW D1). 헤더(`X-API-Key`)·페이지네이션·검색 조건을 komga-client가 이미 정확히 구현한다.
 
 ### 3.4 이미지 로딩
 
 | 라이브러리 | 버전 | 용도 |
 |---|---|---|
-| Coil 3 | 3.1.0 | Compose 네이티브 이미지 로딩 |
+| Coil 3 | 3.6.3 | Compose 네이티브 이미지 로딩 |
 
 **TV 최적화 설정:**
 ```kotlin
@@ -119,22 +117,22 @@ ImageLoader.Builder(context)
 | 항목 | 선택 | 비고 |
 |---|---|---|
 | **아키텍처** | Clean Architecture + MVI | 단방향 데이터 흐름 |
-| **DI** | Hilt 2.53.1 | Android 표준 DI |
-| **네비게이션** | Compose Navigation 2.8.5 | Type-safe routes |
-| **Lifecycle** | 2.8.7 | ViewModel, compose-lifecycle |
-| **로컬 저장** | DataStore 1.1.1 + Room 2.6.1 | 설정 + 캐시 |
+| **DI** | Hilt 2.60.1 | Android 표준 DI |
+| **네비게이션** | Compose Navigation 2.10.2 | Type-safe routes |
+| **Lifecycle** | 2.11.0 | ViewModel, compose-lifecycle |
+| **로컬 저장** | DataStore 1.3.0 | 서버 설정 (Room은 MVP 이후) |
 
 ### 3.6 빌드 도구
 
 | 도구 | 버전 |
 |---|---|
-| Gradle | 8.11.1 |
-| Android Gradle Plugin | 8.7.3 |
-| KSP | 2.1.0-1.0.29 |
+| Gradle | 9.8.2 |
+| Android Gradle Plugin | 9.5.0 (내장 Kotlin) |
+| KSP | 2.3.13 |
 | Java Target | 17 |
 | Min SDK | 30 |
-| Target SDK | 35 |
-| Compile SDK | 35 |
+| Target SDK | 36 |
+| Compile SDK | 37 (platform `android-37.2`, komga-client가 minCompileSdk 37 요구) |
 
 ---
 

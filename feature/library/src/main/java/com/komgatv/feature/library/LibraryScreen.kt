@@ -6,18 +6,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.tv.foundation.lazy.grid.TvGridCells
-import androidx.tv.foundation.lazy.grid.TvLazyVerticalGrid
-import androidx.tv.foundation.lazy.grid.items
-import androidx.tv.foundation.lazy.grid.rememberTvLazyGridState
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -28,7 +29,7 @@ import com.komgatv.core.ui.components.PosterCard
  * 라이브러리 화면
  *
  * 특정 라이브러리에 속한 시리즈를 그리드 형태로 표시합니다.
- * TvLazyVerticalGrid를 사용하여 D-Pad 네비게이션을 지원하고,
+ * 표준 LazyVerticalGrid와 focusRestorer를 사용하여 D-Pad 네비게이션을 지원하고,
  * 페이지네이션으로 대량의 시리즈를 효율적으로 로드합니다.
  *
  * @param libraryId 표시할 라이브러리 ID
@@ -44,7 +45,6 @@ fun LibraryScreen(
     onNavigateBack: () -> Unit,
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
-    // 라이브러리 ID로 데이터 로드
     LaunchedEffect(libraryId) {
         viewModel.loadLibrary(libraryId)
     }
@@ -83,6 +83,7 @@ fun LibraryScreen(
                 libraryName = state.libraryName,
                 seriesList = state.series,
                 isLoadingMore = state.isLoadingMore,
+                baseUrl = viewModel.baseUrl,
                 onNavigateToSeries = onNavigateToSeries,
                 onLoadMore = { viewModel.loadMoreSeries() },
             )
@@ -92,23 +93,19 @@ fun LibraryScreen(
 
 /**
  * 라이브러리 콘텐츠
- *
- * 시리즈를 그리드 형태로 표시하며, 스크롤 끝에 도달하면
- * 추가 페이지를 자동으로 로드합니다.
  */
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun LibraryContent(
     libraryName: String,
     seriesList: List<Series>,
     isLoadingMore: Boolean,
+    baseUrl: String,
     onNavigateToSeries: (String) -> Unit,
     onLoadMore: () -> Unit,
 ) {
-    val gridState = rememberTvLazyGridState()
+    val gridState = rememberLazyGridState()
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // 라이브러리 이름 헤더
         Text(
             text = libraryName,
             style = MaterialTheme.typography.headlineMedium,
@@ -120,9 +117,9 @@ private fun LibraryContent(
             ),
         )
 
-        // 시리즈 그리드
-        TvLazyVerticalGrid(
-            columns = TvGridCells.Adaptive(minSize = 160.dp),
+        // D4: 표준 LazyVerticalGrid + focusRestorer
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 160.dp),
             state = gridState,
             contentPadding = PaddingValues(
                 start = 48.dp,
@@ -131,21 +128,27 @@ private fun LibraryContent(
             ),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .focusRestorer(),
         ) {
             items(
                 items = seriesList,
                 key = { it.id },
             ) { series ->
+                val imageUrl = if (baseUrl.isNotBlank()) {
+                    "${baseUrl.trimEnd('/')}/api/v1/series/${series.id}/thumbnail"
+                } else {
+                    ""
+                }
                 PosterCard(
                     title = series.name,
-                    imageUrl = "api/v1/series/${series.id}/thumbnail",
+                    imageUrl = imageUrl,
                     subtitle = "${series.booksCount}권",
                     onClick = { onNavigateToSeries(series.id) },
                 )
             }
 
-            // 마지막 아이템 근처에서 추가 로드 트리거
             if (seriesList.isNotEmpty()) {
                 item {
                     LaunchedEffect(Unit) {

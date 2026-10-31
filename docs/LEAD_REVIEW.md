@@ -56,6 +56,11 @@ tv-foundation의 TvLazy* 대신 표준 lazy 레이아웃을 쓴다(Google 권장
 ### D6. 자격 증명은 Android Keystore로 암호화한다
 `EncryptedSharedPreferences`는 deprecated이므로 Keystore AES-GCM으로 비밀번호·API Key를 암호화해 DataStore에 저장한다.
 
+### D7. compileSdk 37 / targetSdk 36 / minSdk 30, SDK는 kimchi 것을 공유
+- komga-client 0.11.0 AAR이 `minCompileSdk=37`을 요구해서 compileSdk만 37 (`android-37.2` rev 2). targetSdk는 사용자 지정대로 36.
+- 값은 `build-logic/convention/src/main/kotlin/AndroidConfig.kt` 한 곳에만 있다. 모듈 빌드 파일에 SDK 숫자를 쓰지 않는다.
+- `sdk.dir=D:\Project\kimchi\tools\android-sdk`. 다른 SDK를 새로 받지 않는다.
+
 ## 5. 문서 수정
 - KMReader 링크: `pvalenta/KMReader` → `https://github.com/kmworks/kmreader`
 - TECH_SPEC 날짜 `2024-10-31` → `2026-10-31`, 버전 표는 D3 이후 실제 값으로 갱신
