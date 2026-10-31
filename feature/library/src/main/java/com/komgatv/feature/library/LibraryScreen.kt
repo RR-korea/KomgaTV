@@ -16,7 +16,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -26,6 +28,11 @@ import androidx.tv.material3.Text
 import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.model.Series
 import com.komgatv.core.ui.components.PosterCard
+import com.komgatv.core.ui.components.loadErrorText
+import com.komgatv.core.ui.focus.EntryFocusEffect
+import com.komgatv.core.ui.focus.EntryFocusState
+import com.komgatv.core.ui.focus.rememberEntryFocusState
+import com.komgatv.core.ui.focus.requesterFor
 
 /**
  * 라이브러리 화면
@@ -52,6 +59,7 @@ fun LibraryScreen(
     }
 
     val uiState by viewModel.uiState.collectAsState()
+    val entryFocus = rememberEntryFocusState()
 
     when (val state = uiState) {
         is LibraryUiState.Loading -> {
@@ -73,7 +81,7 @@ fun LibraryScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = stringResource(R.string.library_error_prefix, state.message),
+                    text = loadErrorText(state.error),
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -87,6 +95,7 @@ fun LibraryScreen(
                 isLoadingMore = state.isLoadingMore,
                 isLastPage = state.isLastPage,
                 imageUrls = viewModel.imageUrls,
+                entryFocus = entryFocus,
                 onNavigateToSeries = onNavigateToSeries,
                 onLoadMore = { viewModel.loadMoreSeries() },
             )
@@ -104,10 +113,13 @@ private fun LibraryContent(
     isLoadingMore: Boolean,
     isLastPage: Boolean,
     imageUrls: ImageUrls,
+    entryFocus: EntryFocusState,
     onNavigateToSeries: (String) -> Unit,
     onLoadMore: () -> Unit,
 ) {
     val gridState = rememberLazyGridState()
+    // 처음엔 첫 시리즈, 돌아오면 연 시리즈. 페이지가 덧붙어도 다시 요청하지 않는다(키 없음).
+    EntryFocusEffect(entryFocus)
 
     Column(modifier = Modifier.fillMaxSize()) {
         Text(
@@ -125,9 +137,11 @@ private fun LibraryContent(
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 160.dp),
             state = gridState,
+            // 위 여백: 포커스로 커진 첫 줄 카드의 테두리가 잘리지 않게
             contentPadding = PaddingValues(
                 start = 48.dp,
                 end = 48.dp,
+                top = 12.dp,
                 bottom = 48.dp,
             ),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -147,11 +161,18 @@ private fun LibraryContent(
                     }
                 }
 
+                val key = "series:${series.id}"
                 PosterCard(
+                    modifier = Modifier
+                        .focusRequester(entryFocus.requesterFor(key))
+                        .then(if (index == 0) Modifier.focusRequester(entryFocus.fallback) else Modifier),
                     title = series.name,
                     imageUrl = imageUrls.seriesThumbnail(series.id).orEmpty(),
-                    subtitle = stringResource(R.string.series_books_count, series.booksCount),
-                    onClick = { onNavigateToSeries(series.id) },
+                    subtitle = pluralStringResource(R.plurals.series_books_count, series.booksCount, series.booksCount),
+                    onClick = {
+                        entryFocus.onOpen(key)
+                        onNavigateToSeries(series.id)
+                    },
                 )
             }
 

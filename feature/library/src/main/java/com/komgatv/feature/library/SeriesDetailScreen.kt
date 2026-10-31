@@ -25,8 +25,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -38,6 +40,12 @@ import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.Series
 import com.komgatv.core.ui.components.PosterCard
+import com.komgatv.core.ui.components.loadErrorText
+import com.komgatv.core.ui.focus.EntryFocusEffect
+import com.komgatv.core.ui.focus.EntryFocusState
+import com.komgatv.core.ui.focus.OnReturnEffect
+import com.komgatv.core.ui.focus.rememberEntryFocusState
+import com.komgatv.core.ui.focus.requesterFor
 
 /**
  * 시리즈 상세 화면
@@ -61,6 +69,9 @@ fun SeriesDetailScreen(
     LaunchedEffect(seriesId) {
         viewModel.loadSeriesDetail(seriesId)
     }
+    // 리더에서 돌아오면 읽은 진행도를 다시 읽는다
+    OnReturnEffect { viewModel.refreshProgress() }
+    val entryFocus = rememberEntryFocusState()
 
     val uiState by viewModel.uiState.collectAsState()
 
@@ -90,7 +101,7 @@ fun SeriesDetailScreen(
                         color = MaterialTheme.colorScheme.error,
                     )
                     Text(
-                        text = state.message,
+                        text = loadErrorText(state.error),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp),
@@ -106,6 +117,7 @@ fun SeriesDetailScreen(
                 isLoadingMore = state.isLoadingMore,
                 isLastPage = state.isLastPage,
                 imageUrls = viewModel.imageUrls,
+                entryFocus = entryFocus,
                 onNavigateToReader = onNavigateToReader,
                 onLoadMore = { viewModel.loadMoreBooks() },
             )
@@ -123,10 +135,13 @@ private fun SeriesDetailContent(
     isLoadingMore: Boolean,
     isLastPage: Boolean,
     imageUrls: ImageUrls,
+    entryFocus: EntryFocusState,
     onNavigateToReader: (String) -> Unit,
     onLoadMore: () -> Unit,
 ) {
     val gridState = rememberLazyGridState()
+    // 처음엔 첫 책, 돌아오면 연 책. 새로고침은 순서를 바꾸지 않고 페이지 덧붙임도 있어 키를 넘기지 않는다.
+    EntryFocusEffect(entryFocus)
 
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 150.dp),
@@ -193,11 +208,18 @@ private fun SeriesDetailContent(
                 }
             }
 
+            val key = "book:${book.id}"
             PosterCard(
+                modifier = Modifier
+                    .focusRequester(entryFocus.requesterFor(key))
+                    .then(if (index == 0) Modifier.focusRequester(entryFocus.fallback) else Modifier),
                 title = book.name,
                 imageUrl = imageUrls.bookThumbnail(book.id).orEmpty(),
                 subtitle = progressText,
-                onClick = { onNavigateToReader(book.id) },
+                onClick = {
+                    entryFocus.onOpen(key)
+                    onNavigateToReader(book.id)
+                },
             )
         }
 
@@ -261,14 +283,14 @@ private fun SeriesHeader(
             // 권 수 및 상태
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
-                    text = stringResource(R.string.series_detail_books_count, series.booksCount),
+                    text = pluralStringResource(R.plurals.series_books_count, series.booksCount, series.booksCount),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
 
                 if (series.metadata.status.isNotBlank()) {
                     Text(
-                        text = stringResource(R.string.series_detail_status_prefix, series.metadata.status),
+                        text = stringResource(R.string.series_detail_status_prefix, seriesStatusText(series.metadata.status)),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -306,4 +328,14 @@ private fun SeriesHeader(
             }
         }
     }
+}
+
+/** Komga 시리즈 상태 값(ENDED 등)을 현재 언어로. 모르는 값은 그대로 보인다. */
+@Composable
+private fun seriesStatusText(status: String): String = when (status) {
+    "ENDED" -> stringResource(R.string.series_status_ended)
+    "ONGOING" -> stringResource(R.string.series_status_ongoing)
+    "ABANDONED" -> stringResource(R.string.series_status_abandoned)
+    "HIATUS" -> stringResource(R.string.series_status_hiatus)
+    else -> status
 }

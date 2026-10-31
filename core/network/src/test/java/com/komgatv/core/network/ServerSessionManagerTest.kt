@@ -2,6 +2,7 @@ package com.komgatv.core.network
 
 import com.komgatv.core.datastore.AuthConfig
 import com.komgatv.core.datastore.ServerConfig
+import com.komgatv.core.datastore.SavedServer
 import com.komgatv.core.datastore.ServerPreferences
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -70,6 +71,12 @@ class FakeServerPreferences : ServerPreferences {
         authMethodFlow.value = "basic"
         defaultLibraryFlow.value = ""
     }
+
+    override val savedServers: Flow<List<SavedServer>> = MutableStateFlow(emptyList())
+
+    override suspend fun switchTo(serverId: String): Boolean = false
+
+    override suspend fun removeServer(serverId: String) = Unit
 }
 
 class ServerSessionManagerTest {

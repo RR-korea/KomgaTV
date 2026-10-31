@@ -13,4 +13,10 @@ dependencies {
     api(project(":core:model"))
     api(project(":core:network"))
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.timber)
+
+    testImplementation(project(":core:datastore"))
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.okhttp.mockwebserver)
 }

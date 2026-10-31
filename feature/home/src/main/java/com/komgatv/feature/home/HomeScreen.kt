@@ -9,11 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.withFrameNanos
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -28,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -37,8 +33,16 @@ import androidx.tv.material3.Text
 import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.Library
+import com.komgatv.core.model.Series
+import com.komgatv.core.ui.components.NameCard
 import com.komgatv.core.ui.components.PosterCard
 import com.komgatv.core.ui.components.TVRow
+import com.komgatv.core.ui.components.loadErrorText
+import com.komgatv.core.ui.focus.EntryFocusEffect
+import com.komgatv.core.ui.focus.EntryFocusState
+import com.komgatv.core.ui.focus.OnReturnEffect
+import com.komgatv.core.ui.focus.rememberEntryFocusState
+import com.komgatv.core.ui.focus.requesterFor
 
 /**
  * TV 홈 화면
@@ -56,20 +60,16 @@ import com.komgatv.core.ui.components.TVRow
 fun HomeScreen(
     onNavigateToLibrary: (String) -> Unit,
     onNavigateToReader: (String) -> Unit,
+    onNavigateToSeries: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToSearch: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // 다른 화면(리더 등)에서 돌아올 때마다 조용히 다시 읽는다. 첫 진입은 ViewModel init이 읽는다.
-    var entered by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        if (entered) viewModel.refresh() else entered = true
-    }
-
-    // 마지막으로 연 항목 키. 돌아오면 이 항목에 포커스를 준다. 화면을 떠나도 남아야 해서 여기서 보관한다.
-    // 포커스 변화로 기록하지 않는다: 새로고침으로 순서가 바뀌면 포커스가 옆 카드로 밀리면서 키가 덮인다.
-    var openedKey by rememberSaveable { mutableStateOf<String?>(null) }
+    // 다른 화면(리더 등)에서 돌아올 때마다 조용히 다시 읽는다(진행도·순서). 첫 진입은 ViewModel init이 읽는다.
+    OnReturnEffect { viewModel.refresh() }
+    val entryFocus = rememberEntryFocusState()
 
     when (val state = uiState) {
         is HomeUiState.Loading -> {
@@ -97,7 +97,7 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.error,
                     )
                     Text(
-                        text = state.message,
+                        text = loadErrorText(state.error),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp),
@@ -119,47 +119,118 @@ fun HomeScreen(
 
         is HomeUiState.Success -> {
             HomeContent(
-                continueReading = state.continueReading,
-                libraries = state.libraries,
+                state = state,
                 imageUrls = viewModel.imageUrls,
-                openedKey = openedKey,
-                onItemOpened = { openedKey = it },
+                entryFocus = entryFocus,
                 onNavigateToLibrary = onNavigateToLibrary,
                 onNavigateToReader = onNavigateToReader,
+                onNavigateToSeries = onNavigateToSeries,
                 onNavigateToSettings = onNavigateToSettings,
+                onNavigateToSearch = onNavigateToSearch,
             )
         }
     }
 }
 
+/** 홈의 한 줄: 제목, 항목, 항목을 그리는 법 */
+private class HomeRow<T>(
+    val key: String,
+    val titleRes: Int,
+    val items: List<T>,
+    val itemKey: (T) -> String,
+    val content: @Composable (T, Modifier) -> Unit,
+)
+
 /**
  * 홈 화면 콘텐츠 (표준 LazyColumn + focusRestorer로 포커스 복원 지원)
+ *
+ * 줄 순서는 Komelia 홈과 같다: 읽는 중, 다음 권, 최근 추가된 책, 최근 추가된 시리즈, 최근 업데이트된 시리즈, 라이브러리.
+ * 빈 줄은 그리지 않는다.
  */
 @Composable
 private fun HomeContent(
-    continueReading: List<Book>,
-    libraries: List<Library>,
+    state: HomeUiState.Success,
     imageUrls: ImageUrls,
-    openedKey: String?,
-    onItemOpened: (String) -> Unit,
+    entryFocus: EntryFocusState,
     onNavigateToLibrary: (String) -> Unit,
     onNavigateToReader: (String) -> Unit,
+    onNavigateToSeries: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToSearch: () -> Unit,
 ) {
-    // 들어올 때와 내용이 바뀔 때(돌아와서 새로고침하면 순서가 바뀐다) 포커스를 준다:
-    // 마지막으로 연 항목(키로 찾으므로 자리가 바뀌어도 따라간다), 처음이거나 그 항목이 없어졌으면 첫 행.
-    // 포커스 없이 시작하면 첫 키 입력이 이동 대신 포커스 잡기에 쓰인다.
-    val itemFocus = remember { mutableMapOf<String, FocusRequester>() }
-    val firstRowFocus = remember { FocusRequester() }
-    LaunchedEffect(continueReading, libraries) {
-        withFrameNanos { } // Lazy 항목이 배치된 뒤에 요청한다
-        (openedKey?.let(itemFocus::get) ?: firstRowFocus).requestFocus()
+    // 새로고침하면 읽는 중·다음 권 순서가 바뀌므로 내용이 바뀔 때도 연 항목으로 포커스를 다시 준다.
+    // 처음이거나 그 항목이 없어졌으면 첫 줄.
+    EntryFocusEffect(entryFocus, state.continueReading, state.onDeck, state.libraries)
+
+    @Composable
+    fun bookCard(rowKey: String, book: Book, modifier: Modifier, showProgress: Boolean) {
+        val key = "$rowKey:${book.id}"
+        PosterCard(
+            modifier = modifier.focusRequester(entryFocus.requesterFor(key)),
+            // 책 이름이 "01"처럼 번호뿐이면 무슨 책인지 알 수 없어 시리즈 이름을 붙인다
+            title = if (book.name.any { it.isLetter() }) book.name else "${book.seriesTitle} ${book.name}",
+            imageUrl = imageUrls.bookThumbnail(book.id).orEmpty(),
+            subtitle = when {
+                !showProgress -> book.seriesTitle.takeIf { book.name.any { c -> c.isLetter() } }
+                book.readProgress?.completed == true -> stringResource(R.string.home_book_completed)
+                else -> stringResource(R.string.home_book_progress, book.readProgress?.page ?: 0, book.pageCount)
+            },
+            onClick = {
+                entryFocus.onOpen(key)
+                onNavigateToReader(book.id)
+            },
+        )
     }
+
+    @Composable
+    fun seriesCard(rowKey: String, series: Series, modifier: Modifier) {
+        val key = "$rowKey:${series.id}"
+        PosterCard(
+            modifier = modifier.focusRequester(entryFocus.requesterFor(key)),
+            title = series.name,
+            imageUrl = imageUrls.seriesThumbnail(series.id).orEmpty(),
+            subtitle = pluralStringResource(R.plurals.home_series_books_count, series.booksCount, series.booksCount),
+            onClick = {
+                entryFocus.onOpen(key)
+                onNavigateToSeries(series.id)
+            },
+        )
+    }
+
+    val rows = listOf(
+        HomeRow("continue", R.string.home_continue_reading, state.continueReading, { it.id }) { book, m ->
+            bookCard("continue", book, m, showProgress = true)
+        },
+        HomeRow("ondeck", R.string.home_on_deck, state.onDeck, { it.id }) { book, m ->
+            bookCard("ondeck", book, m, showProgress = false)
+        },
+        HomeRow("latest", R.string.home_latest_books, state.latestBooks, { it.id }) { book, m ->
+            bookCard("latest", book, m, showProgress = false)
+        },
+        HomeRow("newseries", R.string.home_new_series, state.newSeries, { it.id }) { series, m ->
+            seriesCard("newseries", series, m)
+        },
+        HomeRow("updatedseries", R.string.home_updated_series, state.updatedSeries, { it.id }) { series, m ->
+            seriesCard("updatedseries", series, m)
+        },
+        HomeRow("library", R.string.home_libraries, state.libraries, { it.id }) { library, m ->
+            val key = "library:${library.id}"
+            // Komga 라이브러리에는 표지가 없다 — 이름 카드로
+            NameCard(
+                modifier = m.focusRequester(entryFocus.requesterFor(key)),
+                title = library.name,
+                onClick = {
+                    entryFocus.onOpen(key)
+                    onNavigateToLibrary(library.id)
+                },
+            )
+        },
+    ).filter { it.items.isNotEmpty() }
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .focusRestorer(firstRowFocus),
+            .focusRestorer(entryFocus.fallback),
         contentPadding = PaddingValues(top = 32.dp, bottom = 48.dp),
     ) {
         item(key = "home_header") {
@@ -167,68 +238,29 @@ private fun HomeContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 48.dp),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.End),
             ) {
+                OutlinedButton(onClick = onNavigateToSearch) {
+                    Text(stringResource(R.string.home_search))
+                }
                 OutlinedButton(onClick = onNavigateToSettings) {
                     Text(stringResource(R.string.home_server_settings))
                 }
             }
         }
 
-        // ========== "읽는 중" 행 ==========
-        if (continueReading.isNotEmpty()) {
-            item(key = "home_continue_reading_row") {
+        rows.forEachIndexed { index, row ->
+            item(key = "home_row_${row.key}") {
+                @Suppress("UNCHECKED_CAST")
+                val typed = row as HomeRow<Any>
                 TVRow(
-                    title = stringResource(R.string.home_continue_reading),
-                    items = continueReading,
-                    key = { it.id },
-                    modifier = Modifier.focusRequester(firstRowFocus),
-                ) { book ->
-                    val progressSubtitle = if (book.readProgress?.completed == true) {
-                        stringResource(R.string.home_book_completed)
-                    } else {
-                        stringResource(
-                            R.string.home_book_progress,
-                            book.readProgress?.page ?: 0,
-                            book.pageCount,
-                        )
-                    }
-                    val key = "book:${book.id}"
-                    PosterCard(
-                        modifier = Modifier.focusRequester(rememberItemFocus(key, itemFocus)),
-                        // 책 이름이 "01"처럼 번호뿐이면 무슨 책인지 알 수 없어 시리즈 이름을 붙인다
-                        title = if (book.name.any { it.isLetter() }) book.name else "${book.seriesTitle} ${book.name}",
-                        imageUrl = imageUrls.bookThumbnail(book.id).orEmpty(),
-                        subtitle = progressSubtitle,
-                        onClick = {
-                            onItemOpened(key)
-                            onNavigateToReader(book.id)
-                        },
-                    )
-                }
-            }
-        }
-
-        // ========== "라이브러리" 행 ==========
-        if (libraries.isNotEmpty()) {
-            item(key = "home_libraries_row") {
-                TVRow(
-                    title = stringResource(R.string.home_libraries),
-                    items = libraries,
-                    key = { it.id },
-                    // 읽는 중 행이 없으면 라이브러리 행이 첫 행이다
-                    modifier = if (continueReading.isEmpty()) Modifier.focusRequester(firstRowFocus) else Modifier,
-                ) { library ->
-                    val key = "library:${library.id}"
-                    PosterCard(
-                        modifier = Modifier.focusRequester(rememberItemFocus(key, itemFocus)),
-                        title = library.name,
-                        imageUrl = "",
-                        onClick = {
-                            onItemOpened(key)
-                            onNavigateToLibrary(library.id)
-                        },
-                    )
+                    title = stringResource(typed.titleRes),
+                    items = typed.items,
+                    key = typed.itemKey,
+                    // 처음 들어오면 맨 위 줄에 포커스
+                    modifier = if (index == 0) Modifier.focusRequester(entryFocus.fallback) else Modifier,
+                ) { item ->
+                    typed.content(item, Modifier)
                 }
             }
         }
@@ -237,17 +269,4 @@ private fun HomeContent(
             Spacer(modifier = Modifier.height(48.dp))
         }
     }
-}
-
-/**
- * 항목별 FocusRequester를 만들고, 화면에 있는 동안 [registry]에 등록해 둔다.
- */
-@Composable
-private fun rememberItemFocus(key: String, registry: MutableMap<String, FocusRequester>): FocusRequester {
-    val requester = remember(key) { FocusRequester() }
-    DisposableEffect(key) {
-        registry[key] = requester
-        onDispose { registry.remove(key) }
-    }
-    return requester
 }

@@ -1,11 +1,16 @@
 package com.komgatv.feature.library
 
+import com.komgatv.core.model.EpubPosition
+import com.komgatv.core.model.EpubChapter
+import com.komgatv.core.model.LoadError
 import com.komgatv.core.data.repository.BookPageResult
 import com.komgatv.core.data.repository.BookRepository
+import com.komgatv.core.data.repository.ReadProgressEvents
 import com.komgatv.core.data.repository.SeriesPageResult
 import com.komgatv.core.data.repository.SeriesRepository
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.BookMetadata
+import com.komgatv.core.model.BookPage
 import com.komgatv.core.model.ReadProgress
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.Series
@@ -13,6 +18,7 @@ import com.komgatv.core.model.SeriesMetadata
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -28,11 +34,13 @@ class SeriesDetailViewModelTest {
 
     private val fakeSeriesRepository = FakeSeriesRepository()
     private val fakeBookRepository = FakeBookRepository()
+    private val progressEvents = ReadProgressEvents()
 
     private fun createViewModel(): SeriesDetailViewModel {
         return SeriesDetailViewModel(
             seriesRepository = fakeSeriesRepository,
             bookRepository = fakeBookRepository,
+            progressEvents = progressEvents,
             imageUrls = FakeImageUrls,
         )
     }
@@ -91,6 +99,30 @@ class SeriesDetailViewModelTest {
     }
 
     @Test
+    fun `이 시리즈 책의 진행 저장 알림이 오면 진행 표시를 다시 읽는다`() = runTest {
+        fakeSeriesRepository.seriesToReturn = Series(
+            id = "series-1", libraryId = "lib-1", name = "테스트 시리즈", booksCount = 2,
+            booksReadCount = 0, booksInProgressCount = 0,
+            metadata = SeriesMetadata("테스트 시리즈", "", "ENDED", "", emptyList(), null),
+        )
+        val books = listOf(createTestBook("book-1", 1), createTestBook("book-2", 2))
+        fakeBookRepository.pages[0] = BookPageResult(books, 1, 2, 0, true)
+        val viewModel = createViewModel()
+        viewModel.loadSeriesDetail("series-1")
+        advanceUntilIdle()
+
+        val updated = books.map { if (it.id == "book-2") it.copy(readProgress = ReadProgress(page = 7, completed = false)) else it }
+        fakeBookRepository.pages[0] = BookPageResult(updated, 1, 2, 0, true)
+        progressEvents.notifyUpdated("other-series-book")
+        advanceUntilIdle()
+        assertEquals(null, (viewModel.uiState.value as SeriesDetailUiState.Success).books[1].readProgress)
+
+        progressEvents.notifyUpdated("book-2")
+        advanceUntilIdle()
+        assertEquals(7, (viewModel.uiState.value as SeriesDetailUiState.Success).books[1].readProgress?.page)
+    }
+
+    @Test
     fun `loadMoreBooks 호출 시 다음 페이지 도서가 누적되어 로드된다`() = runTest {
         val testSeries = Series(
             id = "series-1",
@@ -146,7 +178,7 @@ class SeriesDetailViewModelTest {
         val state = viewModel.uiState.value
         assertTrue("Error 상태여야 함", state is SeriesDetailUiState.Error)
         val errorState = state as SeriesDetailUiState.Error
-        assertEquals("시리즈 정보 조회 실패", errorState.message)
+        assertEquals(LoadError.UNKNOWN, errorState.error)
     }
 
     @Test
@@ -202,6 +234,10 @@ class SeriesDetailViewModelTest {
         override fun searchSeries(query: String, page: Int, size: Int): Flow<SeriesPageResult> = flow {
             emit(SeriesPageResult(emptyList(), 0, 0, page, true))
         }
+
+        override suspend fun getNewSeries(size: Int): List<Series> = emptyList()
+
+        override suspend fun getUpdatedSeries(size: Int): List<Series> = emptyList()
     }
 
     private class FakeBookRepository : BookRepository {
@@ -223,7 +259,23 @@ class SeriesDetailViewModelTest {
             throw NotImplementedError()
         }
 
+        override suspend fun getBookPages(bookId: String): List<BookPage> {
+            throw NotImplementedError()
+        }
+
         override suspend fun updateReadProgress(bookId: String, page: Int, completed: Boolean) {
         }
+
+        override suspend fun getBooksOnDeck(size: Int): List<Book> = emptyList()
+
+        override suspend fun getLatestBooks(size: Int): List<Book> = emptyList()
+
+        override fun searchBooks(query: String, page: Int, size: Int): Flow<BookPageResult> = throw NotImplementedError()
+
+        override suspend fun getEpubChapters(bookId: String): List<EpubChapter> = throw NotImplementedError()
+
+        override suspend fun getEpubPosition(bookId: String): EpubPosition? = null
+
+        override suspend fun saveEpubPosition(bookId: String, position: EpubPosition) = Unit
     }
 }

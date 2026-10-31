@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_title">Search</string>
+    <string name="search_placeholder">Series or book title</string>
+    <string name="search_voice">Voice</string>
+    <string name="search_hint">Type a series or book title. Press OK on the box to open the keyboard.</string>
+    <string name="search_loading">Searching&#8230;</string>
+    <string name="search_empty">Nothing matches “%1$s”.</string>
+    <plurals name="search_books_count">
+        <item quantity="one">%1$d book</item>
+        <item quantity="other">%1$d books</item>
+    </plurals>
+    <string name="search_series_title">Series (%1$d)</string>
+    <string name="search_books_title">Books (%1$d)</string>
+</resources>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_loading_page">불러오는 중…</string>
+    <string name="reader_error_prefix">오류: %1$s</string>
+    <string name="reader_page_content_description">%2$d쪽 중 %1$d쪽</string>
+    <string name="reader_page_range_format">%1$s쪽 / %2$d쪽</string>
+    <string name="reader_page_percent_format">%1$d%%</string>
+    <string name="reader_overlay_hint">OK: 보기 설정 · ▲▼: 10쪽 이동 · Back: 닫기</string>
+
+    <string name="reader_settings_title">보기 설정</string>
+    <string name="reader_layout_title">쪽 배치</string>
+    <string name="reader_layout_single">한 쪽</string>
+    <string name="reader_layout_double">두 쪽 (표지 한 쪽)</string>
+    <string name="reader_layout_double_no_cover">두 쪽 (표지 없음)</string>
+    <string name="reader_offset_title">한 쪽 밀기</string>
+    <string name="reader_direction_title">읽기 방향</string>
+    <string name="reader_direction_ltr">왼쪽에서 오른쪽</string>
+    <string name="reader_direction_rtl">오른쪽에서 왼쪽</string>
+    <string name="reader_scale_title">크기 맞춤</string>
+    <string name="reader_scale_screen">화면에 맞춤</string>
+    <string name="reader_scale_fit_width">너비 맞춤</string>
+    <string name="reader_scale_fit_height">높이 맞춤</string>
+    <string name="reader_scale_original">원본 크기</string>
+    <string name="reader_stretch_title">작은 이미지 키우기</string>
+    <string name="reader_option_on">켜짐</string>
+    <string name="reader_option_off">꺼짐</string>
+    <string name="reader_settings_hint">▲▼: 항목 · ◀▶/OK: 바꾸기 · Back: 닫기</string>
+    <string name="reader_type_title">리더 종류</string>
+    <string name="reader_type_paged">페이지 넘김</string>
+    <string name="reader_type_continuous">세로 스크롤</string>
+    <string name="reader_side_padding_title">좌우 여백</string>
+    <string name="reader_page_spacing_title">쪽 간격</string>
+    <string name="reader_percent_value">%1$d%%</string>
+    <string name="reader_dp_value">%1$d dp</string>
+    <string name="epub_chapter_format">%2$d장 중 %1$d장 · %3$s</string>
+    <string name="epub_overlay_hint">▲▼: 글자 크기 (%1$d%%) · ◀▶: 장 이동 · Back: 닫기</string>
+    <string name="epub_chapter_number_format">%2$d장 중 %1$d장</string>
+</resources>

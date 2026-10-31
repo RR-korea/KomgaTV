@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_title">검색</string>
+    <string name="search_placeholder">시리즈·책 제목</string>
+    <string name="search_voice">음성</string>
+    <string name="search_hint">시리즈나 책 제목을 입력하세요. 입력칸에서 OK를 누르면 키보드가 열립니다.</string>
+    <string name="search_loading">찾는 중&#8230;</string>
+    <string name="search_empty">“%1$s”에 맞는 시리즈나 책이 없습니다.</string>
+    <plurals name="search_books_count">
+        <item quantity="other">%1$d권</item>
+    </plurals>
+    <string name="search_series_title">시리즈 (%1$d)</string>
+    <string name="search_books_title">책 (%1$d)</string>
+</resources>

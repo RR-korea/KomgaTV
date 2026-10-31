@@ -11,6 +11,7 @@ import com.komgatv.feature.home.HomeScreen
 import com.komgatv.feature.library.LibraryScreen
 import com.komgatv.feature.library.SeriesDetailScreen
 import com.komgatv.feature.reader.ReaderScreen
+import com.komgatv.feature.search.SearchScreen
 import com.komgatv.feature.settings.SettingsScreen
 
 /**
@@ -37,6 +38,9 @@ sealed class Screen(val route: String) {
     data object Reader : Screen("reader/{bookId}") {
         fun createRoute(bookId: String) = "reader/$bookId"
     }
+
+    /** 검색 화면 - 시리즈 제목 검색 */
+    data object Search : Screen("search")
 
     /** 설정 화면 - 서버 연결 및 캐시 관리 */
     data object Settings : Screen("settings")
@@ -80,8 +84,26 @@ fun KomgaTVNavHost(
                 onNavigateToReader = { bookId ->
                     navController.navigate(Screen.Reader.createRoute(bookId))
                 },
+                onNavigateToSeries = { seriesId ->
+                    navController.navigate(Screen.SeriesDetail.createRoute(seriesId))
+                },
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
+                },
+                onNavigateToSearch = {
+                    navController.navigate(Screen.Search.route)
+                },
+            )
+        }
+
+        // 검색 화면
+        composable(Screen.Search.route) {
+            SearchScreen(
+                onNavigateToSeries = { seriesId ->
+                    navController.navigate(Screen.SeriesDetail.createRoute(seriesId))
+                },
+                onNavigateToReader = { bookId ->
+                    navController.navigate(Screen.Reader.createRoute(bookId))
                 },
             )
         }
@@ -139,6 +161,12 @@ fun KomgaTVNavHost(
             SettingsScreen(
                 onNavigateBack = leaveSettings,
                 onConnectSuccess = leaveSettings,
+                // 다른 서버로 바꾸면 쌓인 화면을 모두 버리고 홈부터 (옛 서버 내용이 남지 않게)
+                onServerSwitched = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
             )
         }
     }

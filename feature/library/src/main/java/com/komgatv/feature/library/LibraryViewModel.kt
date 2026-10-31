@@ -2,10 +2,12 @@ package com.komgatv.feature.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.komgatv.core.data.error.toLoadError
 import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.data.repository.LibraryRepository
 import com.komgatv.core.data.repository.SeriesRepository
 import com.komgatv.core.model.Series
+import com.komgatv.core.model.LoadError
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,7 +31,7 @@ sealed interface LibraryUiState {
         val isLastPage: Boolean = false,
     ) : LibraryUiState
 
-    data class Error(val message: String) : LibraryUiState
+    data class Error(val error: LoadError) : LibraryUiState
 }
 
 /**
@@ -87,9 +89,7 @@ class LibraryViewModel @Inject constructor(
                 )
             } catch (e: Exception) {
                 Timber.e(e, "라이브러리 로드 실패: $libraryId")
-                _uiState.value = LibraryUiState.Error(
-                    message = e.localizedMessage ?: "라이브러리를 불러올 수 없습니다"
-                )
+                _uiState.value = LibraryUiState.Error(e.toLoadError())
             }
         }
     }

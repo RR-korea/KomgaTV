@@ -1,6 +1,8 @@
 package com.komgatv.core.datastore.di
 
+import com.komgatv.core.datastore.DefaultReaderPreferences
 import com.komgatv.core.datastore.DefaultServerPreferences
+import com.komgatv.core.datastore.ReaderPreferences
 import com.komgatv.core.datastore.ServerPreferences
 import com.komgatv.core.datastore.crypto.CredentialEncryptor
 import com.komgatv.core.datastore.crypto.KeystoreCredentialEncryptor
@@ -25,4 +27,10 @@ abstract class DataStoreModule {
     abstract fun bindServerPreferences(
         impl: DefaultServerPreferences,
     ): ServerPreferences
+
+    @Binds
+    @Singleton
+    abstract fun bindReaderPreferences(
+        impl: DefaultReaderPreferences,
+    ): ReaderPreferences
 }

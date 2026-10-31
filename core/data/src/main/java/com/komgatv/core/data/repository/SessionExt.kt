@@ -7,4 +7,4 @@ import snd.komga.client.KomgaClientFactory
 internal fun ServerSessionManager.requireClient(): KomgaClientFactory =
     session.value?.komgaClient ?: throw NotConnectedException()
 
-class NotConnectedException : IllegalStateException("Komga 서버에 연결되어 있지 않습니다")
+class NotConnectedException : IllegalStateException("Not connected to a Komga server")

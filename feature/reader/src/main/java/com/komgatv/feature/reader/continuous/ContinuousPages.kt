@@ -1,0 +1,104 @@
+package com.komgatv.feature.reader.continuous
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.distinctUntilChanged
+import timber.log.Timber
+
+/**
+ * 세로 스크롤 리더 본문. 항목 하나가 타일 하나이고, 보이는 타일만 디코딩한다.
+ *
+ * @param scrollToTileIndex 이 값이 오면 그 타일로 스크롤한 뒤 [onScrolled]
+ * @param onVisibleTilesChanged 보이는 타일의 [PageTile.key] 목록 (위에서부터)
+ */
+@Composable
+internal fun ContinuousPages(
+    tiles: List<PageTile>,
+    listState: LazyListState,
+    scrollToTileIndex: Int?,
+    loadTile: suspend (PageTile) -> ImageBitmap,
+    onScrolled: () -> Unit,
+    onVisibleTilesChanged: (List<String>) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val currentOnVisible by rememberUpdatedState(onVisibleTilesChanged)
+
+    LaunchedEffect(scrollToTileIndex) {
+        if (scrollToTileIndex != null) {
+            listState.scrollToItem(scrollToTileIndex)
+            onScrolled()
+        }
+    }
+
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.map { it.key as String } }
+            .distinctUntilChanged()
+            .collect { currentOnVisible(it) }
+    }
+
+    LazyColumn(
+        state = listState,
+        modifier = modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        items(tiles, key = { it.key }) { tile ->
+            TileItem(tile, loadTile)
+        }
+    }
+}
+
+@Composable
+private fun TileItem(tile: PageTile, loadTile: suspend (PageTile) -> ImageBitmap) {
+    val density = LocalDensity.current
+    val bitmap by produceState<ImageBitmap?>(null, tile) {
+        value = if (tile.isPlaceholder) {
+            null
+        } else {
+            try {
+                loadTile(tile)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // 화면에서 벗어나 취소되면 OkHttp는 InterruptedIOException을 던진다 — 그때는 기록하지 않는다
+                currentCoroutineContext().ensureActive()
+                Timber.w(e, "타일 불러오기 실패: ${tile.key}")
+                null
+            }
+        }
+    }
+    Column {
+        Box(
+            modifier = with(density) { Modifier.size(tile.displayWidth.toDp(), tile.displayHeight.toDp()) },
+        ) {
+            bitmap?.let {
+                Image(it, contentDescription = null, contentScale = ContentScale.FillBounds, modifier = Modifier.fillMaxSize())
+            }
+        }
+        if (tile.bottomSpacingDp > 0) {
+            Spacer(modifier = Modifier.height(tile.bottomSpacingDp.dp))
+        }
+    }
+}

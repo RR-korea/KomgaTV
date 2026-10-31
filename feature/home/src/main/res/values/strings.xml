@@ -1,11 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="home_loading">로딩 중&#8230;</string>
-    <string name="home_error_title">오류가 발생했습니다</string>
-    <string name="home_error_unknown">알 수 없는 오류가 발생했습니다</string>
-    <string name="home_continue_reading">읽는 중</string>
-    <string name="home_libraries">라이브러리</string>
-    <string name="home_book_progress">%1$d/%2$d페이지</string>
-    <string name="home_book_completed">완독</string>
-    <string name="home_server_settings">서버 설정</string>
+    <string name="home_loading">Loading&#8230;</string>
+    <string name="home_error_title">Something went wrong</string>
+    <string name="home_continue_reading">Continue reading</string>
+    <string name="home_libraries">Libraries</string>
+    <string name="home_book_progress">Page %1$d/%2$d</string>
+    <string name="home_book_completed">Finished</string>
+    <string name="home_server_settings">Server settings</string>
+    <string name="home_search">Search</string>
+    <string name="home_on_deck">On deck</string>
+    <string name="home_latest_books">Recently added books</string>
+    <string name="home_new_series">Recently added series</string>
+    <string name="home_updated_series">Recently updated series</string>
+    <plurals name="home_series_books_count">
+        <item quantity="one">%1$d book</item>
+        <item quantity="other">%1$d books</item>
+    </plurals>
 </resources>

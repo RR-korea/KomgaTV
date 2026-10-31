@@ -1,9 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="reader_loading_page">페이지 로딩 중…</string>
-    <string name="reader_error_prefix">오류: %1$s</string>
-    <string name="reader_error_load_failed">책을 불러올 수 없습니다</string>
-    <string name="reader_page_content_description">%1$d/%2$d 페이지</string>
-    <string name="reader_page_progress_format">%1$d / %2$d</string>
+    <string name="reader_loading_page">Loading…</string>
+    <string name="reader_error_prefix">Error: %1$s</string>
+    <string name="reader_page_content_description">Page %1$d of %2$d</string>
+    <string name="reader_page_range_format">Page %1$s / %2$d</string>
     <string name="reader_page_percent_format">%1$d%%</string>
+    <string name="reader_overlay_hint">OK: View settings · ▲▼: Jump 10 pages · Back: Close</string>
+
+    <!-- 보기 설정 패널 (Komelia의 이름을 따름) -->
+    <string name="reader_settings_title">View settings</string>
+    <string name="reader_layout_title">Page layout</string>
+    <string name="reader_layout_single">Single page</string>
+    <string name="reader_layout_double">Double pages</string>
+    <string name="reader_layout_double_no_cover">Double pages (no cover)</string>
+    <string name="reader_offset_title">Offset pages</string>
+    <string name="reader_direction_title">Reading direction</string>
+    <string name="reader_direction_ltr">Left to right</string>
+    <string name="reader_direction_rtl">Right to left</string>
+    <string name="reader_scale_title">Scale type</string>
+    <string name="reader_scale_screen">Screen</string>
+    <string name="reader_scale_fit_width">Fit width</string>
+    <string name="reader_scale_fit_height">Fit height</string>
+    <string name="reader_scale_original">Original</string>
+    <string name="reader_stretch_title">Stretch small images</string>
+    <string name="reader_option_on">On</string>
+    <string name="reader_option_off">Off</string>
+    <string name="reader_settings_hint">▲▼: Choose · ◀▶/OK: Change · Back: Close</string>
+    <string name="reader_type_title">Reader type</string>
+    <string name="reader_type_paged">Paged</string>
+    <string name="reader_type_continuous">Continuous</string>
+    <string name="reader_side_padding_title">Side padding</string>
+    <string name="reader_page_spacing_title">Page spacing</string>
+    <string name="reader_percent_value">%1$d%%</string>
+    <string name="reader_dp_value">%1$d dp</string>
+    <string name="epub_chapter_format">Chapter %1$d / %2$d · %3$s</string>
+    <string name="epub_overlay_hint">▲▼: Text size (%1$d%%) · ◀▶: Chapter · Back: Close</string>
+    <string name="epub_chapter_number_format">Chapter %1$d / %2$d</string>
 </resources>

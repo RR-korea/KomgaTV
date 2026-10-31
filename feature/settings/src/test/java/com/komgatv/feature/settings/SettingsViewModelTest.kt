@@ -2,6 +2,7 @@ package com.komgatv.feature.settings
 
 import android.content.Context
 import com.komgatv.core.datastore.AuthConfig
+import com.komgatv.core.datastore.SavedServer
 import com.komgatv.core.datastore.ServerConfig
 import com.komgatv.core.datastore.ServerPreferences
 import com.komgatv.core.network.ServerSessionManager
@@ -87,6 +88,29 @@ private class FakeServerPreferences : ServerPreferences {
         authMethodFlow.value = "basic"
         defaultLibraryFlow.value = ""
     }
+
+    val savedFlow = MutableStateFlow(
+        listOf(
+            SavedServer("http://initial.example.com|initialUser", "http://initial.example.com", "basic", "initialUser", true),
+            SavedServer("http://other.example.com|kid", "http://other.example.com", "basic", "kid", false),
+        ),
+    )
+    val removed = mutableListOf<String>()
+
+    override val savedServers: Flow<List<SavedServer>> = savedFlow
+
+    override suspend fun switchTo(serverId: String): Boolean {
+        val target = savedFlow.value.firstOrNull { it.id == serverId } ?: return false
+        urlFlow.value = target.url
+        configFlow.value = configFlow.value.copy(serverUrl = target.url, username = target.username)
+        savedFlow.value = savedFlow.value.map { it.copy(isActive = it.id == serverId) }
+        return true
+    }
+
+    override suspend fun removeServer(serverId: String) {
+        removed += serverId
+        savedFlow.value = savedFlow.value.filterNot { it.id == serverId }
+    }
 }
 
 private class FakeContext(private val tempDir: File) : android.content.ContextWrapper(null) {
@@ -124,6 +148,39 @@ class SettingsViewModelTest {
     fun tearDown() {
         mockWebServer.shutdown()
         Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `저장된 서버로 바꾸면 연결 설정이 바뀌고 홈부터 다시 연다`() = runTest {
+        viewModel.switchServer("http://other.example.com|kid")
+        advanceUntilIdle()
+
+        assertEquals("http://other.example.com", fakePreferences.urlFlow.value)
+        assertTrue(viewModel.uiState.value.serverSwitched)
+        assertTrue(viewModel.savedServers.value.single { it.isActive }.id == "http://other.example.com|kid")
+    }
+
+    @Test
+    fun `없는 서버로는 바꾸지 않는다`() = runTest {
+        viewModel.switchServer("nope")
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.serverSwitched)
+        assertEquals("http://initial.example.com", fakePreferences.urlFlow.value)
+    }
+
+    @Test
+    fun `저장된 서버를 지우고, 새 서버 추가는 입력칸을 비운다`() = runTest {
+        viewModel.removeServer("http://other.example.com|kid")
+        advanceUntilIdle()
+        assertEquals(listOf("http://other.example.com|kid"), fakePreferences.removed)
+        assertEquals(1, viewModel.savedServers.value.size)
+
+        viewModel.startNewServer()
+        val state = viewModel.uiState.value
+        assertEquals("", state.serverUrl)
+        assertEquals("", state.username)
+        assertEquals("", state.password)
     }
 
     @Test

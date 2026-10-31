@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_not_connected">Not connected to a Komga server. Check the server settings.</string>
+    <string name="error_unreachable">Can\'t reach the server. Check the address and your network.</string>
+    <string name="error_unauthorized">The server rejected the login. Check your email/password or API key.</string>
+    <string name="error_unknown">Something went wrong while loading.</string>
+</resources>

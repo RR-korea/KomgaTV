@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_loading">로딩 중&#8230;</string>
+    <string name="home_error_title">오류가 발생했습니다</string>
+    <string name="home_continue_reading">읽는 중</string>
+    <string name="home_libraries">라이브러리</string>
+    <string name="home_book_progress">%1$d/%2$d페이지</string>
+    <string name="home_book_completed">완독</string>
+    <string name="home_server_settings">서버 설정</string>
+    <string name="home_search">검색</string>
+    <string name="home_on_deck">다음 권</string>
+    <string name="home_latest_books">최근 추가된 책</string>
+    <string name="home_new_series">최근 추가된 시리즈</string>
+    <string name="home_updated_series">최근 업데이트된 시리즈</string>
+    <plurals name="home_series_books_count">
+        <item quantity="other">%1$d권</item>
+    </plurals>
+</resources>
