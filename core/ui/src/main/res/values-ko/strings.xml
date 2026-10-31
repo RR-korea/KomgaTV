@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_not_connected">Komga 서버에 연결되어 있지 않습니다. 서버 설정을 확인하세요.</string>
+    <string name="error_unreachable">서버에 연결할 수 없습니다. 주소와 네트워크를 확인하세요.</string>
+    <string name="error_unauthorized">서버가 로그인을 거절했습니다. 이메일/비밀번호 또는 API 키를 확인하세요.</string>
+    <string name="error_unknown">불러오는 중 오류가 발생했습니다.</string>
+</resources>

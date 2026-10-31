@@ -1,5 +1,6 @@
 package com.komgatv.feature.library
 
+import com.komgatv.core.model.LoadError
 import com.komgatv.core.data.repository.LibraryRepository
 import com.komgatv.core.data.repository.SeriesPageResult
 import com.komgatv.core.data.repository.SeriesRepository
@@ -113,7 +114,7 @@ class LibraryViewModelTest {
         val state = viewModel.uiState.value
         assertTrue("Error 상태여야 함", state is LibraryUiState.Error)
         val errorState = state as LibraryUiState.Error
-        assertEquals("라이브러리 조회 실패", errorState.message)
+        assertEquals(LoadError.UNKNOWN, errorState.error)
     }
 
     @Test

@@ -2,11 +2,13 @@ package com.komgatv.feature.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.komgatv.core.data.error.toLoadError
 import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.data.repository.BookRepository
 import com.komgatv.core.data.repository.SeriesRepository
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.Series
+import com.komgatv.core.model.LoadError
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,7 +33,7 @@ sealed interface SeriesDetailUiState {
         val isLastPage: Boolean = false,
     ) : SeriesDetailUiState
 
-    data class Error(val message: String) : SeriesDetailUiState
+    data class Error(val error: LoadError) : SeriesDetailUiState
 }
 
 /**
@@ -89,9 +91,7 @@ class SeriesDetailViewModel @Inject constructor(
                 )
             } catch (e: Exception) {
                 Timber.e(e, "시리즈 상세 로드 실패: $seriesId")
-                _uiState.value = SeriesDetailUiState.Error(
-                    message = e.localizedMessage ?: "시리즈 정보를 불러올 수 없습니다"
-                )
+                _uiState.value = SeriesDetailUiState.Error(e.toLoadError())
             }
         }
     }

@@ -34,6 +34,7 @@ import com.komgatv.core.model.Book
 import com.komgatv.core.model.Library
 import com.komgatv.core.ui.components.PosterCard
 import com.komgatv.core.ui.components.TVRow
+import com.komgatv.core.ui.components.loadErrorText
 import com.komgatv.core.ui.focus.EntryFocusEffect
 import com.komgatv.core.ui.focus.EntryFocusState
 import com.komgatv.core.ui.focus.OnReturnEffect
@@ -91,7 +92,7 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.error,
                     )
                     Text(
-                        text = state.message,
+                        text = loadErrorText(state.error),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp),

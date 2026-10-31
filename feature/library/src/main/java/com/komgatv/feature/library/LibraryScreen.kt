@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -27,6 +28,7 @@ import androidx.tv.material3.Text
 import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.model.Series
 import com.komgatv.core.ui.components.PosterCard
+import com.komgatv.core.ui.components.loadErrorText
 import com.komgatv.core.ui.focus.EntryFocusEffect
 import com.komgatv.core.ui.focus.EntryFocusState
 import com.komgatv.core.ui.focus.rememberEntryFocusState
@@ -79,7 +81,7 @@ fun LibraryScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = stringResource(R.string.library_error_prefix, state.message),
+                    text = loadErrorText(state.error),
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -166,7 +168,7 @@ private fun LibraryContent(
                         .then(if (index == 0) Modifier.focusRequester(entryFocus.fallback) else Modifier),
                     title = series.name,
                     imageUrl = imageUrls.seriesThumbnail(series.id).orEmpty(),
-                    subtitle = stringResource(R.string.series_books_count, series.booksCount),
+                    subtitle = pluralStringResource(R.plurals.series_books_count, series.booksCount, series.booksCount),
                     onClick = {
                         entryFocus.onOpen(key)
                         onNavigateToSeries(series.id)

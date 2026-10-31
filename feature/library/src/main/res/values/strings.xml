@@ -1,19 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="library_loading">로딩 중&#8230;</string>
-    <string name="library_loading_more">더 불러오는 중&#8230;</string>
-    <string name="library_error_prefix">오류: %1$s</string>
-    <string name="library_error_default">라이브러리를 불러올 수 없습니다</string>
-    <string name="series_books_count">%1$d권</string>
-    <string name="series_detail_loading">로딩 중&#8230;</string>
-    <string name="series_detail_error_title">오류가 발생했습니다</string>
-    <string name="series_detail_error_default">시리즈 정보를 불러올 수 없습니다</string>
-    <string name="series_detail_books_header">도서 목록</string>
-    <string name="series_detail_books_count">%1$d개 권</string>
-    <string name="series_detail_status_prefix">상태: %1$s</string>
-    <string name="series_detail_publisher_prefix">출판사: %1$s</string>
-    <string name="series_detail_genres_prefix">장르: %1$s</string>
-    <string name="series_detail_progress">%1$d/%2$d페이지</string>
-    <string name="series_detail_completed">완독</string>
-    <string name="series_detail_unread">미독</string>
+    <string name="library_loading">Loading&#8230;</string>
+    <string name="library_loading_more">Loading more&#8230;</string>
+    <plurals name="series_books_count">
+        <item quantity="one">%1$d book</item>
+        <item quantity="other">%1$d books</item>
+    </plurals>
+    <string name="series_detail_loading">Loading&#8230;</string>
+    <string name="series_detail_error_title">Something went wrong</string>
+    <string name="series_detail_books_header">Books</string>
+    <string name="series_detail_status_prefix">Status: %1$s</string>
+    <string name="series_detail_publisher_prefix">Publisher: %1$s</string>
+    <string name="series_detail_genres_prefix">Genres: %1$s</string>
+    <string name="series_detail_progress">%1$d/%2$d pages</string>
+    <string name="series_detail_completed">Finished</string>
+    <string name="series_detail_unread">Unread</string>
+    <string name="series_status_ended">Ended</string>
+    <string name="series_status_ongoing">Ongoing</string>
+    <string name="series_status_abandoned">Abandoned</string>
+    <string name="series_status_hiatus">On hiatus</string>
 </resources>
