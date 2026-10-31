@@ -440,6 +440,15 @@ body {
   white-space: nowrap;
 }
 
+/* 세로 스크롤: 쪽들을 절대 위치로 쌓고 기둥 전체를 옮긴다 (부드럽게, Komelia scrollScreenForward처럼) */
+.reader-column {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  transition: transform 0.22s ease-out;
+}
+
 .reader-page {
   flex: 0 0 auto;
   position: relative;

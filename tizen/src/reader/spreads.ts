@@ -1,7 +1,7 @@
 // 펼침(두 쪽 보기) 분할. Komelia(Apache-2.0) PagedReaderState.kt의 알고리즘을 옮겼다 — Android T5와 같은 규칙.
 // Source: https://github.com/Snd-R/Komelia
 // File: komelia-ui/src/commonMain/kotlin/snd/komelia/ui/reader/image/paged/PagedReaderState.kt
-// License: Apache License 2.0 (루트 THIRD_PARTY_NOTICES.md)
+// License: Apache License 2.0 (tizen/THIRD_PARTY_NOTICES.md)
 import type { PageLayout } from '../state/readerPrefs';
 
 export interface PageInfo {

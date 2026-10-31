@@ -1,0 +1,100 @@
+import { describe, expect, it } from 'vitest';
+import {
+  anchorOf,
+  DP,
+  layoutContinuous,
+  maxScroll,
+  scrollByScreen,
+  scrollOf,
+  stepPage,
+  visiblePages,
+} from '../src/reader/continuous';
+import { parseReaderSettings, resolveReaderType, startPage } from '../src/state/readerPrefs';
+
+const screen = { width: 1920, height: 1080 };
+const webtoon = { width: 800, height: 12000 }; // 화면보다 훨씬 긴 쪽
+const small = { width: 400, height: 600 };
+
+describe('layoutContinuous', () => {
+  it('쪽 너비 = 화면 너비 × (1 − 2 × 여백), 높이는 비율대로, 가운데 정렬', () => {
+    const layout = layoutContinuous([webtoon], screen, 0.25, 0, true);
+    expect(layout.pages[0]).toEqual({ top: 0, left: 480, width: 960, height: 14400 });
+    expect(layout.total).toBe(14400);
+  });
+
+  it('쪽 사이 간격 (dp → px)', () => {
+    const layout = layoutContinuous([small, small], screen, 0, 8, true);
+    expect(layout.pages[1].top).toBe(layout.pages[0].height + 8 * DP);
+  });
+
+  it('작은 이미지 키우기 꺼짐: 원본 너비보다 넓히지 않는다', () => {
+    const layout = layoutContinuous([small], screen, 0, 0, false);
+    expect(layout.pages[0].width).toBe(400);
+    expect(layout.pages[0].height).toBe(600);
+  });
+});
+
+describe('스크롤·기준 쪽', () => {
+  const layout = layoutContinuous([small, webtoon, small], screen, 0, 0, true);
+  // small → 1920×2880, webtoon → 1920×28800
+
+  it('기준 쪽 ↔ 화면 위치 왕복', () => {
+    const anchor = anchorOf(layout, 5000);
+    expect(anchor).toEqual({ index: 1, offset: 5000 - 2880 });
+    expect(scrollOf(layout, anchor, screen.height)).toBe(5000);
+  });
+
+  it('한 화면씩 내려가고 끝에서 멈춘다', () => {
+    expect(scrollByScreen(layout, 0, screen.height, 1)).toBe(1080);
+    const end = maxScroll(layout, screen.height);
+    expect(scrollByScreen(layout, end - 10, screen.height, 1)).toBe(end);
+    expect(scrollByScreen(layout, 100, screen.height, -1)).toBe(0);
+  });
+
+  it('보이는 쪽과 완독', () => {
+    expect(visiblePages(layout, 2500, screen.height)).toEqual({ first: 0, last: 1, endReached: false });
+    const end = maxScroll(layout, screen.height);
+    expect(visiblePages(layout, end, screen.height).endReached).toBe(true);
+  });
+
+  it('좌/우: 다음 쪽 맨 위, 이전은 지금 쪽 맨 위 → 앞 쪽', () => {
+    expect(stepPage({ index: 1, offset: 300 }, 3, 1)).toEqual({ index: 2, offset: 0 });
+    expect(stepPage({ index: 1, offset: 300 }, 3, -1)).toEqual({ index: 1, offset: 0 });
+    expect(stepPage({ index: 1, offset: 0 }, 3, -1)).toEqual({ index: 0, offset: 0 });
+    expect(stepPage({ index: 2, offset: 0 }, 3, 1)).toEqual({ index: 2, offset: 0 });
+  });
+
+  it('위쪽 쪽 높이가 바뀌어도 기준 쪽 위치는 그대로', () => {
+    const anchor = { index: 2, offset: 100 };
+    const before = layoutContinuous([small, small, small], screen, 0, 0, true);
+    const after = layoutContinuous([small, webtoon, small], screen, 0, 0, true);
+    expect(scrollOf(after, anchor, 1080) - after.pages[2].top).toBe(scrollOf(before, anchor, 1080) - before.pages[2].top);
+  });
+});
+
+describe('리더 종류 우선순위 (Komelia)', () => {
+  it('LTR/RTL → PAGED, WEBTOON → CONTINUOUS, VERTICAL/없음 → 저장값', () => {
+    expect(resolveReaderType('LEFT_TO_RIGHT', 'CONTINUOUS')).toBe('PAGED');
+    expect(resolveReaderType('RIGHT_TO_LEFT', 'CONTINUOUS')).toBe('PAGED');
+    expect(resolveReaderType('WEBTOON', 'PAGED')).toBe('CONTINUOUS');
+    expect(resolveReaderType('VERTICAL', 'CONTINUOUS')).toBe('CONTINUOUS');
+    expect(resolveReaderType(null, 'PAGED')).toBe('PAGED');
+  });
+});
+
+describe('이어 읽기 시작 쪽', () => {
+  it('진행 없음·완독 → 1쪽, 아니면 저장된 쪽', () => {
+    expect(startPage(null)).toBe(1);
+    expect(startPage({ page: 40, completed: true })).toBe(1);
+    expect(startPage({ page: 40, completed: false })).toBe(40);
+  });
+});
+
+describe('parseReaderSettings', () => {
+  it('모르는 값은 기본값, 옛 저장값(T5)도 읽는다', () => {
+    const parsed = parseReaderSettings({ pageLayout: 'DOUBLE_PAGES', continuousPadding: 0.33, readerType: 'PANELS' });
+    expect(parsed.pageLayout).toBe('DOUBLE_PAGES');
+    expect(parsed.readerType).toBe('PAGED');
+    expect(parsed.continuousPadding).toBe(0);
+  });
+});

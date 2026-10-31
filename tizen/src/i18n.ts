@@ -64,6 +64,11 @@ const ko = {
   readerSpreadOf: '{0} / {1} 펼침 ({2} / {3}쪽)',
   readerSettings: '보기 설정',
   readerSettingsTitle: '리더 보기 설정',
+  readerType: '리더 종류',
+  readerTypePaged: '페이지 넘김',
+  readerTypeContinuous: '세로 스크롤',
+  readerPadding: '좌우 여백',
+  readerSpacing: '쪽 간격',
   readerLayout: '쪽 배치',
   readerLayoutSingle: '한 쪽',
   readerLayoutDouble: '두 쪽 (표지 단독)',
@@ -82,6 +87,7 @@ const ko = {
   off: '꺼짐',
   close: '닫기',
   readerHelp: 'OK: 정보  ·  위/아래: 10쪽 이동  ·  Back: 나가기',
+  readerHelpContinuous: '정보를 닫으면 위/아래: 한 화면씩  ·  좌/우: 쪽 이동  ·  위/아래(정보): 10쪽 이동',
 };
 
 export type Strings = typeof ko;
@@ -150,6 +156,11 @@ const en: Strings = {
   readerSpreadOf: 'Spread {0} / {1} (page {2} / {3})',
   readerSettings: 'View settings',
   readerSettingsTitle: 'Reader view settings',
+  readerType: 'Reader type',
+  readerTypePaged: 'Paged',
+  readerTypeContinuous: 'Continuous',
+  readerPadding: 'Side padding',
+  readerSpacing: 'Page spacing',
   readerLayout: 'Page layout',
   readerLayoutSingle: 'Single page',
   readerLayoutDouble: 'Double pages (cover alone)',
@@ -168,6 +179,7 @@ const en: Strings = {
   off: 'Off',
   close: 'Close',
   readerHelp: 'OK: info  ·  Up/Down: jump 10 pages  ·  Back: exit',
+  readerHelpContinuous: 'Info closed: Up/Down scroll a screen  ·  Left/Right: page  ·  Up/Down (info): jump 10 pages',
 };
 
 const tables: Record<string, Strings> = { ko, en };

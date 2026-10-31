@@ -110,7 +110,9 @@ try {
   await expectText('정보: 8/24쪽', '.reader-overlay-row:nth-child(2)', /8 \/ 24/);
   await shot('reader-overlay');
   await key('Enter');
-  await expectFocus('한 번 더 OK → 패널 첫 항목', 'opt-layout');
+  await expectFocus('한 번 더 OK → 패널 첫 항목(리더 종류)', 'opt-type');
+  await key('ArrowDown');
+  await expectFocus('아래 → 쪽 배치', 'opt-layout');
   await key('ArrowRight');
   await shot('reader-panel-double');
   await key('ArrowDown', 3);
@@ -151,6 +153,49 @@ try {
   await key('Escape');
   await page.waitForTimeout(800);
   await expectFocus('RTL 책에서 돌아오면 그 책', 'book-S2B1');
+
+  // 5-2. 세로 스크롤(웹툰): 진행 3쪽인 책을 열어 리더 종류를 바꾼다.
+  // 이어 읽기는 최근 읽은 순이라 지금 순서는 S2B1, S1B3, S5B2
+  await key('ArrowRight', 2);
+  await expectFocus('셋째 책', 'book-S5B2');
+  await key('Enter');
+  await page.waitForTimeout(800);
+  await key('Enter');
+  await key('Enter');
+  await key('ArrowRight'); // 리더 종류 → 세로 스크롤
+  await expectText('패널: 세로 스크롤', '[data-key="opt-type"] .panel-option-value', /세로 스크롤/);
+  await key('ArrowDown');
+  await expectFocus('세로 스크롤 패널: 좌우 여백', 'opt-padding');
+  await key('ArrowRight', 2); // 10%
+  await shot('continuous-panel');
+  await key('Escape');
+  await key('Escape');
+  const column = () =>
+    page.evaluate(() => {
+      const el = document.querySelector('.reader-column');
+      const first = el?.querySelector('.reader-page');
+      return {
+        transform: el?.getAttribute('style') ?? '',
+        width: first ? Math.round(first.getBoundingClientRect().width) : 0,
+      };
+    });
+  const start = await column();
+  results.push(`${start.width === 1536 ? 'PASS' : 'FAIL'} 좌우 여백 10% → 쪽 너비 1536: ${start.width}`);
+  await key('ArrowDown');
+  await page.waitForTimeout(400);
+  const after = await column();
+  results.push(`${after.transform !== start.transform ? 'PASS' : 'FAIL'} 아래 → 한 화면 스크롤: ${after.transform.match(/translateY\([^)]+\)/)?.[0]}`);
+  // 두 쪽 보기 상태에서 바꿨으므로 [2,3] 펼침의 첫 쪽(2쪽)에서 시작 → 오른쪽 두 번이면 4쪽 맨 위
+  await key('ArrowRight', 2);
+  await page.waitForTimeout(400);
+  await key('Enter');
+  await expectText('오른쪽 ×2 → 4쪽', '.reader-overlay-row:nth-child(2)', /4 \/ 24/);
+  await shot('continuous-overlay');
+  await key('Escape');
+  await key('Escape');
+  await page.waitForTimeout(1000);
+  results.push(`${patches.some((p) => p.includes('S5B2 page=4')) ? 'PASS' : 'FAIL'} 세로 스크롤 진행 저장 4쪽: ${patches.filter((p) => p.includes('S5B2')).join(' | ')}`);
+  await expectFocus('세로 스크롤 책에서 돌아오면 그 책', 'book-S5B2');
 
   // 6. 라이브러리 → 시리즈 → 뒤로
   await key('ArrowDown');
