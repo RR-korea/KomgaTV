@@ -595,3 +595,44 @@ body {
   margin-top: 32px;
   text-align: center;
 }
+
+/* ---------- 저장된 서버 (Android T11) ---------- */
+
+.saved-server {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  background: #1d212b;
+}
+
+.saved-server-text {
+  min-width: 0;
+  margin-right: 24px;
+}
+
+.saved-server-url {
+  font-size: 26px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.saved-server-account {
+  margin-top: 4px;
+  font-size: 22px;
+  color: #9aa1b2;
+}
+
+.saved-server-active {
+  color: #ffb547;
+  font-size: 24px;
+  white-space: nowrap;
+}
+
+.saved-server-actions {
+  margin-bottom: 0;
+  flex: 0 0 auto;
+}

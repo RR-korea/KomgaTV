@@ -22,22 +22,95 @@ export interface Session {
   pages: ImageCache;
 }
 
+/** 지금 연결 설정 */
 const STORAGE_KEY = 'komgatv.server';
+/** 연결에 성공한 서버 목록 (Android T11) */
+const LIST_KEY = 'komgatv.servers';
+
+function isSavedServer(value: unknown): value is SavedServer {
+  if (!value || typeof value !== 'object') return false;
+  const server = value as SavedServer;
+  if (typeof server.url !== 'string' || !server.auth) return false;
+  return server.auth.kind === 'basic'
+    ? typeof server.auth.email === 'string' && typeof server.auth.password === 'string'
+    : server.auth.kind === 'apiKey' && typeof server.auth.apiKey === 'string';
+}
+
+/** 같은 서버·같은 계정이면 같은 항목 (API 키는 서버당 하나) — Android T11과 같음 */
+export function serverId(server: SavedServer): string {
+  const url = normalizeServerUrl(server.url) ?? server.url.trim();
+  return server.auth.kind === 'basic' ? `${url}|${server.auth.email.trim().toLowerCase()}` : `${url}|apikey`;
+}
+
+/** 목록에 넣거나(같은 ID면 바꾼다) — 순수 함수 */
+export function upsertServer(list: SavedServer[], server: SavedServer): SavedServer[] {
+  const id = serverId(server);
+  const index = list.findIndex((item) => serverId(item) === id);
+  if (index < 0) return [...list, server];
+  const next = list.slice();
+  next[index] = server;
+  return next;
+}
+
+export function removeServerFrom(list: SavedServer[], id: string): SavedServer[] {
+  return list.filter((item) => serverId(item) !== id);
+}
+
+/** 저장된 목록 문자열 → 목록. 깨진 항목은 버린다 — 순수 함수 */
+export function parseServerList(raw: string | null): SavedServer[] {
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter(isSavedServer) : [];
+  } catch {
+    return [];
+  }
+}
 
 export function loadSavedServer(): SavedServer | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as SavedServer;
-    if (typeof parsed.url !== 'string' || !parsed.auth) return null;
-    return parsed;
+    const parsed: unknown = JSON.parse(raw);
+    return isSavedServer(parsed) ? parsed : null;
   } catch {
     return null;
   }
 }
 
+/** 저장된 서버 목록. 목록이 생기기 전 버전에서 연결한 서버도 들어 있게 한다. */
+export function loadServerList(): SavedServer[] {
+  let list: SavedServer[];
+  try {
+    list = parseServerList(localStorage.getItem(LIST_KEY));
+  } catch {
+    list = [];
+  }
+  const current = loadSavedServer();
+  return current ? upsertServer(list, current) : list;
+}
+
+function writeServerList(list: SavedServer[]): void {
+  localStorage.setItem(LIST_KEY, JSON.stringify(list));
+}
+
+/** 지금 연결로 정하고 목록에도 넣는다 */
 export function saveServer(server: SavedServer): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(server));
+  writeServerList(upsertServer(loadServerList(), server));
+}
+
+export function removeSavedServer(id: string): SavedServer[] {
+  const next = removeServerFrom(loadServerList(), id);
+  writeServerList(next);
+  return next;
+}
+
+/** 저장된 다른 서버로 바꾼다: 세션을 새 서버로 만들고(옛 서버 이미지 캐시는 비움) 지금 연결로 저장 */
+export function switchServer(server: SavedServer): boolean {
+  if (!restoreSession(server)) return false;
+  saveServer(server);
+  return true;
 }
 
 export const session = new Store<Session | null>(null);

@@ -276,6 +276,49 @@ try {
   await key('Enter');
   await page.waitForTimeout(800);
   await shot('library-again');
+
+  // 8. 서버 여러 개 (Android T11): API 키 연결을 두 번째 서버로 더하고, 목록에서 첫 계정으로 바꾼다
+  const toSettings = async () => {
+    for (let i = 0; i < 12 && !['search', 'settings'].includes(await focused()); i++) await key('ArrowUp');
+    if ((await focused()) === 'search') await key('ArrowRight');
+    await key('Enter');
+    await page.waitForTimeout(400);
+  };
+  await key('Escape');
+  await page.waitForTimeout(800);
+  await toSettings();
+  await expectFocus('설정 → 목록 맨 위 (지금 서버뿐이라 "다른 서버 추가")', 'server-add');
+  await key('Enter');
+  await expectFocus('다른 서버 추가 → 주소 칸', 'url');
+  const cleared = await page.evaluate(() => document.querySelector('[data-key="url"] input')?.value);
+  results.push(`${cleared === '' ? 'PASS' : 'FAIL'} 다른 서버 추가 → 입력칸 비움: "${cleared}"`);
+  await typeInto(`http://localhost:${port}/komga`);
+  await key('ArrowDown');
+  await key('ArrowRight');
+  await key('Enter'); // API 키 방식
+  await key('ArrowDown');
+  await expectFocus('API 키 칸', 'apiKey');
+  await typeInto('test');
+  await key('ArrowDown');
+  await key('ArrowRight');
+  await expectFocus('저장 버튼(두 번째 서버)', 'save');
+  await key('Enter');
+  await page.waitForTimeout(1000);
+  await expectFocus('API 키 서버 연결 → 홈', (k) => !!k && k.startsWith('reading-'));
+  await toSettings();
+  const saved = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('.saved-server')).map((el) => el.textContent?.replace(/\s+/g, ' ').trim()),
+  );
+  results.push(`${saved.length === 2 ? 'PASS' : 'FAIL'} 저장된 서버 2개: ${saved.join(' / ')}`);
+  await expectFocus('목록 맨 위 = 다른 서버의 바꾸기', 'server-switch-0');
+  await shot('saved-servers');
+  await key('Enter');
+  await page.waitForTimeout(1000);
+  const nowKind = await page.evaluate(() => JSON.parse(localStorage.getItem('komgatv.server') ?? '{}').auth?.kind);
+  results.push(`${nowKind === 'basic' ? 'PASS' : 'FAIL'} 바꾸기 → 첫 계정(이메일)으로 연결: ${nowKind}`);
+  await expectFocus('바꾸기 → 홈부터', (k) => !!k && k.startsWith('reading-'));
+  const stack = await page.evaluate(() => document.querySelectorAll('.screen').length);
+  results.push(`${stack === 1 ? 'PASS' : 'FAIL'} 바꾸면 쌓인 화면을 버린다: 화면 ${stack}개`);
 } finally {
   console.log(results.join('\n'));
   console.log(`errors: ${errors.length ? errors.join('\n') : 'none'}`);
