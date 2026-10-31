@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.komgatv.core.data.error.toLoadError
 import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.data.repository.BookRepository
+import com.komgatv.core.data.repository.ReadProgressEvents
 import com.komgatv.core.data.repository.SeriesRepository
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.Series
@@ -45,6 +46,7 @@ sealed interface SeriesDetailUiState {
 class SeriesDetailViewModel @Inject constructor(
     private val seriesRepository: SeriesRepository,
     private val bookRepository: BookRepository,
+    private val progressEvents: ReadProgressEvents,
     val imageUrls: ImageUrls,
 ) : ViewModel() {
 
@@ -56,6 +58,16 @@ class SeriesDetailViewModel @Inject constructor(
 
     companion object {
         const val PAGE_SIZE = 50
+    }
+
+    init {
+        // 이 시리즈의 책 진행이 저장되면 (리더를 나온 뒤 늦게 끝나도) 진행 표시를 다시 읽는다
+        viewModelScope.launch {
+            progressEvents.updates.collect { bookId ->
+                val current = _uiState.value as? SeriesDetailUiState.Success ?: return@collect
+                if (current.books.any { it.id == bookId }) refreshProgress()
+            }
+        }
     }
 
     /**

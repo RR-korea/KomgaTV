@@ -4,6 +4,7 @@ import com.komgatv.core.model.LoadError
 import com.komgatv.core.data.repository.BookPageResult
 import com.komgatv.core.data.repository.BookRepository
 import com.komgatv.core.data.repository.LibraryRepository
+import com.komgatv.core.data.repository.ReadProgressEvents
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.BookMetadata
 import com.komgatv.core.model.BookPage
@@ -12,6 +13,7 @@ import com.komgatv.core.model.ReadProgress
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -27,6 +29,7 @@ class HomeViewModelTest {
 
     private lateinit var fakeLibraryRepository: FakeLibraryRepository
     private lateinit var fakeBookRepository: FakeBookRepository
+    private val progressEvents = ReadProgressEvents()
 
     @Before
     fun setUp() {
@@ -38,8 +41,28 @@ class HomeViewModelTest {
         return HomeViewModel(
             libraryRepository = fakeLibraryRepository,
             bookRepository = fakeBookRepository,
+            progressEvents = progressEvents,
             imageUrls = FakeImageUrls,
         )
+    }
+
+    @Test
+    fun `진행 저장 알림이 오면 읽는 중 줄을 다시 읽는다`() = runTest {
+        val book = Book(
+            id = "book-1", seriesId = "series-1", seriesTitle = "원피스", name = "원피스 1권", number = 1,
+            pageCount = 100, metadata = BookMetadata("원피스 1권", "", "1"),
+            readProgress = ReadProgress(page = 50, completed = false),
+        )
+        fakeBookRepository.inProgressBooksToReturn = listOf(book)
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        fakeBookRepository.inProgressBooksToReturn = listOf(book.copy(readProgress = ReadProgress(page = 60, completed = false)))
+        progressEvents.notifyUpdated("book-1")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as HomeUiState.Success
+        assertEquals(60, state.continueReading.single().readProgress?.page)
     }
 
     @Test

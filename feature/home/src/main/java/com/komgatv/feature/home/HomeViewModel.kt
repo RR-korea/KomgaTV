@@ -6,6 +6,7 @@ import com.komgatv.core.data.error.toLoadError
 import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.data.repository.BookRepository
 import com.komgatv.core.data.repository.LibraryRepository
+import com.komgatv.core.data.repository.ReadProgressEvents
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.Library
 import com.komgatv.core.model.LoadError
@@ -53,6 +54,7 @@ sealed interface HomeUiState {
 class HomeViewModel @Inject constructor(
     private val libraryRepository: LibraryRepository,
     private val bookRepository: BookRepository,
+    private val progressEvents: ReadProgressEvents,
     val imageUrls: ImageUrls,
 ) : ViewModel() {
 
@@ -62,6 +64,10 @@ class HomeViewModel @Inject constructor(
 
     init {
         loadHomeData()
+        // 리더를 나올 때의 저장이 돌아온 뒤에 끝나도 "읽는 중" 줄을 맞춘다
+        viewModelScope.launch {
+            progressEvents.updates.collect { refreshContinueReading() }
+        }
     }
 
     /**
@@ -106,6 +112,19 @@ class HomeViewModel @Inject constructor(
     /** 읽는 중인 책 목록 로드 (IN_PROGRESS, 최근 읽은 순) */
     private suspend fun loadContinueReading(): List<Book> {
         return bookRepository.getBooksInProgress(page = 0, size = 20).first().books
+    }
+
+    /** "읽는 중" 줄만 다시 읽는다 (내용이 보일 때만) */
+    private suspend fun refreshContinueReading() {
+        if (_uiState.value !is HomeUiState.Success) return
+        try {
+            val books = loadContinueReading()
+            (_uiState.value as? HomeUiState.Success)?.let { _uiState.value = it.copy(continueReading = books) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "읽는 중 목록 새로고침 실패")
+        }
     }
 
     /** 데이터 새로고침 (다른 화면에서 돌아왔을 때 — 읽기 진행이 바뀌었을 수 있다) */
