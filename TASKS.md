@@ -43,7 +43,7 @@ LEAD_REVIEW §2의 B1~B7 전부와 D1·D2·D3·D4 구조 변경.
 - 모든 입력·버튼이 D-pad만으로 도달 가능, 화면 진입 시 첫 입력칸에 포커스.
 - **완료 조건:** `MockWebServer` 단위 테스트 — 성공(200 /api/v2/users/me), 401, 연결 거부 3가지. `./gradlew testDebugUnitTest` 통과.
 
-## T3. 탐색 — `task/T3-browse`
+## T3. 탐색 — `task/T3-browse` — ✅ 완료 (docs/reports/T3.md)
 - 홈(단순 버전): 라이브러리 목록 행 + "읽는 중" 행(`read_status=IN_PROGRESS` 책). 캐러셀은 아직 없음.
 - 라이브러리 → 시리즈 그리드(무한 스크롤, 페이지 크기 50) → 시리즈 상세(책 목록, 진행률) → 리더.
 - 뒤로 가기 시 이전 화면의 **포커스 위치 복원**.
