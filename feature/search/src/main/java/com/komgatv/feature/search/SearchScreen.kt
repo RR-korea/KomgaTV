@@ -12,9 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -36,6 +34,7 @@ import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.ui.components.PosterCard
+import com.komgatv.core.ui.components.TVRow
 import com.komgatv.core.ui.components.TvTextField
 import com.komgatv.core.ui.components.loadErrorText
 import com.komgatv.core.ui.focus.EntryFocusEffect
@@ -52,6 +51,7 @@ import com.komgatv.core.ui.focus.requesterFor
 @Composable
 fun SearchScreen(
     onNavigateToSeries: (String) -> Unit,
+    onNavigateToReader: (String) -> Unit,
     viewModel: SearchViewModel = hiltViewModel(),
 ) {
     val query by viewModel.query.collectAsState()
@@ -107,13 +107,15 @@ fun SearchScreen(
             SearchUiState.Loading -> Message(stringResource(R.string.search_loading))
             is SearchUiState.Empty -> Message(stringResource(R.string.search_empty, state.query))
             is SearchUiState.Error -> Message(loadErrorText(state.error))
-            is SearchUiState.Results -> ResultsGrid(
+            is SearchUiState.Results -> ResultRows(
                 state = state,
                 imageUrls = viewModel.imageUrls,
                 entryFocus = entryFocus,
                 firstResult = firstResult,
                 onNavigateToSeries = onNavigateToSeries,
-                onLoadMore = viewModel::loadMore,
+                onNavigateToReader = onNavigateToReader,
+                onLoadMoreSeries = viewModel::loadMoreSeries,
+                onLoadMoreBooks = viewModel::loadMoreBooks,
             )
         }
     }
@@ -126,42 +128,82 @@ private fun Message(text: String) {
     }
 }
 
+/**
+ * 결과: 시리즈 줄, 책 줄 (Android TV 검색 화면처럼 갈래마다 한 줄). 줄 끝에 가까워지면 다음 페이지.
+ */
 @Composable
-private fun ResultsGrid(
+private fun ResultRows(
     state: SearchUiState.Results,
     imageUrls: ImageUrls,
     entryFocus: EntryFocusState,
     firstResult: FocusRequester,
     onNavigateToSeries: (String) -> Unit,
-    onLoadMore: () -> Unit,
+    onNavigateToReader: (String) -> Unit,
+    onLoadMoreSeries: () -> Unit,
+    onLoadMoreBooks: () -> Unit,
 ) {
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 160.dp),
-        // 위 여백: 포커스로 커진 첫 줄 카드의 테두리가 잘리지 않게
-        contentPadding = PaddingValues(start = 48.dp, end = 48.dp, top = 24.dp, bottom = 48.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .focusRestorer(),
+        contentPadding = PaddingValues(top = 12.dp, bottom = 48.dp),
     ) {
-        itemsIndexed(state.series, key = { _, series -> series.id }) { index, series ->
-            if (index >= state.series.size - 5 && !state.isLastPage && !state.isLoadingMore) {
-                LaunchedEffect(index) { onLoadMore() }
+        if (state.series.items.isNotEmpty()) {
+            item(key = "search_series") {
+                TVRow(
+                    title = stringResource(R.string.search_series_title, state.series.total),
+                    items = state.series.items,
+                    key = { it.id },
+                    modifier = Modifier.focusRequester(firstResult),
+                ) { series ->
+                    LoadMoreNearEnd(state.series, series, onLoadMoreSeries)
+                    val key = "series:${series.id}"
+                    PosterCard(
+                        modifier = Modifier.focusRequester(entryFocus.requesterFor(key)),
+                        title = series.name,
+                        imageUrl = imageUrls.seriesThumbnail(series.id).orEmpty(),
+                        subtitle = pluralStringResource(R.plurals.search_books_count, series.booksCount, series.booksCount),
+                        onClick = {
+                            entryFocus.onOpen(key)
+                            onNavigateToSeries(series.id)
+                        },
+                    )
+                }
             }
-            val key = "series:${series.id}"
-            PosterCard(
-                modifier = Modifier
-                    .focusRequester(entryFocus.requesterFor(key))
-                    .then(if (index == 0) Modifier.focusRequester(firstResult) else Modifier),
-                title = series.name,
-                imageUrl = imageUrls.seriesThumbnail(series.id).orEmpty(),
-                subtitle = pluralStringResource(R.plurals.search_books_count, series.booksCount, series.booksCount),
-                onClick = {
-                    entryFocus.onOpen(key)
-                    onNavigateToSeries(series.id)
-                },
-            )
         }
+        if (state.books.items.isNotEmpty()) {
+            item(key = "search_books") {
+                TVRow(
+                    title = stringResource(R.string.search_books_title, state.books.total),
+                    items = state.books.items,
+                    key = { it.id },
+                    // 시리즈가 없으면 책 줄이 첫 결과
+                    modifier = if (state.series.items.isEmpty()) Modifier.focusRequester(firstResult) else Modifier,
+                ) { book ->
+                    LoadMoreNearEnd(state.books, book, onLoadMoreBooks)
+                    val key = "book:${book.id}"
+                    PosterCard(
+                        modifier = Modifier.focusRequester(entryFocus.requesterFor(key)),
+                        // 책 이름이 "01"처럼 번호뿐이면 시리즈 이름을 붙인다
+                        title = if (book.name.any { it.isLetter() }) book.name else "${book.seriesTitle} ${book.name}",
+                        imageUrl = imageUrls.bookThumbnail(book.id).orEmpty(),
+                        subtitle = book.seriesTitle,
+                        onClick = {
+                            entryFocus.onOpen(key)
+                            onNavigateToReader(book.id)
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** 줄의 끝에서 5번째 항목이 그려지면 다음 페이지를 부른다 */
+@Composable
+private fun <T> LoadMoreNearEnd(section: SearchSection<T>, item: T, onLoadMore: () -> Unit) {
+    if (section.isLastPage || section.isLoadingMore) return
+    if (section.items.indexOf(item) >= section.items.size - 5) {
+        LaunchedEffect(section.items.size) { onLoadMore() }
     }
 }
