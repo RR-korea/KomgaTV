@@ -2,7 +2,7 @@
 import { useRef, useState } from 'preact/hooks';
 import { type Auth, connect } from '../api/client';
 import { ConnectionError } from '../api/errors';
-import { fmt, t } from '../i18n';
+import { fmt, getLanguageChoice, setLanguageChoice, t } from '../i18n';
 import { type RouteEntry, reset } from '../platform/router';
 import { loadSavedServer, openSession, saveServer, session } from '../state/session';
 import { Button, TextField } from '../ui/components';
@@ -39,6 +39,7 @@ export function SettingsScreen({ entry, active }: { entry: RouteEntry; active: b
   const [password, setPassword] = useState(saved?.auth.kind === 'basic' ? saved.auth.password : '');
   const [apiKey, setApiKey] = useState(saved?.auth.kind === 'apiKey' ? saved.auth.apiKey : '');
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
+  const language = useRef(getLanguageChoice()).current;
 
   useEntryFocus(root, entry, active, 0, 'url');
 
@@ -141,6 +142,19 @@ export function SettingsScreen({ entry, active }: { entry: RouteEntry; active: b
       )}
 
       <h2 class="section-title">{t.settingsSectionApp}</h2>
+      <div class="field-label standalone">{t.settingsLanguage}</div>
+      <div class="choice-row" data-section="language" data-last-key={`lang-${language}`}>
+        <Button focusKey="lang-system" selected={language === 'system'} onClick={() => setLanguageChoice('system')}>
+          {t.settingsLanguageSystem}
+        </Button>
+        {/* 언어 이름은 그 언어로 쓴다 */}
+        <Button focusKey="lang-ko" selected={language === 'ko'} onClick={() => setLanguageChoice('ko')}>
+          한국어
+        </Button>
+        <Button focusKey="lang-en" selected={language === 'en'} onClick={() => setLanguageChoice('en')}>
+          English
+        </Button>
+      </div>
       <div class="about">{fmt(t.settingsVersion, APP_VERSION)}</div>
       <div class="about small">{navigator.userAgent}</div>
     </div>

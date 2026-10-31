@@ -121,6 +121,11 @@ try {
   await page.waitForTimeout(300);
   const shown = await page.evaluate(() => document.querySelectorAll('.reader-page').length);
   results.push(`${shown === 2 ? 'PASS' : 'FAIL'} 두 쪽 보기 → 두 장 표시: ${shown}장`);
+  // 화면에 맞춤: 세로 쪽 두 장이 화면 높이(1080)를 채워야 한다 (스타일 크기가 실제로 적용됐는지)
+  const heights = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('.reader-page')).map((el) => Math.round(el.getBoundingClientRect().height)),
+  );
+  results.push(`${heights.every((h) => h === 1080) ? 'PASS' : 'FAIL'} 화면에 맞춤 높이 1080: ${heights.join(',')}`);
   await shot('reader-double-9-10');
   await key('Enter');
   await expectText('두 쪽 보기 → 9,10쪽 펼침', '.reader-overlay-row:nth-child(2)', /9, 10 \/ 24/);

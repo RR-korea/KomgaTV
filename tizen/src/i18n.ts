@@ -36,6 +36,8 @@ const ko = {
   settingsCacheCleared: '이미지 캐시를 비웠습니다.',
   settingsSectionApp: '앱',
   settingsVersion: '버전 {0}',
+  settingsLanguage: '언어',
+  settingsLanguageSystem: 'TV 설정 따름',
 
   homeContinueReading: '이어 읽기',
   homeLibraries: '라이브러리',
@@ -120,6 +122,8 @@ const en: Strings = {
   settingsCacheCleared: 'Image cache cleared.',
   settingsSectionApp: 'App',
   settingsVersion: 'Version {0}',
+  settingsLanguage: 'Language',
+  settingsLanguageSystem: 'Same as TV',
 
   homeContinueReading: 'Continue reading',
   homeLibraries: 'Libraries',
@@ -168,7 +172,33 @@ const en: Strings = {
 
 const tables: Record<string, Strings> = { ko, en };
 
+// 앱 언어: 기본은 TV 언어를 따르고, 설정에서 고를 수 있다 (TV 언어를 바꿀 수 없는 에뮬레이터·호텔 TV 등).
+export type LanguageChoice = 'system' | 'ko' | 'en';
+const LANGUAGE_KEY = 'komgatv.language';
+
+export function getLanguageChoice(): LanguageChoice {
+  try {
+    const value = localStorage.getItem(LANGUAGE_KEY);
+    return value === 'ko' || value === 'en' ? value : 'system';
+  } catch {
+    return 'system';
+  }
+}
+
+/** 저장하고 앱을 다시 읽는다 (문자열은 시작할 때 한 번 정해진다). */
+export function setLanguageChoice(choice: LanguageChoice): void {
+  try {
+    if (choice === 'system') localStorage.removeItem(LANGUAGE_KEY);
+    else localStorage.setItem(LANGUAGE_KEY, choice);
+  } catch {
+    return;
+  }
+  location.reload();
+}
+
 function pickLanguage(): Strings {
+  const choice = getLanguageChoice();
+  if (choice !== 'system') return tables[choice];
   const lang = (navigator.language || 'en').toLowerCase();
   return tables[lang.split('-')[0]] ?? en;
 }

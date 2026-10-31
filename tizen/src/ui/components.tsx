@@ -3,6 +3,7 @@ import type { ComponentChildren, RefObject } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ImageCache } from '../image/ImageCache';
 import { FOCUSABLE_CLASS, focusElement, move } from '../platform/focus';
+import { isTizen } from '../platform/keys';
 import { fmt, t } from '../i18n';
 import type { LoadError } from '../state/session';
 import { session as sessionStore } from '../state/session';
@@ -44,7 +45,9 @@ const IME_CANCEL = 65385;
 
 /**
  * 입력칸. 지나가기만 해서는 키보드가 뜨지 않고 OK로 입력을 시작한다 (Android E2E-1 1번 규칙).
- * 입력 중 위/아래는 입력을 끝내고 이동, OK·완료·Back은 입력만 끝낸다.
+ * - Tizen: 화면 키보드(IME)가 떠 있는 동안 방향키·OK가 페이지에도 전달된다 (TV 에뮬레이터에서 확인).
+ *   그래서 IME의 완료·취소와 Back으로만 입력을 끝낸다 — 위/아래로 끝내면 키보드 안에서 움직일 수 없다.
+ * - PC(개발용): 위/아래는 입력을 끝내고 이동, Enter·Esc는 입력만 끝낸다.
  */
 export function TextField({ focusKey, label, value, onInput, type = 'text', placeholder }: TextFieldProps) {
   const boxRef = useRef<HTMLDivElement>(null);
@@ -58,6 +61,13 @@ export function TextField({ focusKey, label, value, onInput, type = 'text', plac
   };
 
   const onKeyDown = (event: KeyboardEvent) => {
+    if (isTizen()) {
+      if (event.keyCode === IME_DONE || event.keyCode === IME_CANCEL || event.keyCode === 10009) {
+        event.preventDefault();
+        stopEditing();
+      }
+      return;
+    }
     switch (event.keyCode) {
       case 38:
       case 40:

@@ -72,8 +72,19 @@ MVP는 앱 전용 `localStorage`(Tizen 앱마다 격리). 스토어 전에 Tizen
   패키지 관리자는 `__COMPAT_LAYER=RunAsInvoker`로 실행. **`NoDefaultCurrentDirectoryInExePath` 환경 변수를 지워야** 패키지 설치 스크립트가 돈다.
 - 받을 수 있는 TV 확장은 **10.0(2026년형)뿐** — 웹 엔진이 2020년형(M69)보다 훨씬 새로워 호환성은 실기에서만 확인된다.
 - 에뮬레이터는 WHPX(Hyper-V)로 돌아 Android 에뮬레이터와 함께 쓸 수 있다. `em-cli launch -n T-samsung-10.0-x86_64`, 리모컨 키는 `ecp-cli --target emulator-26101 keycode <코드>` (VM 이름을 target으로 주면 조용히 실패).
-- **설치는 삼성 인증서가 있어야 한다.** Tizen 작성자 인증서(배포자 new 인증서 포함)로 서명하면 `Invalid certificate chain`으로 거절. 삼성 인증서는 삼성 계정 로그인(사용자)이 필요하다 — 실기 TV용과 같은 단계.
-- 에뮬레이터 언어: `ecp-cli menu language`는 이 이미지에서 효과가 없고, `sdb shell`·`root`는 막혀 있으며 Menu 키로 여는 시스템 설정 앱도 없다. 영어 UI 그대로.
+- **설치는 삼성 인증서가 있어야 한다.** Tizen 작성자 인증서(배포자 new 인증서 포함)로 서명하면 `Invalid certificate chain`으로 거절.
+  삼성 인증서 발급: `dev/samsung-cert/login.mjs`(삼성 계정 로그인, 2차 인증은 사람이) → `create-cert.mjs`(작성자·배포자 p12, 기기 DUID 포함).
+  DUID는 `sdb shell 0 getduid`. 인증서·비밀번호는 `D:\tizen-studio-data\keystore\samsung`(저장소 밖), 보안 프로필 `KomgaTV-samsung`.
+- 에뮬레이터 시스템 언어는 바꿀 수 없다 (`ecp-cli menu language` 무효, `sdb shell` 막힘, 설정 앱 없음) → 앱 설정에 언어 선택(TV 설정 따름/한국어/English)을 넣었다.
+
+### 에뮬레이터 1차 결과 (실제 Komga 서버, 2026-10-31)
+- 설치·실행, 첫 실행 설정 화면 → 실제 서버(하위 경로) 로그인 → 홈(이어 읽기·표지) → 리더(쪽 넘김, 정보, 보기 설정 패널) → 진행 저장 ✅
+- 패키지 앱(wgt)에서는 Komga CORS 설정 없이 서버 요청이 된다 (TizenBrew 모듈은 다를 수 있음).
+- 찾아서 고친 결함:
+  1. **화면 키보드(IME)가 떠 있어도 방향키·OK가 페이지에 전달된다.** 위/아래로 입력을 끝내던 규칙 때문에 키보드 안에서 아래로 갈 수 없었다 → Tizen에서는 IME 완료(65376)·취소(65385)·Back으로만 입력 종료.
+  2. **리더 쪽 크기가 적용되지 않음** — Preact 11은 숫자 스타일 값에 px를 붙이지 않는다. 화면에 맞춤이 원본 크기로 그려졌다 → 단위 명시, 스모크 테스트에 높이 검사 추가.
+- 입력칸 종류마다 키보드 배치가 다르다: url은 소문자+`www.`/`.com`, email·password는 숫자 줄+QWERTY+`@`.
+- 웹 엔진: Tizen 10.0 = Chromium 130. 2020년형(M69) 호환은 여전히 실기에서만 확인된다.
 - 패키징: `node dev/package-wgt.mjs <보안 프로필>` (TIZEN_STUDIO 환경 변수).
 
 ## Android와 다른 점

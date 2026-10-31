@@ -66,7 +66,8 @@ function ReaderPage({
   const currentSession = useStore(sessionStore);
   const image = useCachedImage(currentSession?.pages, ImagePaths.bookPage(bookId, page.number));
   return (
-    <div class="reader-page" style={{ width: size.width, height: size.height }}>
+    // Preact 11은 숫자 스타일 값에 px를 붙이지 않는다 — 단위를 직접 쓴다
+    <div class="reader-page" style={{ width: `${size.width}px`, height: `${size.height}px` }}>
       {image.url ? (
         <img
           class="reader-image"
