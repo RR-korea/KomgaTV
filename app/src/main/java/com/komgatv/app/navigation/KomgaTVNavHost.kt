@@ -161,6 +161,12 @@ fun KomgaTVNavHost(
             SettingsScreen(
                 onNavigateBack = leaveSettings,
                 onConnectSuccess = leaveSettings,
+                // 다른 서버로 바꾸면 쌓인 화면을 모두 버리고 홈부터 (옛 서버 내용이 남지 않게)
+                onServerSwitched = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
             )
         }
     }

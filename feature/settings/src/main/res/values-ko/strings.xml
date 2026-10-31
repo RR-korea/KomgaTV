@@ -26,4 +26,9 @@
     <string name="settings_section_cache">캐시 관리</string>
     <string name="settings_btn_clear_cache">이미지 캐시 삭제</string>
     <string name="settings_status_cache_cleared">이미지 캐시가 삭제되었습니다.</string>
+    <string name="settings_saved_servers">저장된 서버</string>
+    <string name="settings_server_active">사용 중</string>
+    <string name="settings_server_switch">바꾸기</string>
+    <string name="settings_server_remove">삭제</string>
+    <string name="settings_server_add">다른 서버 추가</string>
 </resources>

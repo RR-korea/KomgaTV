@@ -26,4 +26,9 @@
     <string name="settings_section_cache">Cache</string>
     <string name="settings_btn_clear_cache">Clear image cache</string>
     <string name="settings_status_cache_cleared">Image cache cleared.</string>
+    <string name="settings_saved_servers">Saved servers</string>
+    <string name="settings_server_active">In use</string>
+    <string name="settings_server_switch">Switch</string>
+    <string name="settings_server_remove">Remove</string>
+    <string name="settings_server_add">Add another server</string>
 </resources>

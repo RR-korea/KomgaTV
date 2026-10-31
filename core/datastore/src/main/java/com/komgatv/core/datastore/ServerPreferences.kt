@@ -2,6 +2,7 @@ package com.komgatv.core.datastore
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -64,6 +65,15 @@ interface ServerPreferences {
     suspend fun saveApiKey(apiKey: String)
     suspend fun saveDefaultLibrary(libraryId: String)
     suspend fun clearAll()
+
+    /** 연결에 성공했던 서버들 (지금 서버 포함). 연결을 저장하면 자동으로 더해진다. */
+    val savedServers: Flow<List<SavedServer>>
+
+    /** 저장된 서버로 바꾼다 — 지금 연결 설정이 그 서버로 바뀐다. 없는 ID면 false. */
+    suspend fun switchTo(serverId: String): Boolean
+
+    /** 저장된 서버를 지운다. 지금 연결된 서버는 지우지 않는다. */
+    suspend fun removeServer(serverId: String)
 }
 
 /**
@@ -84,6 +94,65 @@ class DefaultServerPreferences @Inject constructor(
         private val KEY_API_KEY = stringPreferencesKey("auth_api_key")
         private val KEY_DEFAULT_LIBRARY = stringPreferencesKey("default_library_id")
         private val KEY_AUTH_METHOD = stringPreferencesKey("auth_method")
+        private val KEY_SAVED_SERVERS = stringPreferencesKey("saved_servers")
+    }
+
+    /** 지금 연결 설정(암호화된 비밀 그대로)을 저장 서버 형태로. 설정이 없으면 null. */
+    private fun activeStored(prefs: Preferences): StoredServer? {
+        val url = prefs[KEY_SERVER_URL].orEmpty()
+        if (url.isBlank()) return null
+        val method = prefs[KEY_AUTH_METHOD] ?: "basic"
+        val secret = (if (method == "apikey") prefs[KEY_API_KEY] else prefs[KEY_PASSWORD]).orEmpty()
+        if (secret.isBlank()) return null
+        val user = if (method == "apikey") "" else prefs[KEY_USERNAME].orEmpty()
+        return StoredServer(url, method, user, secret)
+    }
+
+    /** 지금 연결 설정을 저장 서버 목록에 넣는다 (같은 서버·계정이면 바꾼다) */
+    private fun rememberActive(prefs: MutablePreferences) {
+        val active = activeStored(prefs) ?: return
+        val list = SavedServerCodec.decode(prefs[KEY_SAVED_SERVERS])
+        prefs[KEY_SAVED_SERVERS] = SavedServerCodec.encode(SavedServerCodec.upsert(list, active))
+    }
+
+    override val savedServers: Flow<List<SavedServer>> = context.dataStore.data.map { prefs ->
+        val active = activeStored(prefs)
+        // 예전 버전에서 연결한 서버는 목록에 없을 수 있다 — 지금 서버는 늘 보인다
+        val list = SavedServerCodec.decode(prefs[KEY_SAVED_SERVERS])
+            .let { stored -> if (active != null) SavedServerCodec.upsert(stored, active) else stored }
+        list.map { SavedServer(it.id, it.url, it.authMethod, it.username, isActive = it.id == active?.id) }
+    }
+
+    override suspend fun switchTo(serverId: String): Boolean {
+        var switched = false
+        context.dataStore.edit { prefs ->
+            rememberActive(prefs)
+            val target = SavedServerCodec.decode(prefs[KEY_SAVED_SERVERS]).firstOrNull { it.id == serverId }
+                ?: return@edit
+            prefs[KEY_SERVER_URL] = target.url
+            prefs[KEY_AUTH_METHOD] = target.authMethod
+            if (target.authMethod == "apikey") {
+                prefs[KEY_API_KEY] = target.secret
+                prefs.remove(KEY_USERNAME)
+                prefs.remove(KEY_PASSWORD)
+            } else {
+                prefs[KEY_USERNAME] = target.username
+                prefs[KEY_PASSWORD] = target.secret
+                prefs.remove(KEY_API_KEY)
+            }
+            // 기본 라이브러리는 서버마다 다르다
+            prefs.remove(KEY_DEFAULT_LIBRARY)
+            switched = true
+        }
+        return switched
+    }
+
+    override suspend fun removeServer(serverId: String) {
+        context.dataStore.edit { prefs ->
+            if (activeStored(prefs)?.id == serverId) return@edit
+            val list = SavedServerCodec.decode(prefs[KEY_SAVED_SERVERS]).filterNot { it.id == serverId }
+            prefs[KEY_SAVED_SERVERS] = SavedServerCodec.encode(list)
+        }
     }
 
     /** 전체 서버 설정 Flow (비밀번호와 API Key는 복호화되어 제공) */
@@ -151,6 +220,7 @@ class DefaultServerPreferences @Inject constructor(
             prefs[KEY_USERNAME] = username
             prefs[KEY_PASSWORD] = encryptedPassword
             prefs.remove(KEY_API_KEY)
+            rememberActive(prefs)
         }
     }
 
@@ -164,6 +234,7 @@ class DefaultServerPreferences @Inject constructor(
             prefs[KEY_API_KEY] = encryptedApiKey
             prefs.remove(KEY_USERNAME)
             prefs.remove(KEY_PASSWORD)
+            rememberActive(prefs)
         }
     }
 

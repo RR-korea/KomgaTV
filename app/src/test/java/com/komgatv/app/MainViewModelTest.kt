@@ -3,6 +3,7 @@ package com.komgatv.app
 import com.komgatv.app.navigation.Screen
 import com.komgatv.core.datastore.AuthConfig
 import com.komgatv.core.datastore.ServerConfig
+import com.komgatv.core.datastore.SavedServer
 import com.komgatv.core.datastore.ServerPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -70,6 +71,12 @@ private class FakeServerPreferences : ServerPreferences {
         authMethodFlow.value = "basic"
         defaultLibraryFlow.value = ""
     }
+
+    override val savedServers: Flow<List<SavedServer>> = MutableStateFlow(emptyList())
+
+    override suspend fun switchTo(serverId: String): Boolean = false
+
+    override suspend fun removeServer(serverId: String) = Unit
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
