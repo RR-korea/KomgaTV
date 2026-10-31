@@ -1,19 +1,28 @@
 package com.komgatv.feature.reader
 
+import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.data.repository.BookPageResult
 import com.komgatv.core.data.repository.BookRepository
 import com.komgatv.core.data.repository.SeriesPageResult
 import com.komgatv.core.data.repository.SeriesRepository
+import com.komgatv.core.datastore.ReaderPreferences
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.BookMetadata
+import com.komgatv.core.model.BookPage
+import com.komgatv.core.model.PageLayout
 import com.komgatv.core.model.ReadProgress
+import com.komgatv.core.model.ReaderSettings
 import com.komgatv.core.model.ReadingDirection
+import com.komgatv.core.model.ScaleType
 import com.komgatv.core.model.Series
 import com.komgatv.core.model.SeriesMetadata
-import com.komgatv.core.data.image.ImageUrls
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -32,13 +41,16 @@ import org.junit.Test
  * ReaderViewModel 단위 테스트
  *
  * 검증 항목:
- * 1. 읽기 방향(ReadingDirection)에 따른 D-pad 좌/우 반전
- * 2. 2초 디바운스 진행 저장 및 연속 이동 시 최종 페이지 1회 저장
- * 3. 완독(completed=true) 및 중간 진행(completed=false) 저장
- * 4. 서버 진행도 페이지에서 시작 (이어 읽기)
- * 5. 종료 시 즉시 저장 (saveProgressOnExit)
- * 6. 이웃 페이지(±2) 프리로드 URL 생성
- * 7. 10페이지 점프 조작
+ * 1. 방향 우선순위: 시리즈 메타데이터 > 저장된 기본값
+ * 2. 방향 변경 시 즉시 반영 및 전역 기본값 저장
+ * 3. D-pad 좌/우 이동 및 읽기 방향에 따른 반전
+ * 4. 두 쪽 펼침에서 진행 저장 (보이는 쪽 중 큰 번호 저장)
+ * 5. 마지막 페이지 펼침 도달 시 완독(completed=true) 저장
+ * 6. 서버 진행도 페이지가 포함된 펼침에서 시작 (이어 읽기)
+ * 7. 2초 디바운스 및 종료 시 즉시 저장 (saveProgressOnExit)
+ * 8. 펼침 기준 앞뒤 2개 프리로드 URL 생성
+ * 9. 설정 변경 (쪽 배치, 밀기, 크기 맞춤, 작은 이미지 키우기) 및 저장
+ * 10. 10페이지 점프 조작
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReaderViewModelTest {
@@ -46,6 +58,7 @@ class ReaderViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var bookRepository: FakeBookRepository
     private lateinit var seriesRepository: FakeSeriesRepository
+    private lateinit var readerPreferences: FakeReaderPreferences
     private lateinit var viewModel: ReaderViewModel
 
     @Before
@@ -53,7 +66,8 @@ class ReaderViewModelTest {
         Dispatchers.setMain(testDispatcher)
         bookRepository = FakeBookRepository()
         seriesRepository = FakeSeriesRepository()
-        viewModel = ReaderViewModel(bookRepository, seriesRepository, FakeImageUrls)
+        readerPreferences = FakeReaderPreferences()
+        viewModel = ReaderViewModel(bookRepository, seriesRepository, FakeImageUrls, readerPreferences)
     }
 
     @After
@@ -62,7 +76,7 @@ class ReaderViewModelTest {
     }
 
     @Test
-    fun `이어 읽기 - 서버에 저장된 진행도 페이지에서 시작한다`() = runTest(testDispatcher) {
+    fun `이어 읽기 - 서버에 저장된 진행도 페이지가 속한 펼침에서 시작한다`() = runTest(testDispatcher) {
         val series = createTestSeries(id = "series1", direction = ReadingDirection.LEFT_TO_RIGHT)
         val book = createTestBook(
             id = "book1",
@@ -72,24 +86,80 @@ class ReaderViewModelTest {
         )
         seriesRepository.seriesMap[series.id] = series
         bookRepository.books[book.id] = book
+        bookRepository.pagesMap[book.id] = (1..20).map { BookPage(number = it) }
 
         viewModel.loadBook(book.id)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value as ReaderUiState.Reading
-        assertEquals(7, state.currentPage)
+        assertTrue(state.currentSpread.containsPage(7))
         assertEquals(20, state.totalPages)
     }
 
     @Test
-    fun `방향 반전 - RIGHT_TO_LEFT 시리즈는 D-pad 좌측이 다음 페이지, 우측이 이전 페이지`() = runTest(testDispatcher) {
+    fun `방향 우선순위 - 시리즈에 방향이 있으면 기본값보다 시리즈 방향을 우선한다`() = runTest(testDispatcher) {
+        // 기본 설정은 LEFT_TO_RIGHT
+        readerPreferences.saveReadingDirection(ReadingDirection.LEFT_TO_RIGHT)
+
+        // 시리즈는 RIGHT_TO_LEFT
+        val series = createTestSeries(id = "s_rtl", direction = ReadingDirection.RIGHT_TO_LEFT)
+        val book = createTestBook(id = "b1", seriesId = "s_rtl", pageCount = 10)
+        seriesRepository.seriesMap[series.id] = series
+        bookRepository.books[book.id] = book
+
+        viewModel.loadBook(book.id)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as ReaderUiState.Reading
+        assertEquals(ReadingDirection.RIGHT_TO_LEFT, state.readingDirection)
+    }
+
+    @Test
+    fun `방향 우선순위 - 시리즈에 방향이 없으면 저장된 기본값을 사용한다`() = runTest(testDispatcher) {
+        readerPreferences.saveReadingDirection(ReadingDirection.RIGHT_TO_LEFT)
+
+        // 시리즈에 방향 지정 안 됨 (null)
+        val series = createTestSeries(id = "s_null", direction = null)
+        val book = createTestBook(id = "b1", seriesId = "s_null", pageCount = 10)
+        seriesRepository.seriesMap[series.id] = series
+        bookRepository.books[book.id] = book
+
+        viewModel.loadBook(book.id)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as ReaderUiState.Reading
+        assertEquals(ReadingDirection.RIGHT_TO_LEFT, state.readingDirection)
+    }
+
+    @Test
+    fun `방향 변경 - 리더에서 방향을 바꾸면 지금 책에 바로 적용되고 기본값으로 저장된다`() = runTest(testDispatcher) {
+        val series = createTestSeries(id = "s1", direction = ReadingDirection.LEFT_TO_RIGHT)
+        val book = createTestBook(id = "b1", seriesId = "s1", pageCount = 10)
+        seriesRepository.seriesMap[series.id] = series
+        bookRepository.books[book.id] = book
+
+        viewModel.loadBook(book.id)
+        advanceUntilIdle()
+
+        var state = viewModel.uiState.value as ReaderUiState.Reading
+        assertEquals(ReadingDirection.LEFT_TO_RIGHT, state.readingDirection)
+
+        // 방향 변경
+        viewModel.setReadingDirection(ReadingDirection.RIGHT_TO_LEFT)
+        advanceUntilIdle()
+
+        // 지금 책에 즉시 반영
+        state = viewModel.uiState.value as ReaderUiState.Reading
+        assertEquals(ReadingDirection.RIGHT_TO_LEFT, state.readingDirection)
+
+        // 기본값으로도 저장됨
+        assertEquals(ReadingDirection.RIGHT_TO_LEFT, readerPreferences.readingDirection.first())
+    }
+
+    @Test
+    fun `방향 반전 - RIGHT_TO_LEFT 시리즈는 D-pad 좌측이 다음 펼침, 우측이 이전 펼침`() = runTest(testDispatcher) {
         val series = createTestSeries(id = "series_rtl", direction = ReadingDirection.RIGHT_TO_LEFT)
-        val book = createTestBook(
-            id = "book_rtl",
-            seriesId = "series_rtl",
-            pageCount = 10,
-            progress = null,
-        )
+        val book = createTestBook(id = "book_rtl", seriesId = "series_rtl", pageCount = 10)
         seriesRepository.seriesMap[series.id] = series
         bookRepository.books[book.id] = book
 
@@ -97,28 +167,23 @@ class ReaderViewModelTest {
         advanceUntilIdle()
 
         var state = viewModel.uiState.value as ReaderUiState.Reading
-        assertEquals(1, state.currentPage)
+        assertEquals(0, state.currentSpreadIndex)
 
-        // D-pad 좌측 누름 -> 다음 페이지(2)로 이동
+        // D-pad 좌측 누름 -> 다음 펼침(index 1)으로 이동
         viewModel.onDpadLeft()
         state = viewModel.uiState.value as ReaderUiState.Reading
-        assertEquals(2, state.currentPage)
+        assertEquals(1, state.currentSpreadIndex)
 
-        // D-pad 우측 누름 -> 이전 페이지(1)로 이동
+        // D-pad 우측 누름 -> 이전 펼침(index 0)으로 이동
         viewModel.onDpadRight()
         state = viewModel.uiState.value as ReaderUiState.Reading
-        assertEquals(1, state.currentPage)
+        assertEquals(0, state.currentSpreadIndex)
     }
 
     @Test
-    fun `기본 방향 - LEFT_TO_RIGHT 시리즈는 D-pad 우측이 다음 페이지, 좌측이 이전 페이지`() = runTest(testDispatcher) {
+    fun `기본 방향 - LEFT_TO_RIGHT 시리즈는 D-pad 우측이 다음 펼침, 좌측이 이전 펼침`() = runTest(testDispatcher) {
         val series = createTestSeries(id = "series_ltr", direction = ReadingDirection.LEFT_TO_RIGHT)
-        val book = createTestBook(
-            id = "book_ltr",
-            seriesId = "series_ltr",
-            pageCount = 10,
-            progress = null,
-        )
+        val book = createTestBook(id = "book_ltr", seriesId = "series_ltr", pageCount = 10)
         seriesRepository.seriesMap[series.id] = series
         bookRepository.books[book.id] = book
 
@@ -126,100 +191,69 @@ class ReaderViewModelTest {
         advanceUntilIdle()
 
         var state = viewModel.uiState.value as ReaderUiState.Reading
-        assertEquals(1, state.currentPage)
+        assertEquals(0, state.currentSpreadIndex)
 
-        // D-pad 우측 누름 -> 다음 페이지(2)로 이동
+        // D-pad 우측 누름 -> 다음 펼침(index 1)으로 이동
         viewModel.onDpadRight()
         state = viewModel.uiState.value as ReaderUiState.Reading
-        assertEquals(2, state.currentPage)
+        assertEquals(1, state.currentSpreadIndex)
 
-        // D-pad 좌측 누름 -> 이전 페이지(1)로 이동
+        // D-pad 좌측 누름 -> 이전 펼침(index 0)으로 이동
         viewModel.onDpadLeft()
         state = viewModel.uiState.value as ReaderUiState.Reading
-        assertEquals(1, state.currentPage)
+        assertEquals(0, state.currentSpreadIndex)
     }
 
     @Test
-    fun `디바운스 - 페이지 이동 후 2초 경과 시 서버에 진행도가 저장된다`() = runTest(testDispatcher) {
+    fun `두 쪽 보기 진행 저장 - 펼침에서 보이는 쪽 중 큰 번호를 저장한다`() = runTest(testDispatcher) {
+        readerPreferences.savePageLayout(PageLayout.DOUBLE_PAGES)
         val series = createTestSeries(id = "s1")
         val book = createTestBook(id = "b1", seriesId = "s1", pageCount = 10)
         seriesRepository.seriesMap[series.id] = series
         bookRepository.books[book.id] = book
+        bookRepository.pagesMap[book.id] = (1..10).map { BookPage(number = it) }
 
         viewModel.loadBook(book.id)
         advanceUntilIdle()
 
-        viewModel.nextPage() // 1 -> 2
-
-        // 1초 경과 시점에는 아직 저장되지 않아야 함
-        advanceTimeBy(1000L)
-        runCurrent()
-        assertTrue(bookRepository.progressUpdates.isEmpty())
-
-        // 추가 1000ms 경과 (총 2000ms) 시 저장 호출
-        advanceTimeBy(1000L)
-        runCurrent()
-        assertEquals(1, bookRepository.progressUpdates.size)
-        val update = bookRepository.progressUpdates.first()
-        assertEquals("b1", update.bookId)
-        assertEquals(2, update.page)
-        assertFalse(update.completed)
-    }
-
-    @Test
-    fun `디바운스 - 연속으로 빠르게 페이지를 넘기면 마지막 페이지만 1회 저장된다`() = runTest(testDispatcher) {
-        val series = createTestSeries(id = "s1")
-        val book = createTestBook(id = "b1", seriesId = "s1", pageCount = 10)
-        seriesRepository.seriesMap[series.id] = series
-        bookRepository.books[book.id] = book
-
-        viewModel.loadBook(book.id)
-        advanceUntilIdle()
-
-        viewModel.nextPage() // 2페이지
-        advanceTimeBy(500L)
-        runCurrent()
-        viewModel.nextPage() // 3페이지
-        advanceTimeBy(500L)
-        runCurrent()
-        viewModel.nextPage() // 4페이지
-        runCurrent()
-
-        // 아직 2초가 지나지 않음 (마지막 이동 후 1500ms)
-        advanceTimeBy(1500L)
-        runCurrent()
-        assertTrue(bookRepository.progressUpdates.isEmpty())
-
-        // 마지막 이동 후 2초 경과 (추가 500ms, 총 2000ms)
-        advanceTimeBy(500L)
-        runCurrent()
-        assertEquals(1, bookRepository.progressUpdates.size)
-        val update = bookRepository.progressUpdates.first()
-        assertEquals(4, update.page)
-    }
-
-    @Test
-    fun `완독 - 마지막 페이지에 도달하면 completed=true로 저장된다`() = runTest(testDispatcher) {
-        val series = createTestSeries(id = "s1")
-        val book = createTestBook(id = "b1", seriesId = "s1", pageCount = 5, progress = ReadProgress(page = 4, completed = false))
-        seriesRepository.seriesMap[series.id] = series
-        bookRepository.books[book.id] = book
-
-        viewModel.loadBook(book.id)
-        advanceUntilIdle()
-
-        viewModel.nextPage() // 4 -> 5 (마지막 페이지)
+        // DOUBLE_PAGES: 펼침 0은 [1], 펼침 1은 [2, 3]
+        viewModel.nextSpread() // 펼침 1 [2, 3]으로 이동
         advanceTimeBy(2000L)
         advanceUntilIdle()
 
         assertEquals(1, bookRepository.progressUpdates.size)
         val update = bookRepository.progressUpdates.first()
-        assertEquals(5, update.page)
+        assertEquals("b1", update.bookId)
+        // [2, 3] 중 큰 번호인 3이 저장되어야 함
+        assertEquals(3, update.page)
+        assertFalse(update.completed)
+    }
+
+    @Test
+    fun `완독 - 마지막 쪽이 보이는 펼침에 도달하면 completed=true로 저장된다`() = runTest(testDispatcher) {
+        readerPreferences.savePageLayout(PageLayout.DOUBLE_PAGES_NO_COVER)
+        val series = createTestSeries(id = "s1")
+        // 4페이지 책: 펼침 0=[1, 2], 펼침 1=[3, 4]
+        val book = createTestBook(id = "b1", seriesId = "s1", pageCount = 4)
+        seriesRepository.seriesMap[series.id] = series
+        bookRepository.books[book.id] = book
+        bookRepository.pagesMap[book.id] = (1..4).map { BookPage(number = it) }
+
+        viewModel.loadBook(book.id)
+        advanceUntilIdle()
+
+        viewModel.nextSpread() // [3, 4] 펼침으로 이동 (마지막 쪽 4 포함)
+        advanceTimeBy(2000L)
+        advanceUntilIdle()
+
+        assertEquals(1, bookRepository.progressUpdates.size)
+        val update = bookRepository.progressUpdates.first()
+        assertEquals(4, update.page)
         assertTrue(update.completed)
     }
 
     @Test
-    fun `종료 시 즉시 저장 - 2초가 지나기 전에도 saveProgressOnExit 호출 시 즉시 동기화된다`() = runTest(testDispatcher) {
+    fun `디바운스 - 연속으로 빠르게 넘기면 마지막 페이지만 1회 저장된다`() = runTest(testDispatcher) {
         val series = createTestSeries(id = "s1")
         val book = createTestBook(id = "b1", seriesId = "s1", pageCount = 10)
         seriesRepository.seriesMap[series.id] = series
@@ -228,11 +262,41 @@ class ReaderViewModelTest {
         viewModel.loadBook(book.id)
         advanceUntilIdle()
 
-        viewModel.nextPage() // 2페이지
+        viewModel.nextPage()
+        advanceTimeBy(500L)
+        runCurrent()
+        viewModel.nextPage()
+        advanceTimeBy(500L)
+        runCurrent()
+        viewModel.nextPage()
+        runCurrent()
+
+        // 아직 2초 미경과
+        advanceTimeBy(1500L)
+        runCurrent()
+        assertTrue(bookRepository.progressUpdates.isEmpty())
+
+        // 2초 경과 (추가 500ms)
+        advanceTimeBy(500L)
+        runCurrent()
+        assertEquals(1, bookRepository.progressUpdates.size)
+        assertEquals(4, bookRepository.progressUpdates.first().page)
+    }
+
+    @Test
+    fun `종료 시 즉시 저장 - 2초 미경과 상태에서 saveProgressOnExit 호출 시 즉시 저장된다`() = runTest(testDispatcher) {
+        val series = createTestSeries(id = "s1")
+        val book = createTestBook(id = "b1", seriesId = "s1", pageCount = 10)
+        seriesRepository.seriesMap[series.id] = series
+        bookRepository.books[book.id] = book
+
+        viewModel.loadBook(book.id)
+        advanceUntilIdle()
+
+        viewModel.nextPage()
         advanceTimeBy(300L)
         assertTrue(bookRepository.progressUpdates.isEmpty())
 
-        // 화면 종료 호출
         viewModel.saveProgressOnExit()
         advanceUntilIdle()
 
@@ -241,26 +305,105 @@ class ReaderViewModelTest {
     }
 
     @Test
-    fun `프리로드 - 현재 페이지 기준 ±2 범위 내 페이지만 프리로드 URL로 생성된다`() = runTest(testDispatcher) {
+    fun `프리로드 - 펼침 기준 앞뒤 2개 펼침의 모든 페이지가 프리로드 URL로 생성된다`() = runTest(testDispatcher) {
+        // DOUBLE_PAGES_NO_COVER: [1, 2], [3, 4], [5, 6], [7, 8], [9, 10]
+        readerPreferences.savePageLayout(PageLayout.DOUBLE_PAGES_NO_COVER)
         val series = createTestSeries(id = "s1")
         val book = createTestBook(id = "b1", seriesId = "s1", pageCount = 10, progress = ReadProgress(page = 5, completed = false))
+        seriesRepository.seriesMap[series.id] = series
+        bookRepository.books[book.id] = book
+        bookRepository.pagesMap[book.id] = (1..10).map { BookPage(number = it) }
+
+        viewModel.loadBook(book.id)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as ReaderUiState.Reading
+        // 현재 펼침: index 2 ([5, 6])
+        assertEquals(2, state.currentSpreadIndex)
+        // 앞뒤 2개 펼침 인덱스: 0([1, 2]), 1([3, 4]), 3([7, 8]), 4([9, 10])
+        val expectedPreloadUrls = listOf(
+            "http://localhost:8080/api/v1/books/b1/pages/1",
+            "http://localhost:8080/api/v1/books/b1/pages/2",
+            "http://localhost:8080/api/v1/books/b1/pages/3",
+            "http://localhost:8080/api/v1/books/b1/pages/4",
+            "http://localhost:8080/api/v1/books/b1/pages/7",
+            "http://localhost:8080/api/v1/books/b1/pages/8",
+            "http://localhost:8080/api/v1/books/b1/pages/9",
+            "http://localhost:8080/api/v1/books/b1/pages/10",
+        )
+        assertEquals(expectedPreloadUrls, state.preloadUrls)
+    }
+
+    @Test
+    fun `설정 변경 - 쪽 배치 변경 시 보고 있던 페이지를 유지하면서 펼침 재계산 및 저장된다`() = runTest(testDispatcher) {
+        val series = createTestSeries(id = "s1")
+        val book = createTestBook(id = "b1", seriesId = "s1", pageCount = 10, progress = ReadProgress(page = 5, completed = false))
+        seriesRepository.seriesMap[series.id] = series
+        bookRepository.books[book.id] = book
+        bookRepository.pagesMap[book.id] = (1..10).map { BookPage(number = it) }
+
+        viewModel.loadBook(book.id)
+        advanceUntilIdle()
+
+        // 현재 SINGLE_PAGE 상태에서 5페이지 보고 있음
+        var state = viewModel.uiState.value as ReaderUiState.Reading
+        assertEquals(PageLayout.SINGLE_PAGE, state.pageLayout)
+        assertTrue(state.currentSpread.containsPage(5))
+
+        // 두 쪽 보기로 변경
+        viewModel.setPageLayout(PageLayout.DOUBLE_PAGES)
+        advanceUntilIdle()
+
+        state = viewModel.uiState.value as ReaderUiState.Reading
+        assertEquals(PageLayout.DOUBLE_PAGES, state.pageLayout)
+        // 여전히 5페이지가 포함된 펼침이어야 함
+        assertTrue(state.currentSpread.containsPage(5))
+        assertEquals(PageLayout.DOUBLE_PAGES, readerPreferences.pageLayout.first())
+    }
+
+    @Test
+    fun `설정 변경 - 밀기(offset) 토글 시 펼침이 재계산된다`() = runTest(testDispatcher) {
+        readerPreferences.savePageLayout(PageLayout.DOUBLE_PAGES)
+        val series = createTestSeries(id = "s1")
+        val book = createTestBook(id = "b1", seriesId = "s1", pageCount = 6)
+        seriesRepository.seriesMap[series.id] = series
+        bookRepository.books[book.id] = book
+        bookRepository.pagesMap[book.id] = (1..6).map { BookPage(number = it) }
+
+        viewModel.loadBook(book.id)
+        advanceUntilIdle()
+
+        var state = viewModel.uiState.value as ReaderUiState.Reading
+        assertFalse(state.layoutOffset)
+        assertEquals(4, state.totalSpreads) // [1], [2, 3], [4, 5], [6]
+
+        // 밀기 켜기
+        viewModel.setLayoutOffset(true)
+        state = viewModel.uiState.value as ReaderUiState.Reading
+        assertTrue(state.layoutOffset)
+        // [1], [2], [3, 4], [5, 6] -> 4개 펼침
+        assertEquals(4, state.totalSpreads)
+    }
+
+    @Test
+    fun `설정 변경 - 크기 맞춤 및 작은 이미지 키우기 설정 저장`() = runTest(testDispatcher) {
+        val series = createTestSeries(id = "s1")
+        val book = createTestBook(id = "b1", seriesId = "s1", pageCount = 6)
         seriesRepository.seriesMap[series.id] = series
         bookRepository.books[book.id] = book
 
         viewModel.loadBook(book.id)
         advanceUntilIdle()
 
+        viewModel.setScaleType(ScaleType.FIT_WIDTH)
+        viewModel.setStretchToFit(false)
+        advanceUntilIdle()
+
         val state = viewModel.uiState.value as ReaderUiState.Reading
-        assertEquals("http://localhost:8080/api/v1/books/b1/pages/5", state.currentPageUrl)
-        assertEquals(
-            listOf(
-                "http://localhost:8080/api/v1/books/b1/pages/3",
-                "http://localhost:8080/api/v1/books/b1/pages/4",
-                "http://localhost:8080/api/v1/books/b1/pages/6",
-                "http://localhost:8080/api/v1/books/b1/pages/7",
-            ),
-            state.preloadUrls,
-        )
+        assertEquals(ScaleType.FIT_WIDTH, state.scaleType)
+        assertFalse(state.stretchToFit)
+        assertEquals(ScaleType.FIT_WIDTH, readerPreferences.scaleType.first())
+        assertFalse(readerPreferences.stretchToFit.first())
     }
 
     @Test
@@ -269,6 +412,7 @@ class ReaderViewModelTest {
         val book = createTestBook(id = "b1", seriesId = "s1", pageCount = 25, progress = ReadProgress(page = 5, completed = false))
         seriesRepository.seriesMap[series.id] = series
         bookRepository.books[book.id] = book
+        bookRepository.pagesMap[book.id] = (1..25).map { BookPage(number = it) }
 
         viewModel.loadBook(book.id)
         advanceUntilIdle()
@@ -283,7 +427,7 @@ class ReaderViewModelTest {
         state = viewModel.uiState.value as ReaderUiState.Reading
         assertEquals(5, state.currentPage)
 
-        // 경계값 테스트: 5에서 -10 점프 시 최소값 1로 제한
+        // 최소값 1로 제한
         viewModel.jumpBackward(10)
         state = viewModel.uiState.value as ReaderUiState.Reading
         assertEquals(1, state.currentPage)
@@ -330,6 +474,7 @@ class ReaderViewModelTest {
 
     private class FakeBookRepository : BookRepository {
         val books = mutableMapOf<String, Book>()
+        val pagesMap = mutableMapOf<String, List<BookPage>>()
         val progressUpdates = mutableListOf<ProgressUpdate>()
 
         override fun getBooks(seriesId: String, page: Int, size: Int): Flow<BookPageResult> {
@@ -342,6 +487,10 @@ class ReaderViewModelTest {
 
         override suspend fun getBookById(bookId: String): Book {
             return books[bookId] ?: throw NoSuchElementException("Book not found: $bookId")
+        }
+
+        override suspend fun getBookPages(bookId: String): List<BookPage> {
+            return pagesMap[bookId] ?: (1..(books[bookId]?.pageCount ?: 1)).map { BookPage(number = it) }
         }
 
         override suspend fun updateReadProgress(bookId: String, page: Int, completed: Boolean) {
@@ -362,6 +511,38 @@ class ReaderViewModelTest {
 
         override fun searchSeries(query: String, page: Int, size: Int): Flow<SeriesPageResult> {
             throw NotImplementedError()
+        }
+    }
+
+    private class FakeReaderPreferences(
+        initialSettings: ReaderSettings = ReaderSettings(),
+    ) : ReaderPreferences {
+        private val _settings = MutableStateFlow(initialSettings)
+        override val readerSettings: Flow<ReaderSettings> = _settings.asStateFlow()
+
+        override val pageLayout: Flow<PageLayout> = _settings.map { it.pageLayout }
+        override val scaleType: Flow<ScaleType> = _settings.map { it.scaleType }
+        override val stretchToFit: Flow<Boolean> = _settings.map { it.stretchToFit }
+        override val readingDirection: Flow<ReadingDirection> = _settings.map { it.readingDirection }
+
+        override suspend fun savePageLayout(layout: PageLayout) {
+            _settings.value = _settings.value.copy(pageLayout = layout)
+        }
+
+        override suspend fun saveScaleType(scaleType: ScaleType) {
+            _settings.value = _settings.value.copy(scaleType = scaleType)
+        }
+
+        override suspend fun saveStretchToFit(stretch: Boolean) {
+            _settings.value = _settings.value.copy(stretchToFit = stretch)
+        }
+
+        override suspend fun saveReadingDirection(direction: ReadingDirection) {
+            _settings.value = _settings.value.copy(readingDirection = direction)
+        }
+
+        override suspend fun clearAll() {
+            _settings.value = ReaderSettings()
         }
     }
 
