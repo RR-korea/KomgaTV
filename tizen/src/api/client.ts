@@ -1,7 +1,17 @@
 // Komga REST 클라이언트. 엔드포인트와 JSON은 Android가 쓰는 komga-client 0.11.0과 같다 (PLAN Z2).
 import type { SearchBody } from './conditions';
 import { classifyError, ConnectionError, HttpError } from './errors';
-import type { KomgaBook, KomgaBookPage, KomgaLibrary, KomgaSeries, KomgaUser, Page, PageRequest } from './types';
+import type {
+  KomgaBook,
+  KomgaBookPage,
+  KomgaLibrary,
+  KomgaSeries,
+  KomgaUser,
+  Page,
+  PageRequest,
+  R2Progression,
+  WebPubManifest,
+} from './types';
 import { apiUrl, normalizeServerUrl } from './url';
 
 export type Auth =
@@ -124,6 +134,53 @@ export class KomgaClient {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ page, completed }),
     });
+  }
+
+  // ---------- EPUB ----------
+  getWebPubManifest(bookId: string): Promise<WebPubManifest> {
+    return this.json(`api/v1/books/${encodeURIComponent(bookId)}/manifest`, {
+      headers: { Accept: 'application/webpub+json' },
+    });
+  }
+
+  /** 읽은 자리. 읽은 적 없으면 null */
+  async getProgression(bookId: string): Promise<R2Progression | null> {
+    try {
+      const response = await this.request(`api/v1/books/${encodeURIComponent(bookId)}/progression`);
+      if (response.status === 204) return null;
+      const text = await response.text();
+      return text ? (JSON.parse(text) as R2Progression) : null;
+    } catch (error) {
+      if (error instanceof HttpError && error.status === 404) return null;
+      throw error;
+    }
+  }
+
+  /** 읽은 자리 저장 — Komga가 읽기 진행·완독으로 바꾼다 */
+  async putProgression(bookId: string, progression: R2Progression): Promise<void> {
+    await this.request(`api/v1/books/${encodeURIComponent(bookId)}/progression`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(progression),
+    });
+  }
+
+  /** manifest의 전체 URL → 이 서버 기준 경로. 다른 서버 주소면 null (인증 정보를 남의 서버에 보내지 않는다) */
+  pathOf(url: string): string | null {
+    const prefix = `${this.baseUrl}/`;
+    return url.startsWith(prefix) ? url.slice(prefix.length) : null;
+  }
+
+  async fetchText(url: string): Promise<string> {
+    const path = this.pathOf(url);
+    if (!path) throw new Error(`not on this server: ${url}`);
+    return (await this.request(path)).text();
+  }
+
+  async fetchBlob(url: string): Promise<Blob> {
+    const path = this.pathOf(url);
+    if (!path) throw new Error(`not on this server: ${url}`);
+    return (await this.request(path)).blob();
   }
 
   /** 인증 이미지 (표지·페이지). path는 ImagePaths로 만든다. */

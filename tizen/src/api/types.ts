@@ -44,6 +44,8 @@ export interface KomgaBook {
   number: number;
   media: {
     pagesCount: number;
+    /** DIVINA(이미지) / PDF / EPUB — EPUB이면 글 리더로 연다 (Android T12) */
+    mediaProfile?: string;
   };
   metadata: {
     title: string;
@@ -83,3 +85,28 @@ export const BookSort = {
   numberAsc: 'metadata.numberSort,asc',
   readDateDesc: 'readProgress.readDate,desc',
 } as const;
+
+// EPUB (Readium WebPub manifest·progression, Android T12와 같은 엔드포인트)
+export interface WebPubLink {
+  href: string;
+  type?: string;
+  title?: string;
+}
+
+export interface WebPubManifest {
+  readingOrder: WebPubLink[];
+  toc?: WebPubLink[];
+}
+
+export interface R2Locator {
+  /** 책 안 경로 (예: index_split_001.html) */
+  href: string;
+  type: string;
+  locations?: { progression?: number; totalProgression?: number };
+}
+
+export interface R2Progression {
+  modified: string;
+  device: { id: string; name: string };
+  locator: R2Locator;
+}

@@ -636,3 +636,53 @@ body {
   margin-bottom: 0;
   flex: 0 0 auto;
 }
+
+/* ---------- EPUB 리더 (Android T12: 어두운 화면, 가운데 46em, 줄 간격 1.8, 그림은 폭에 맞춤) ---------- */
+
+.epub-viewport {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: #121212;
+}
+
+.epub-content {
+  max-width: 46em;
+  margin: 0 auto;
+  padding: 72px 48px 540px;
+  color: #e8e6e1;
+  line-height: 1.8;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* 책 CSS를 지웠어도 남는 인라인 색·배경을 리더 색으로 덮는다 */
+.epub-content * {
+  color: #e8e6e1 !important;
+  background-color: transparent !important;
+  line-height: 1.8 !important;
+}
+
+.epub-content p {
+  margin: 0 0 0.8em;
+}
+
+.epub-content img,
+.epub-content svg {
+  display: block;
+  max-width: 100% !important;
+  height: auto !important;
+  margin: 1em auto;
+}
+
+/* EPUB 정보 막대는 뒤의 글이 비치지 않게 */
+.epub .reader-overlay {
+  background: transparent;
+}
+
+.epub .reader-overlay-bar {
+  background: rgba(8, 8, 8, 0.96);
+}

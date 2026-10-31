@@ -61,6 +61,29 @@ for (const [id, page] of [['S1B3', 7], ['S2B1', 12], ['S5B2', 3]]) {
   book.readDate = Date.now() - books.indexOf(book);
 }
 
+// EPUB 책 하나 (Android T12): S7B1, 3장, 둘째 장은 길고 그림이 있다. 둘째 장 처음에서 읽던 중
+const EPUB_ID = 'S7B1';
+{
+  const book = books.find((b) => b.id === EPUB_ID);
+  book.media = { pagesCount: 30, mediaProfile: 'EPUB' };
+  book.metadata.title = 'a67879a1d4464860c3eedc980bd12118'; // 파일 해시 제목 → 시리즈 이름으로 보여야 한다
+  book.readProgress = { page: 10, completed: false };
+  book.readDate = Date.now() - 10_000_000; // 읽는 중 줄의 맨 뒤
+}
+const epubChapters = ['index_split_000.html', 'index_split_001.html', 'index_split_002.html'];
+const epubHtml = (i) =>
+  `<?xml version='1.0' encoding='utf-8'?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>t</title>` +
+  `<link href="stylesheet.css" rel="stylesheet" type="text/css"/><script>window.bad = 1</script></head>` +
+  `<body class="calibre"><h1>${['첫째', '둘째', '셋째'][i]} 장</h1>` +
+  (i === 1 ? '<p><img src="images/pic.svg" alt=""/></p>' : '') +
+  Array.from({ length: i === 1 ? 120 : 8 }, (_, n) => `<p onclick="alert(1)">${['첫째', '둘째', '셋째'][i]} 장 문단 ${n + 1}. 리모컨으로 읽는 글입니다.</p>`).join('') +
+  `<p><a href="index_split_002.html">다음 장으로</a></p></body></html>`;
+let epubProgression = {
+  modified: new Date().toISOString(),
+  device: { id: 'x', name: 'x' },
+  locator: { href: 'index_split_001.html', type: 'application/xhtml+xml', locations: { progression: 0, totalProgression: 0.33 } },
+};
+
 /** 8쪽·9쪽은 가로(펼침 스캔), 나머지 세로 */
 const pageSize = (n) => (n === 8 || n === 15 ? { width: 1600, height: 1200 } : { width: 800, height: 1200 });
 
@@ -157,6 +180,34 @@ async function api(req, res, path, url) {
       list.sort((a, b) => a.number - b.number);
     }
     return paged(res, list, url);
+  }
+  if ((m = path.match(/^api\/v1\/books\/([^/]+)\/manifest$/)) && m[1] === EPUB_ID) {
+    const base = `http://localhost:${port}${BASE}/api/v1/books/${EPUB_ID}/resource/`;
+    res.writeHead(200, { 'Content-Type': 'application/webpub+json' });
+    return res.end(
+      JSON.stringify({
+        readingOrder: epubChapters.map((f) => ({ href: base + f, type: 'application/xhtml+xml' })),
+        toc: [{ title: '둘째 장 제목', href: `${base}index_split_001.html` }],
+      }),
+    );
+  }
+  if ((m = path.match(/^api\/v1\/books\/([^/]+)\/resource\/(.+)$/)) && m[1] === EPUB_ID) {
+    const file = m[2];
+    if (file === 'images/pic.svg') return svg(res, 600, 300, 'EPUB 그림', 200);
+    const i = epubChapters.indexOf(file);
+    if (i < 0) return json(res, {}, 404);
+    res.writeHead(200, { 'Content-Type': 'application/xhtml+xml' });
+    return res.end(epubHtml(i));
+  }
+  if ((m = path.match(/^api\/v1\/books\/([^/]+)\/progression$/)) && m[1] === EPUB_ID) {
+    if (req.method === 'PUT') {
+      epubProgression = await readBody(req);
+      const loc = epubProgression.locator;
+      console.log(`PUT progression ${EPUB_ID} href=${loc.href} p=${loc.locations.progression.toFixed(2)} total=${loc.locations.totalProgression.toFixed(2)}`);
+      res.writeHead(204);
+      return res.end();
+    }
+    return json(res, epubProgression);
   }
   if ((m = path.match(/^api\/v1\/books\/([^/]+)$/))) {
     const found = books.find((b) => b.id === m[1]);

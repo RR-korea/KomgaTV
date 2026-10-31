@@ -13,7 +13,9 @@ const server = spawn(process.execPath, ['dev/mock-komga.mjs', String(port)], { s
 const patches = [];
 server.stdout.on('data', (chunk) => {
   const text = String(chunk);
-  for (const line of text.split('\n')) if (line.startsWith('PATCH')) patches.push(line.trim());
+  for (const line of text.split('\n')) {
+    if (line.startsWith('PATCH') || line.startsWith('PUT progression')) patches.push(line.trim());
+  }
 });
 await new Promise((resolve) => server.stdout.once('data', resolve));
 
@@ -332,6 +334,60 @@ try {
   await expectFocus('바꾸기 → 홈부터', (k) => !!k && k.startsWith('reading-'));
   const stack = await page.evaluate(() => document.querySelectorAll('.screen').length);
   results.push(`${stack === 1 ? 'PASS' : 'FAIL'} 바꾸면 쌓인 화면을 버린다: 화면 ${stack}개`);
+
+  // 9. EPUB 리더 (Android T12): 읽는 중 줄 맨 뒤의 EPUB 책 (둘째 장에서 읽던 중)
+  await page.waitForTimeout(800);
+  for (let i = 0; i < 8 && (await focused()) !== 'reading-book-S7B1'; i++) await key('ArrowRight');
+  await expectFocus('EPUB 책 카드', 'reading-book-S7B1');
+  await expectText('해시 제목 → 시리즈 이름', '[data-key="reading-book-S7B1"] .card-title', /시리즈 007/);
+  await key('Enter');
+  await page.waitForTimeout(1500);
+  const epub = () =>
+    page.evaluate(() => {
+      const body = document.querySelector('.epub-content');
+      const view = document.querySelector('.epub-viewport');
+      return {
+        heading: body?.querySelector('h1')?.textContent ?? '',
+        scripts: body?.querySelectorAll('script, link, [onclick], a[href]').length ?? -1,
+        img: body?.querySelector('img')?.getAttribute('src') ?? '',
+        scroll: view?.scrollTop ?? -1,
+      };
+    });
+  const first = await epub();
+  results.push(`${first.heading === '둘째 장' ? 'PASS' : 'FAIL'} 저장된 자리(둘째 장)에서 연다: "${first.heading}"`);
+  results.push(`${first.scripts === 0 ? 'PASS' : 'FAIL'} 스크립트·외부 CSS·이벤트·링크 제거: ${first.scripts}`);
+  results.push(`${first.img.startsWith('blob:') ? 'PASS' : 'FAIL'} 그림을 인증 fetch로: ${first.img.slice(0, 20)}`);
+  await shot('epub');
+  await key('ArrowDown');
+  await page.waitForTimeout(600);
+  const scrolled = await epub();
+  results.push(`${scrolled.scroll > 500 ? 'PASS' : 'FAIL'} 아래 → 화면 90% 스크롤: ${scrolled.scroll}`);
+  await key('Enter');
+  await expectText('정보: 3장 중 2장 · 목차 제목', '.reader-overlay-row:nth-child(2)', /3장 중 2장 · 둘째 장 제목/);
+  await key('ArrowUp');
+  await expectText('정보에서 위 → 글자 크기 110%', '.reader-help', /110%/);
+  await shot('epub-overlay');
+  await key('Enter');
+  await key('ArrowRight');
+  await page.waitForTimeout(800);
+  results.push(`${(await epub()).heading === '셋째 장' ? 'PASS' : 'FAIL'} 오른쪽 → 다음 장`);
+  await key('ArrowUp');
+  await page.waitForTimeout(800);
+  const back = await epub();
+  results.push(`${back.heading === '둘째 장' && back.scroll > 1000 ? 'PASS' : 'FAIL'} 장 처음에서 위 → 이전 장 끝: ${back.heading} ${back.scroll}`);
+  await key('ArrowRight');
+  await page.waitForTimeout(800);
+  await key('Escape');
+  await page.waitForTimeout(1200);
+  results.push(
+    `${patches.some((p) => p.includes('PUT progression S7B1 href=index_split_002.html')) ? 'PASS' : 'FAIL'} 나갈 때 EPUB 자리 저장: ${patches.filter((p) => p.startsWith('PUT')).slice(-1)}`,
+  );
+  await expectFocus('EPUB에서 돌아오면 그 책', 'reading-book-S7B1');
+  await key('Enter');
+  await page.waitForTimeout(1500);
+  results.push(`${(await epub()).heading === '셋째 장' ? 'PASS' : 'FAIL'} 다시 열면 저장한 장(셋째 장)`);
+  await key('Escape');
+  await page.waitForTimeout(800);
 } finally {
   console.log(results.join('\n'));
   console.log(`errors: ${errors.length ? errors.join('\n') : 'none'}`);

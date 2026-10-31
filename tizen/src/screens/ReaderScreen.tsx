@@ -41,6 +41,7 @@ import {
 import { type LoadError, requireSession, session as sessionStore, toLoadError, trackWrite } from '../state/session';
 import { useStore } from '../state/store';
 import { Button, ErrorView, LoadingView, ProgressBar, useCachedImage } from '../ui/components';
+import { EpubReader } from './EpubReader';
 
 const SCREEN: Size = { width: 1920, height: 1080 };
 const JUMP_PAGES = 10;
@@ -49,11 +50,14 @@ interface BookData {
   book: KomgaBook;
   pages: PageInfo[];
   seriesDirection: ReadingDirection | null;
+  /** EPUB이면 글 리더로 넘긴다 (Android T12) */
+  epub?: boolean;
 }
 
 async function loadBook(bookId: string): Promise<BookData> {
   const { client } = requireSession();
   const book = await client.getBook(bookId);
+  if (book.media.mediaProfile === 'EPUB') return { book, pages: [], seriesDirection: null, epub: true };
   const [series, pages] = await Promise.all([
     client.getSeries(book.seriesId),
     client.getBookPages(bookId).catch(() => []),
@@ -134,6 +138,10 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
     setError(null);
     loadBook(route.bookId).then(
       (loaded) => {
+        if (loaded.epub) {
+          setData(loaded);
+          return;
+        }
         const progress = loaded.book.readProgress;
         const saved = readerPrefs.get();
         const dir = loaded.seriesDirection;
@@ -427,7 +435,9 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
     return true;
   };
 
-  useKeys(onKey, active);
+  useKeys(onKey, active && !data?.epub);
+
+  if (data?.epub) return <EpubReader book={data.book} active={active} />;
 
   if (error) {
     return (

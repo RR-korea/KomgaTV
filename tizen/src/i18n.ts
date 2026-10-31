@@ -105,6 +105,8 @@ const ko = {
   off: '꺼짐',
   close: '닫기',
   readerHelp: 'OK: 정보  ·  위/아래: 10쪽 이동  ·  Back: 나가기',
+  epubChapter: '{1}장 중 {0}장',
+  epubOverlayHint: '▲▼: 글자 크기 ({0}%) · ◀▶: 장 이동 · Back: 닫기',
   readerHelpContinuous: '정보를 닫으면 위/아래: 한 화면씩  ·  좌/우: 쪽 이동  ·  위/아래(정보): 10쪽 이동',
 };
 
@@ -215,6 +217,8 @@ const en: Strings = {
   off: 'Off',
   close: 'Close',
   readerHelp: 'OK: info  ·  Up/Down: jump 10 pages  ·  Back: exit',
+  epubChapter: 'Chapter {0} / {1}',
+  epubOverlayHint: '▲▼: Text size ({0}%) · ◀▶: Chapter · Back: Close',
   readerHelpContinuous: 'Info closed: Up/Down scroll a screen  ·  Left/Right: page  ·  Up/Down (info): jump 10 pages',
 };
 

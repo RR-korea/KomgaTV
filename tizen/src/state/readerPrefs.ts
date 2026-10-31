@@ -17,6 +17,8 @@ export interface ReaderSettings {
   continuousPadding: number;
   /** 세로 스크롤 쪽 사이 간격 (dp, 0~64) */
   continuousPageSpacing: number;
+  /** EPUB 글자 크기 (%, 60~200) — Android T12 epubTextZoom */
+  epubTextZoom: number;
 }
 
 export const defaultReaderSettings: ReaderSettings = {
@@ -27,6 +29,7 @@ export const defaultReaderSettings: ReaderSettings = {
   readingDirection: 'LEFT_TO_RIGHT',
   continuousPadding: 0,
   continuousPageSpacing: 0,
+  epubTextZoom: 100,
 };
 
 export const READER_TYPES: ReaderType[] = ['PAGED', 'CONTINUOUS'];
@@ -56,6 +59,10 @@ export function parseReaderSettings(raw: unknown): ReaderSettings {
     readingDirection: oneOf(DIRECTIONS, p.readingDirection, d.readingDirection),
     continuousPadding: oneOf(PADDING_STEPS, p.continuousPadding, d.continuousPadding),
     continuousPageSpacing: oneOf(SPACING_STEPS, p.continuousPageSpacing, d.continuousPageSpacing),
+    epubTextZoom:
+      typeof p.epubTextZoom === 'number' && p.epubTextZoom >= 60 && p.epubTextZoom <= 200 && p.epubTextZoom % 10 === 0
+        ? p.epubTextZoom
+        : d.epubTextZoom,
   };
 }
 
