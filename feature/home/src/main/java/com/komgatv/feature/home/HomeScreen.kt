@@ -32,6 +32,7 @@ import androidx.tv.material3.Text
 import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.Library
+import com.komgatv.core.ui.components.NameCard
 import com.komgatv.core.ui.components.PosterCard
 import com.komgatv.core.ui.components.TVRow
 import com.komgatv.core.ui.components.loadErrorText
@@ -207,10 +208,10 @@ private fun HomeContent(
                     modifier = if (continueReading.isEmpty()) Modifier.focusRequester(entryFocus.fallback) else Modifier,
                 ) { library ->
                     val key = "library:${library.id}"
-                    PosterCard(
+                    // Komga 라이브러리에는 표지가 없다 — 이름 카드로
+                    NameCard(
                         modifier = Modifier.focusRequester(entryFocus.requesterFor(key)),
                         title = library.name,
-                        imageUrl = "",
                         onClick = {
                             entryFocus.onOpen(key)
                             onNavigateToLibrary(library.id)
