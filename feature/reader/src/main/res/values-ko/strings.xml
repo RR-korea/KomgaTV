@@ -25,4 +25,11 @@
     <string name="reader_option_on">켜짐</string>
     <string name="reader_option_off">꺼짐</string>
     <string name="reader_settings_hint">▲▼: 항목 · ◀▶/OK: 바꾸기 · Back: 닫기</string>
+    <string name="reader_type_title">리더 종류</string>
+    <string name="reader_type_paged">페이지 넘김</string>
+    <string name="reader_type_continuous">세로 스크롤</string>
+    <string name="reader_side_padding_title">좌우 여백</string>
+    <string name="reader_page_spacing_title">쪽 간격</string>
+    <string name="reader_percent_value">%1$d%%</string>
+    <string name="reader_dp_value">%1$d dp</string>
 </resources>

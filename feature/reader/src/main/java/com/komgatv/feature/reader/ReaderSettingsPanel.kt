@@ -38,30 +38,35 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.komgatv.core.model.PageLayout
+import com.komgatv.core.model.ReaderType
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.ScaleType
 
 /**
  * 리더 보기 설정 패널
  *
- * D-pad 전용 인터랙션을 제공합니다:
- * - 상/하: 설정 항목 간 포커스 이동
- * - 좌/우 또는 Center/Enter: 설정 값 순환 변경
- * - 열릴 때 첫 항목에 자동 포커스, Back은 리더 화면이 받아 패널을 닫는다
+ * 첫 줄은 리더 종류(Paged/Continuous), 그 아래 줄은 종류에 따라 바뀐다 (Komelia와 같은 항목).
+ * - 상/하: 항목 이동, 좌/우 또는 OK: 값 바꾸기 (바로 반영)
+ * - 열릴 때 첫 항목에 포커스, Back은 리더 화면이 받아 패널을 닫는다
  */
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun ReaderSettingsPanel(
+    readerType: ReaderType,
     pageLayout: PageLayout,
     layoutOffset: Boolean,
     readingDirection: ReadingDirection,
     scaleType: ScaleType,
     stretchToFit: Boolean,
+    continuousPadding: Float,
+    continuousPageSpacing: Int,
+    onReaderTypeChange: (ReaderType) -> Unit,
     onPageLayoutChange: (PageLayout) -> Unit,
     onLayoutOffsetChange: (Boolean) -> Unit,
     onReadingDirectionChange: (ReadingDirection) -> Unit,
     onScaleTypeChange: (ScaleType) -> Unit,
     onStretchToFitChange: (Boolean) -> Unit,
+    onContinuousPaddingChange: (Float) -> Unit,
+    onContinuousPageSpacingChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val firstFocusRequester = remember { FocusRequester() }
@@ -91,86 +96,80 @@ fun ReaderSettingsPanel(
                 color = Color.White,
             )
 
-            // 1. 쪽 배치
-            val layoutOptions = listOf(
-                PageLayout.SINGLE_PAGE to stringResource(R.string.reader_layout_single),
-                PageLayout.DOUBLE_PAGES to stringResource(R.string.reader_layout_double),
-                PageLayout.DOUBLE_PAGES_NO_COVER to stringResource(R.string.reader_layout_double_no_cover),
-            )
-            SettingSelectorRow(
-                title = stringResource(R.string.reader_layout_title),
-                currentValueText = layoutOptions.firstOrNull { it.first == pageLayout }?.second.orEmpty(),
-                onPrevious = {
-                    val currentIndex = layoutOptions.indexOfFirst { it.first == pageLayout }
-                    val prevIndex = if (currentIndex > 0) currentIndex - 1 else layoutOptions.lastIndex
-                    onPageLayoutChange(layoutOptions[prevIndex].first)
-                },
-                onNext = {
-                    val currentIndex = layoutOptions.indexOfFirst { it.first == pageLayout }
-                    val nextIndex = (currentIndex + 1) % layoutOptions.size
-                    onPageLayoutChange(layoutOptions[nextIndex].first)
-                },
+            OptionRow(
+                title = stringResource(R.string.reader_type_title),
+                options = listOf(
+                    ReaderType.PAGED to stringResource(R.string.reader_type_paged),
+                    ReaderType.CONTINUOUS to stringResource(R.string.reader_type_continuous),
+                ),
+                current = readerType,
+                onChange = onReaderTypeChange,
                 modifier = Modifier.focusRequester(firstFocusRequester),
             )
 
-            // 2. 쪽 맞춤 밀기 (offset) - 두 쪽 보기일 때만 유효
-            val isDoublePage = pageLayout != PageLayout.SINGLE_PAGE
-            SettingSelectorRow(
-                title = stringResource(R.string.reader_offset_title),
-                currentValueText = stringResource(if (layoutOffset) R.string.reader_option_on else R.string.reader_option_off),
-                enabled = isDoublePage,
-                onPrevious = { onLayoutOffsetChange(!layoutOffset) },
-                onNext = { onLayoutOffsetChange(!layoutOffset) },
-            )
+            when (readerType) {
+                ReaderType.PAGED -> {
+                    OptionRow(
+                        title = stringResource(R.string.reader_layout_title),
+                        options = listOf(
+                            PageLayout.SINGLE_PAGE to stringResource(R.string.reader_layout_single),
+                            PageLayout.DOUBLE_PAGES to stringResource(R.string.reader_layout_double),
+                            PageLayout.DOUBLE_PAGES_NO_COVER to stringResource(R.string.reader_layout_double_no_cover),
+                        ),
+                        current = pageLayout,
+                        onChange = onPageLayoutChange,
+                    )
+                    // 쪽 맞춤 밀기는 두 쪽 보기에서만
+                    OnOffRow(
+                        title = stringResource(R.string.reader_offset_title),
+                        value = layoutOffset,
+                        onChange = onLayoutOffsetChange,
+                        enabled = pageLayout != PageLayout.SINGLE_PAGE,
+                    )
+                    OptionRow(
+                        title = stringResource(R.string.reader_direction_title),
+                        options = listOf(
+                            ReadingDirection.LEFT_TO_RIGHT to stringResource(R.string.reader_direction_ltr),
+                            ReadingDirection.RIGHT_TO_LEFT to stringResource(R.string.reader_direction_rtl),
+                        ),
+                        current = readingDirection,
+                        onChange = onReadingDirectionChange,
+                    )
+                    OptionRow(
+                        title = stringResource(R.string.reader_scale_title),
+                        options = listOf(
+                            ScaleType.SCREEN to stringResource(R.string.reader_scale_screen),
+                            ScaleType.FIT_WIDTH to stringResource(R.string.reader_scale_fit_width),
+                            ScaleType.FIT_HEIGHT to stringResource(R.string.reader_scale_fit_height),
+                            ScaleType.ORIGINAL to stringResource(R.string.reader_scale_original),
+                        ),
+                        current = scaleType,
+                        onChange = onScaleTypeChange,
+                    )
+                }
 
-            // 3. 읽기 방향
-            val directionOptions = listOf(
-                ReadingDirection.LEFT_TO_RIGHT to stringResource(R.string.reader_direction_ltr),
-                ReadingDirection.RIGHT_TO_LEFT to stringResource(R.string.reader_direction_rtl),
-            )
-            SettingSelectorRow(
-                title = stringResource(R.string.reader_direction_title),
-                currentValueText = directionOptions.firstOrNull { it.first == readingDirection }?.second.orEmpty(),
-                onPrevious = {
-                    val currentIndex = directionOptions.indexOfFirst { it.first == readingDirection }
-                    val prevIndex = if (currentIndex > 0) currentIndex - 1 else directionOptions.lastIndex
-                    onReadingDirectionChange(directionOptions[prevIndex].first)
-                },
-                onNext = {
-                    val currentIndex = directionOptions.indexOfFirst { it.first == readingDirection }
-                    val nextIndex = (currentIndex + 1) % directionOptions.size
-                    onReadingDirectionChange(directionOptions[nextIndex].first)
-                },
-            )
+                ReaderType.CONTINUOUS -> {
+                    OptionRow(
+                        title = stringResource(R.string.reader_side_padding_title),
+                        options = PADDING_STEPS.map { it to stringResource(R.string.reader_percent_value, (it * 100).toInt()) },
+                        current = PADDING_STEPS.minBy { kotlin.math.abs(it - continuousPadding) },
+                        onChange = onContinuousPaddingChange,
+                        wrap = false,
+                    )
+                    OptionRow(
+                        title = stringResource(R.string.reader_page_spacing_title),
+                        options = SPACING_STEPS.map { it to stringResource(R.string.reader_dp_value, it) },
+                        current = SPACING_STEPS.minBy { kotlin.math.abs(it - continuousPageSpacing) },
+                        onChange = onContinuousPageSpacingChange,
+                        wrap = false,
+                    )
+                }
+            }
 
-            // 4. 크기 맞춤
-            val scaleOptions = listOf(
-                ScaleType.SCREEN to stringResource(R.string.reader_scale_screen),
-                ScaleType.FIT_WIDTH to stringResource(R.string.reader_scale_fit_width),
-                ScaleType.FIT_HEIGHT to stringResource(R.string.reader_scale_fit_height),
-                ScaleType.ORIGINAL to stringResource(R.string.reader_scale_original),
-            )
-            SettingSelectorRow(
-                title = stringResource(R.string.reader_scale_title),
-                currentValueText = scaleOptions.firstOrNull { it.first == scaleType }?.second.orEmpty(),
-                onPrevious = {
-                    val currentIndex = scaleOptions.indexOfFirst { it.first == scaleType }
-                    val prevIndex = if (currentIndex > 0) currentIndex - 1 else scaleOptions.lastIndex
-                    onScaleTypeChange(scaleOptions[prevIndex].first)
-                },
-                onNext = {
-                    val currentIndex = scaleOptions.indexOfFirst { it.first == scaleType }
-                    val nextIndex = (currentIndex + 1) % scaleOptions.size
-                    onScaleTypeChange(scaleOptions[nextIndex].first)
-                },
-            )
-
-            // 5. 작은 이미지 키우기
-            SettingSelectorRow(
+            OnOffRow(
                 title = stringResource(R.string.reader_stretch_title),
-                currentValueText = stringResource(if (stretchToFit) R.string.reader_option_on else R.string.reader_option_off),
-                onPrevious = { onStretchToFitChange(!stretchToFit) },
-                onNext = { onStretchToFitChange(!stretchToFit) },
+                value = stretchToFit,
+                onChange = onStretchToFitChange,
             )
 
             Text(
@@ -180,6 +179,57 @@ fun ReaderSettingsPanel(
             )
         }
     }
+}
+
+/** 좌우 여백 단계: 0%~45%, 5% 단위 */
+private val PADDING_STEPS = (0..9).map { it * 0.05f }
+
+/** 쪽 간격 단계: 0~64dp, 8 단위 */
+private val SPACING_STEPS = (0..8).map { it * 8 }
+
+/**
+ * 값 목록 중 하나를 고르는 줄. 좌 = 이전 값, 우·OK = 다음 값.
+ * [wrap]이 false면 끝에서 멈춘다 (여백·간격처럼 크기가 있는 값).
+ */
+@Composable
+private fun <T> OptionRow(
+    title: String,
+    options: List<Pair<T, String>>,
+    current: T,
+    onChange: (T) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    wrap: Boolean = true,
+) {
+    val index = options.indexOfFirst { it.first == current }.coerceAtLeast(0)
+    fun step(delta: Int) {
+        val next = if (wrap) (index + delta).mod(options.size) else (index + delta).coerceIn(0, options.lastIndex)
+        if (next != index) onChange(options[next].first)
+    }
+    SettingSelectorRow(
+        title = title,
+        currentValueText = options[index].second,
+        onPrevious = { step(-1) },
+        onNext = { step(1) },
+        modifier = modifier,
+        enabled = enabled,
+    )
+}
+
+@Composable
+private fun OnOffRow(
+    title: String,
+    value: Boolean,
+    onChange: (Boolean) -> Unit,
+    enabled: Boolean = true,
+) {
+    SettingSelectorRow(
+        title = title,
+        currentValueText = stringResource(if (value) R.string.reader_option_on else R.string.reader_option_off),
+        onPrevious = { onChange(!value) },
+        onNext = { onChange(!value) },
+        enabled = enabled,
+    )
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)

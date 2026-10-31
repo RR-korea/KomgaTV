@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -53,10 +55,12 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Precision
+import com.komgatv.core.model.ReaderType
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.ScaleType
 import com.komgatv.core.ui.components.ProgressBar
 import com.komgatv.core.ui.components.loadErrorText
+import com.komgatv.feature.reader.continuous.ContinuousPages
 import kotlinx.coroutines.launch
 import coil3.size.Size as CoilSize
 
@@ -67,8 +71,8 @@ private const val MAX_TALL_SCREENS = 3
  * 전체 화면 만화 페이지 리더
  *
  * 리모컨 키 (오버레이 닫힘):
- * - 좌/우: 이전/다음 펼침 (RIGHT_TO_LEFT면 반대)
- * - 위/아래: 화면보다 큰 페이지(너비 맞춤·원본)를 화면 절반씩 스크롤, 끝이면 아무것도 안 함
+ * - 좌/우: Paged = 이전/다음 펼침 (RIGHT_TO_LEFT면 반대), Continuous = 이전/다음 쪽 처음
+ * - 위/아래: Paged = 화면보다 큰 페이지(너비 맞춤·원본)를 화면 절반씩, Continuous = 화면 높이만큼 스크롤 (Komelia와 같음)
  * - OK: 오버레이 열기
  * - Back: 진행 저장 후 종료
  *
@@ -151,7 +155,14 @@ private fun ReaderContent(
     val focusRequester = remember { FocusRequester() }
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
-    val scrollable = state.scaleType == ScaleType.FIT_WIDTH || state.scaleType == ScaleType.ORIGINAL
+    val continuous = state.readerType == ReaderType.CONTINUOUS
+    val scrollable = !continuous && (state.scaleType == ScaleType.FIT_WIDTH || state.scaleType == ScaleType.ORIGINAL)
+    val listState = rememberLazyListState()
+
+    // 세로 스크롤 타일은 화면 크기로 계획한다
+    LaunchedEffect(screenWidthPx, screenHeightPx) {
+        viewModel.setScreenSize(screenWidthPx, screenHeightPx)
+    }
 
     // 처음 그릴 때와 설정 패널이 닫힐 때 리더가 키를 받도록 포커스를 가져온다
     LaunchedEffect(state.showSettingsPanel) {
@@ -208,6 +219,8 @@ private fun ReaderContent(
                     }
                     Key.DirectionUp -> if (state.showOverlay) {
                         viewModel.jumpPages(10)
+                    } else if (continuous) {
+                        coroutineScope.launch { listState.animateScrollBy(-screenHeightPx.toFloat()) }
                     } else if (scrollable && scrollState.value > 0) {
                         coroutineScope.launch {
                             scrollState.animateScrollTo((scrollState.value - screenHeightPx / 2).coerceAtLeast(0))
@@ -215,6 +228,8 @@ private fun ReaderContent(
                     }
                     Key.DirectionDown -> if (state.showOverlay) {
                         viewModel.jumpPages(-10)
+                    } else if (continuous) {
+                        coroutineScope.launch { listState.animateScrollBy(screenHeightPx.toFloat()) }
                     } else if (scrollable && scrollState.value < scrollState.maxValue) {
                         coroutineScope.launch {
                             scrollState.animateScrollTo(
@@ -238,7 +253,16 @@ private fun ReaderContent(
             )
         }
 
-        if (scrollable) {
+        if (continuous) {
+            ContinuousPages(
+                tiles = state.continuousTiles,
+                listState = listState,
+                scrollToTileIndex = state.scrollToTileIndex,
+                loadTile = viewModel::loadTile,
+                onScrolled = viewModel::onTileScrolled,
+                onVisibleTilesChanged = viewModel::onContinuousVisibleTilesChanged,
+            )
+        } else if (scrollable) {
             // 화면보다 클 수 있는 모드: 세로 스크롤, 작은 페이지는 가운데
             val screenHeightDp = with(LocalDensity.current) { screenHeightPx.toDp() }
             Column(
@@ -277,6 +301,12 @@ private fun ReaderContent(
             exit = fadeOut(),
         ) {
             ReaderSettingsPanel(
+                readerType = state.readerType,
+                continuousPadding = state.continuousPadding,
+                continuousPageSpacing = state.continuousPageSpacing,
+                onReaderTypeChange = viewModel::setReaderType,
+                onContinuousPaddingChange = viewModel::setContinuousPadding,
+                onContinuousPageSpacingChange = viewModel::setContinuousPageSpacing,
                 pageLayout = state.pageLayout,
                 layoutOffset = state.layoutOffset,
                 readingDirection = state.readingDirection,
@@ -372,13 +402,17 @@ private fun ReaderOverlay(state: ReaderUiState.Reading) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                val pageNumbers = state.currentSpread.pages.map { it.number }.sorted().joinToString("-")
+                val pageNumbers = if (state.readerType == ReaderType.CONTINUOUS) {
+                    state.currentContinuousPage.toString()
+                } else {
+                    state.currentSpread.pages.map { it.number }.sorted().joinToString("-")
+                }
                 Text(
                     text = stringResource(R.string.reader_page_range_format, pageNumbers, state.totalPages),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White,
                 )
-                val percent = state.currentSpread.highestPageNumber * 100 / state.totalPages
+                val percent = state.shownPage * 100 / state.totalPages
                 Text(
                     text = stringResource(R.string.reader_page_percent_format, percent),
                     style = MaterialTheme.typography.bodyMedium,
@@ -389,7 +423,7 @@ private fun ReaderOverlay(state: ReaderUiState.Reading) {
             Spacer(modifier = Modifier.height(8.dp))
 
             ProgressBar(
-                progress = state.currentSpread.highestPageNumber.toFloat() / state.totalPages,
+                progress = state.shownPage.toFloat() / state.totalPages,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(4.dp),
@@ -453,3 +487,7 @@ private class NoUpscale(private val base: ContentScale) : ContentScale {
         return ScaleFactor(factor.scaleX.coerceAtMost(1f), factor.scaleY.coerceAtMost(1f))
     }
 }
+
+/** 진행 표시에 쓰는 쪽 — 펼침에서 보이는 큰 쪽, 세로 스크롤에서 보이는 큰 쪽 */
+private val ReaderUiState.Reading.shownPage: Int
+    get() = if (readerType == ReaderType.CONTINUOUS) currentContinuousPage else currentSpread.highestPageNumber

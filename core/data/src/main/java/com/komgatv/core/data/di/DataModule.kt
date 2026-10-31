@@ -1,5 +1,9 @@
 package com.komgatv.core.data.di
 
+import com.komgatv.core.data.cache.DefaultPageCacheConfig
+import com.komgatv.core.data.cache.DefaultPageFileCache
+import com.komgatv.core.data.cache.PageCacheConfig
+import com.komgatv.core.data.cache.PageFileCache
 import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.data.image.SessionImageUrls
 import com.komgatv.core.data.repository.BookRepository
@@ -46,4 +50,15 @@ abstract class DataModule {
     abstract fun bindImageUrls(
         impl: SessionImageUrls,
     ): ImageUrls
+
+    @Binds
+    abstract fun bindPageCacheConfig(
+        impl: DefaultPageCacheConfig,
+    ): PageCacheConfig
+
+    @Binds
+    @Singleton
+    abstract fun bindPageFileCache(
+        impl: DefaultPageFileCache,
+    ): PageFileCache
 }

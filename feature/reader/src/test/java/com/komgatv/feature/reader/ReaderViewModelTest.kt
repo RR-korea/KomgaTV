@@ -13,10 +13,14 @@ import com.komgatv.core.model.LoadError
 import com.komgatv.core.model.PageLayout
 import com.komgatv.core.model.ReadProgress
 import com.komgatv.core.model.ReaderSettings
+import com.komgatv.core.model.ReaderType
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.ScaleType
 import com.komgatv.core.model.Series
 import com.komgatv.core.model.SeriesMetadata
+import com.komgatv.feature.reader.continuous.PageTile
+import com.komgatv.feature.reader.continuous.TileSource
+import androidx.compose.ui.graphics.ImageBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -59,6 +63,7 @@ class ReaderViewModelTest {
     private lateinit var bookRepository: FakeBookRepository
     private lateinit var seriesRepository: FakeSeriesRepository
     private lateinit var readerPreferences: FakeReaderPreferences
+    private lateinit var tileSource: FakeTileSource
     private lateinit var viewModel: ReaderViewModel
 
     @Before
@@ -67,7 +72,8 @@ class ReaderViewModelTest {
         bookRepository = FakeBookRepository()
         seriesRepository = FakeSeriesRepository()
         readerPreferences = FakeReaderPreferences()
-        viewModel = ReaderViewModel(bookRepository, seriesRepository, FakeImageUrls, readerPreferences)
+        tileSource = FakeTileSource()
+        viewModel = ReaderViewModel(bookRepository, seriesRepository, FakeImageUrls, readerPreferences, tileSource)
     }
 
     @After
@@ -448,6 +454,197 @@ class ReaderViewModelTest {
         assertEquals(1, state.currentSpread.pages.first().number)
     }
 
+    // ---- T6: 리더 종류, 이어 읽기, 세로 스크롤 ----
+
+    private fun openBook(
+        direction: ReadingDirection? = null,
+        pages: List<BookPage> = (1..10).map { BookPage(number = it, width = 1000, height = 1000) },
+        progress: ReadProgress? = null,
+    ) {
+        val series = createTestSeries(id = "s1", direction = direction)
+        val book = createTestBook(id = "b1", seriesId = "s1", pageCount = pages.size, progress = progress)
+        seriesRepository.seriesMap[series.id] = series
+        bookRepository.books[book.id] = book
+        bookRepository.pagesMap[book.id] = pages
+        viewModel.setScreenSize(1000, 1000)
+        viewModel.loadBook(book.id)
+    }
+
+    private val reading get() = viewModel.uiState.value as ReaderUiState.Reading
+
+    @Test
+    fun `리더 종류 - WEBTOON 시리즈는 저장된 값이 PAGED여도 세로 스크롤로 연다`() = runTest(testDispatcher) {
+        openBook(direction = ReadingDirection.WEBTOON)
+        advanceUntilIdle()
+
+        assertEquals(ReaderType.CONTINUOUS, reading.readerType)
+    }
+
+    @Test
+    fun `리더 종류 - RTL 시리즈는 저장된 값이 CONTINUOUS여도 페이지 넘김으로 연다`() = runTest(testDispatcher) {
+        readerPreferences.saveReaderType(ReaderType.CONTINUOUS)
+        openBook(direction = ReadingDirection.RIGHT_TO_LEFT)
+        advanceUntilIdle()
+
+        assertEquals(ReaderType.PAGED, reading.readerType)
+    }
+
+    @Test
+    fun `리더 종류 - 방향이 없으면 저장된 값을 따른다`() = runTest(testDispatcher) {
+        readerPreferences.saveReaderType(ReaderType.CONTINUOUS)
+        openBook(direction = null)
+        advanceUntilIdle()
+
+        assertEquals(ReaderType.CONTINUOUS, reading.readerType)
+    }
+
+    @Test
+    fun `리더 종류 변경 - 보던 쪽에서 이어지고 기본값으로 저장된다`() = runTest(testDispatcher) {
+        openBook(progress = ReadProgress(page = 4, completed = false))
+        advanceUntilIdle()
+
+        viewModel.setReaderType(ReaderType.CONTINUOUS)
+        advanceUntilIdle()
+
+        assertEquals(ReaderType.CONTINUOUS, reading.readerType)
+        assertEquals("4_0", reading.continuousTiles[reading.scrollToTileIndex!!].key)
+        assertEquals(ReaderType.CONTINUOUS, readerPreferences.readerSettings.first().readerType)
+    }
+
+    @Test
+    fun `이어 읽기 - 완독한 책은 1쪽부터 연다`() = runTest(testDispatcher) {
+        openBook(progress = ReadProgress(page = 10, completed = true))
+        advanceUntilIdle()
+
+        assertEquals(1, reading.currentSpread.pages.first().number)
+    }
+
+    @Test
+    fun `세로 스크롤 - 이어 읽기 쪽의 첫 타일로 스크롤을 요청하고 처리하면 지운다`() = runTest(testDispatcher) {
+        readerPreferences.saveReaderType(ReaderType.CONTINUOUS)
+        openBook(progress = ReadProgress(page = 3, completed = false))
+        advanceUntilIdle()
+
+        assertEquals("3_0", reading.continuousTiles[reading.scrollToTileIndex!!].key)
+        viewModel.onTileScrolled()
+        assertEquals(null, reading.scrollToTileIndex)
+    }
+
+    @Test
+    fun `세로 스크롤 - 보이는 쪽 중 큰 번호를 2초 뒤 저장하고 마지막 타일이 보이면 완독`() = runTest(testDispatcher) {
+        readerPreferences.saveReaderType(ReaderType.CONTINUOUS)
+        openBook()
+        advanceUntilIdle()
+
+        viewModel.onContinuousVisibleTilesChanged(listOf("4_0", "5_0"))
+        advanceTimeBy(1_999L)
+        runCurrent()
+        assertTrue(bookRepository.progressUpdates.isEmpty())
+        advanceTimeBy(1L)
+        runCurrent()
+        assertEquals(ProgressUpdate("b1", 5, false), bookRepository.progressUpdates.last())
+
+        viewModel.onContinuousVisibleTilesChanged(listOf("9_0", "10_0"))
+        viewModel.saveProgressOnExit()
+        advanceUntilIdle()
+        assertEquals(ProgressUpdate("b1", 10, true), bookRepository.progressUpdates.last())
+    }
+
+    @Test
+    fun `세로 스크롤 - 좌우는 쪽 처음으로, 맨 위가 쪽 중간이면 왼쪽은 그 쪽 처음`() = runTest(testDispatcher) {
+        readerPreferences.saveReaderType(ReaderType.CONTINUOUS)
+        // 2쪽은 화면(1000)보다 3배 긴 쪽 → 타일 3개
+        val pages = listOf(
+            BookPage(number = 1, width = 1000, height = 1000),
+            BookPage(number = 2, width = 1000, height = 3000),
+            BookPage(number = 3, width = 1000, height = 1000),
+        )
+        openBook(pages = pages)
+        advanceUntilIdle()
+        val keyOf = { reading.continuousTiles[reading.scrollToTileIndex!!].key }
+
+        viewModel.onContinuousVisibleTilesChanged(listOf("2_1"))
+        viewModel.onDpadLeft()
+        assertEquals("2_0", keyOf())
+
+        viewModel.onContinuousVisibleTilesChanged(listOf("2_0"))
+        viewModel.onDpadLeft()
+        assertEquals("1_0", keyOf())
+
+        viewModel.onContinuousVisibleTilesChanged(listOf("2_2", "3_0"))
+        viewModel.onDpadRight()
+        assertEquals("3_0", keyOf())
+    }
+
+    @Test
+    fun `세로 스크롤 - 크기를 모르는 쪽이 보이면 크기를 알아내 타일을 다시 만든다`() = runTest(testDispatcher) {
+        readerPreferences.saveReaderType(ReaderType.CONTINUOUS)
+        openBook(pages = listOf(BookPage(number = 1), BookPage(number = 2, width = 1000, height = 1000)))
+        advanceUntilIdle()
+        assertTrue(reading.continuousTiles.first().isPlaceholder)
+        tileSource.sizes[1] = 1000 to 2500
+
+        viewModel.onContinuousVisibleTilesChanged(listOf("1_0"))
+        advanceUntilIdle()
+
+        assertEquals(listOf("1_0", "1_1", "1_2", "2_0"), reading.continuousTiles.map { it.key })
+    }
+
+    @Test
+    fun `세로 스크롤 - 여백을 바꿔 타일이 다시 만들어져도 보던 자리로 돌아간다`() = runTest(testDispatcher) {
+        readerPreferences.saveReaderType(ReaderType.CONTINUOUS)
+        // 각 쪽 1000x3000 → 여백 0이면 쪽마다 타일 3개
+        openBook(pages = (1..5).map { BookPage(number = it, width = 1000, height = 3000) })
+        advanceUntilIdle()
+        viewModel.onContinuousVisibleTilesChanged(listOf("4_2"))
+
+        viewModel.setContinuousPadding(0.25f) // 너비 500 → 쪽마다 타일 2개, 4쪽 아래 절반이 2번째 타일
+        advanceUntilIdle()
+
+        assertEquals("4_1", reading.continuousTiles[reading.scrollToTileIndex!!].key)
+    }
+
+    @Test
+    fun `로드 실패 - 쪽 목록을 못 받고 쪽 수도 0이면 오류를 보여 준다`() = runTest(testDispatcher) {
+        seriesRepository.seriesMap["s1"] = createTestSeries(id = "s1")
+        bookRepository.books["b1"] = createTestBook(id = "b1", seriesId = "s1", pageCount = 0)
+        bookRepository.pagesError = java.io.IOException("Book analysis failed")
+
+        viewModel.loadBook("b1")
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value is ReaderUiState.Error)
+    }
+
+    @Test
+    fun `쪽 목록을 못 받아도 쪽 수를 알면 크기 없이 연다`() = runTest(testDispatcher) {
+        seriesRepository.seriesMap["s1"] = createTestSeries(id = "s1")
+        bookRepository.books["b1"] = createTestBook(id = "b1", seriesId = "s1", pageCount = 5)
+        bookRepository.pagesError = RuntimeException("timeout")
+
+        viewModel.loadBook("b1")
+        advanceUntilIdle()
+
+        assertEquals(5, reading.totalPages)
+    }
+
+    @Test
+    fun `세로 스크롤 설정 - 여백과 간격은 바로 반영되고 저장된다`() = runTest(testDispatcher) {
+        readerPreferences.saveReaderType(ReaderType.CONTINUOUS)
+        openBook()
+        advanceUntilIdle()
+
+        viewModel.setContinuousPadding(0.1f)
+        viewModel.setContinuousPageSpacing(16)
+        advanceUntilIdle()
+
+        assertEquals(800, reading.continuousTiles.first().displayWidth)
+        assertEquals(16, reading.continuousTiles.first().bottomSpacingDp)
+        val saved = readerPreferences.readerSettings.first()
+        assertEquals(0.1f, saved.continuousPadding)
+        assertEquals(16, saved.continuousPageSpacing)
+    }
+
     private fun createTestSeries(id: String, direction: ReadingDirection? = null) = Series(
         id = id,
         libraryId = "lib1",
@@ -504,7 +701,10 @@ class ReaderViewModelTest {
             return books[bookId] ?: throw NoSuchElementException("Book not found: $bookId")
         }
 
+        var pagesError: Exception? = null
+
         override suspend fun getBookPages(bookId: String): List<BookPage> {
+            pagesError?.let { throw it }
             return pagesMap[bookId] ?: (1..(books[bookId]?.pageCount ?: 1)).map { BookPage(number = it) }
         }
 
@@ -551,6 +751,31 @@ class ReaderViewModelTest {
         override suspend fun saveReadingDirection(direction: ReadingDirection) {
             _settings.value = _settings.value.copy(readingDirection = direction)
         }
+
+        override suspend fun saveReaderType(readerType: ReaderType) {
+            _settings.value = _settings.value.copy(readerType = readerType)
+        }
+
+        override suspend fun saveContinuousPadding(padding: Float) {
+            _settings.value = _settings.value.copy(continuousPadding = padding)
+        }
+
+        override suspend fun saveContinuousPageSpacing(spacing: Int) {
+            _settings.value = _settings.value.copy(continuousPageSpacing = spacing)
+        }
+    }
+
+    /** 이미지 디코딩은 JVM 테스트에서 못 하므로 크기 조회만 흉내 낸다 */
+    private class FakeTileSource : TileSource {
+        val sizes = mutableMapOf<Int, Pair<Int, Int>>()
+
+        override suspend fun tile(bookId: String, tile: PageTile): ImageBitmap = throw NotImplementedError()
+
+        override suspend fun bounds(bookId: String, pageNumber: Int): Pair<Int, Int>? = sizes[pageNumber]
+
+        override suspend fun prefetch(bookId: String, pageNumber: Int) = Unit
+
+        override fun clear() = Unit
     }
 
     private object FakeImageUrls : ImageUrls {
