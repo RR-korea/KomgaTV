@@ -39,7 +39,7 @@ LEAD_REVIEW §2의 B1~B7 전부와 D1·D2·D3·D4 구조 변경.
 9. 런처 리소스: `ic_launcher`(adaptive), `tv_banner`(320×180 xml/png) 임시 제작.
 - **완료 조건:** `./gradlew assembleDebug lint` 성공. 경고 중 deprecated API 사용은 0개.
 
-## T2. 서버 연결 화면 — `task/T2-connect`
+## T2. 서버 연결 화면 — `task/T2-connect` — ✅ 완료 (docs/reports/T2.md)
 - 첫 실행(세션 없음) → 설정 화면이 시작 화면. URL, 인증 방식(ID/PW | API Key), 연결 테스트, 저장.
 - 실패 메시지 구분: 주소 오류 / 연결 불가 / 401 / 기타. 자체서명 인증서는 지금은 미지원(문구로 안내).
 - 자격 증명 Keystore 암호화 (D6). `allowBackup=false` 또는 백업 규칙에서 제외.
