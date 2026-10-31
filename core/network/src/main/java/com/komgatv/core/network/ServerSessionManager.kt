@@ -50,55 +50,33 @@ data class KomgaSession(
  * 요청 경로에서 동기 블로킹(runBlocking) 없이 StateFlow로 세션을 제공합니다.
  */
 @Singleton
-class ServerSessionManager internal constructor(
-    private val serverPreferences: ServerPreferences?,
-    initialBaseUrl: String?,
+class ServerSessionManager @Inject constructor(
+    private val serverPreferences: ServerPreferences,
 ) {
-    @Inject
-    constructor(serverPreferences: ServerPreferences) : this(serverPreferences, null)
-
-    /** 단위 테스트용 보조 생성자 */
-    constructor(testBaseUrl: String = "") : this(null, testBaseUrl)
-
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val _session = MutableStateFlow<KomgaSession?>(
-        initialBaseUrl?.takeIf { it.isNotBlank() }?.let { url ->
-            val cleanUrl = url.trimEnd('/')
-            val okHttp = OkHttpClient.Builder().build()
-            val ktor = HttpClient(OkHttp) {
-                engine { preconfigured = okHttp }
-            }
-            KomgaSession(
-                okHttpClient = okHttp,
-                komgaClient = KomgaClientFactory.Builder().baseUrl { cleanUrl }.ktor(ktor).build(),
-                baseUrl = cleanUrl,
-            )
-        }
-    )
+    private val _session = MutableStateFlow<KomgaSession?>(null)
 
     /** 현재 활성화된 세션의 StateFlow (미연결 시 null) */
     val session: StateFlow<KomgaSession?> = _session.asStateFlow()
 
     init {
-        if (serverPreferences != null) {
-            scope.launch {
-                serverPreferences.serverConfig.collect { config ->
-                    try {
-                        if (config.isConfigured) {
-                            val auth = if (config.authMethod == "apikey") {
-                                AuthMode.ApiKey(config.apiKey)
-                            } else {
-                                AuthMode.Basic(config.username, config.password)
-                            }
-                            _session.value = buildSession(config.serverUrl, auth)
-                            Timber.d("Komga session initialized for: %s", config.serverUrl)
+        scope.launch {
+            serverPreferences.serverConfig.collect { config ->
+                try {
+                    if (config.isConfigured) {
+                        val auth = if (config.authMethod == "apikey") {
+                            AuthMode.ApiKey(config.apiKey)
                         } else {
-                            _session.value = null
+                            AuthMode.Basic(config.username, config.password)
                         }
-                    } catch (e: Exception) {
-                        Timber.e(e, "Failed to initialize Komga session")
+                        _session.value = buildSession(config.serverUrl, auth)
+                        Timber.d("Komga session initialized for: %s", config.serverUrl)
+                    } else {
                         _session.value = null
                     }
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to initialize Komga session")
+                    _session.value = null
                 }
             }
         }
@@ -171,10 +149,10 @@ class ServerSessionManager internal constructor(
         val tempSession = buildSession(url, auth)
         val user = tempSession.komgaClient.userClient().getMe()
 
-        serverPreferences?.saveServerUrl(url)
+        serverPreferences.saveServerUrl(url)
         when (auth) {
-            is AuthMode.Basic -> serverPreferences?.saveBasicAuth(auth.username, auth.password)
-            is AuthMode.ApiKey -> serverPreferences?.saveApiKey(auth.apiKey)
+            is AuthMode.Basic -> serverPreferences.saveBasicAuth(auth.username, auth.password)
+            is AuthMode.ApiKey -> serverPreferences.saveApiKey(auth.apiKey)
         }
 
         _session.value = tempSession
@@ -185,7 +163,7 @@ class ServerSessionManager internal constructor(
      * 세션을 종료하고 저장된 설정을 초기화합니다.
      */
     suspend fun disconnect() {
-        serverPreferences?.clearAll()
+        serverPreferences.clearAll()
         _session.value = null
     }
 }

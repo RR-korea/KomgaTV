@@ -20,11 +20,11 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.Library
 import com.komgatv.core.ui.components.PosterCard
 import com.komgatv.core.ui.components.TVRow
-import com.komgatv.core.ui.util.KomgaUrls
 
 /**
  * TV 홈 화면
@@ -85,7 +85,7 @@ fun HomeScreen(
             HomeContent(
                 continueReading = state.continueReading,
                 libraries = state.libraries,
-                baseUrl = viewModel.baseUrl,
+                imageUrls = viewModel.imageUrls,
                 onNavigateToLibrary = onNavigateToLibrary,
                 onNavigateToReader = onNavigateToReader,
             )
@@ -100,7 +100,7 @@ fun HomeScreen(
 private fun HomeContent(
     continueReading: List<Book>,
     libraries: List<Library>,
-    baseUrl: String,
+    imageUrls: ImageUrls,
     onNavigateToLibrary: (String) -> Unit,
     onNavigateToReader: (String) -> Unit,
 ) {
@@ -129,7 +129,7 @@ private fun HomeContent(
                     }
                     PosterCard(
                         title = book.name,
-                        imageUrl = KomgaUrls.bookThumbnail(baseUrl, book.id),
+                        imageUrl = imageUrls.bookThumbnail(book.id).orEmpty(),
                         subtitle = progressSubtitle,
                         onClick = { onNavigateToReader(book.id) },
                     )

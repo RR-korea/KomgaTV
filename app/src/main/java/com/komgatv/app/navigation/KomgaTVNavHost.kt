@@ -38,9 +38,6 @@ sealed class Screen(val route: String) {
         fun createRoute(bookId: String) = "reader/$bookId"
     }
 
-    /** 검색 화면 */
-    data object Search : Screen("search")
-
     /** 설정 화면 - 서버 연결 및 캐시 관리 */
     data object Settings : Screen("settings")
 }
@@ -119,11 +116,6 @@ fun KomgaTVNavHost(
                 bookId = bookId,
                 onNavigateBack = { navController.popBackStack() },
             )
-        }
-
-        // 검색 화면
-        composable(Screen.Search.route) {
-            // TODO: SearchScreen 구현
         }
 
         // 설정 화면

@@ -34,10 +34,10 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
+import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.Series
 import com.komgatv.core.ui.components.PosterCard
-import com.komgatv.core.ui.util.KomgaUrls
 
 /**
  * 시리즈 상세 화면
@@ -105,7 +105,7 @@ fun SeriesDetailScreen(
                 books = state.books,
                 isLoadingMore = state.isLoadingMore,
                 isLastPage = state.isLastPage,
-                baseUrl = viewModel.baseUrl,
+                imageUrls = viewModel.imageUrls,
                 onNavigateToReader = onNavigateToReader,
                 onLoadMore = { viewModel.loadMoreBooks() },
             )
@@ -122,7 +122,7 @@ private fun SeriesDetailContent(
     books: List<Book>,
     isLoadingMore: Boolean,
     isLastPage: Boolean,
-    baseUrl: String,
+    imageUrls: ImageUrls,
     onNavigateToReader: (String) -> Unit,
     onLoadMore: () -> Unit,
 ) {
@@ -148,7 +148,7 @@ private fun SeriesDetailContent(
             key = "series_header",
             span = { GridItemSpan(maxLineSpan) },
         ) {
-            SeriesHeader(series = series, baseUrl = baseUrl)
+            SeriesHeader(series = series, imageUrls = imageUrls)
         }
 
         // ========== 섹션 제목: 도서 목록 ==========
@@ -195,7 +195,7 @@ private fun SeriesDetailContent(
 
             PosterCard(
                 title = book.name,
-                imageUrl = KomgaUrls.bookThumbnail(baseUrl, book.id),
+                imageUrl = imageUrls.bookThumbnail(book.id).orEmpty(),
                 subtitle = progressText,
                 onClick = { onNavigateToReader(book.id) },
             )
@@ -224,7 +224,7 @@ private fun SeriesDetailContent(
 @Composable
 private fun SeriesHeader(
     series: Series,
-    baseUrl: String,
+    imageUrls: ImageUrls,
 ) {
     Row(
         modifier = Modifier
@@ -233,7 +233,7 @@ private fun SeriesHeader(
     ) {
         // 시리즈 대표 포스터 이미지
         AsyncImage(
-            model = KomgaUrls.seriesThumbnail(baseUrl, series.id),
+            model = imageUrls.seriesThumbnail(series.id).orEmpty(),
             contentDescription = series.name,
             contentScale = ContentScale.Crop,
             modifier = Modifier

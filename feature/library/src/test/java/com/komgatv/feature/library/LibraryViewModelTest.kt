@@ -7,7 +7,6 @@ import com.komgatv.core.model.Library
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.Series
 import com.komgatv.core.model.SeriesMetadata
-import com.komgatv.core.network.ServerSessionManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -26,13 +25,12 @@ class LibraryViewModelTest {
 
     private val fakeLibraryRepository = FakeLibraryRepository()
     private val fakeSeriesRepository = FakeSeriesRepository()
-    private val fakeSessionManager = ServerSessionManager("http://example.com:8080")
 
     private fun createViewModel(): LibraryViewModel {
         return LibraryViewModel(
             libraryRepository = fakeLibraryRepository,
             seriesRepository = fakeSeriesRepository,
-            sessionManager = fakeSessionManager,
+            imageUrls = FakeImageUrls,
         )
     }
 

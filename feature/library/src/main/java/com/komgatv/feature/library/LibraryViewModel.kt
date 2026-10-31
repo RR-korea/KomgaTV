@@ -2,10 +2,10 @@ package com.komgatv.feature.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.data.repository.LibraryRepository
 import com.komgatv.core.data.repository.SeriesRepository
 import com.komgatv.core.model.Series
-import com.komgatv.core.network.ServerSessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,14 +41,12 @@ sealed interface LibraryUiState {
 class LibraryViewModel @Inject constructor(
     private val libraryRepository: LibraryRepository,
     private val seriesRepository: SeriesRepository,
-    private val sessionManager: ServerSessionManager,
+    val imageUrls: ImageUrls,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<LibraryUiState>(LibraryUiState.Loading)
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
 
-    val baseUrl: String
-        get() = sessionManager.session.value?.baseUrl ?: ""
 
     private var currentLibraryId: String = ""
     companion object {

@@ -2,11 +2,11 @@ package com.komgatv.feature.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.data.repository.BookRepository
 import com.komgatv.core.data.repository.SeriesRepository
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.Series
-import com.komgatv.core.network.ServerSessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,14 +42,12 @@ sealed interface SeriesDetailUiState {
 class SeriesDetailViewModel @Inject constructor(
     private val seriesRepository: SeriesRepository,
     private val bookRepository: BookRepository,
-    private val sessionManager: ServerSessionManager,
+    val imageUrls: ImageUrls,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<SeriesDetailUiState>(SeriesDetailUiState.Loading)
     val uiState: StateFlow<SeriesDetailUiState> = _uiState.asStateFlow()
 
-    val baseUrl: String
-        get() = sessionManager.session.value?.baseUrl ?: ""
 
     private var currentSeriesId: String = ""
 

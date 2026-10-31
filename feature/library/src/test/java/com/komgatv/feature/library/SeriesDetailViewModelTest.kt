@@ -10,7 +10,6 @@ import com.komgatv.core.model.ReadProgress
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.Series
 import com.komgatv.core.model.SeriesMetadata
-import com.komgatv.core.network.ServerSessionManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -29,13 +28,12 @@ class SeriesDetailViewModelTest {
 
     private val fakeSeriesRepository = FakeSeriesRepository()
     private val fakeBookRepository = FakeBookRepository()
-    private val fakeSessionManager = ServerSessionManager("http://example.com:8080")
 
     private fun createViewModel(): SeriesDetailViewModel {
         return SeriesDetailViewModel(
             seriesRepository = fakeSeriesRepository,
             bookRepository = fakeBookRepository,
-            sessionManager = fakeSessionManager,
+            imageUrls = FakeImageUrls,
         )
     }
 

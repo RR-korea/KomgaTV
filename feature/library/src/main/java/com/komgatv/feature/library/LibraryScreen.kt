@@ -23,9 +23,9 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.model.Series
 import com.komgatv.core.ui.components.PosterCard
-import com.komgatv.core.ui.util.KomgaUrls
 
 /**
  * 라이브러리 화면
@@ -86,7 +86,7 @@ fun LibraryScreen(
                 seriesList = state.series,
                 isLoadingMore = state.isLoadingMore,
                 isLastPage = state.isLastPage,
-                baseUrl = viewModel.baseUrl,
+                imageUrls = viewModel.imageUrls,
                 onNavigateToSeries = onNavigateToSeries,
                 onLoadMore = { viewModel.loadMoreSeries() },
             )
@@ -103,7 +103,7 @@ private fun LibraryContent(
     seriesList: List<Series>,
     isLoadingMore: Boolean,
     isLastPage: Boolean,
-    baseUrl: String,
+    imageUrls: ImageUrls,
     onNavigateToSeries: (String) -> Unit,
     onLoadMore: () -> Unit,
 ) {
@@ -149,7 +149,7 @@ private fun LibraryContent(
 
                 PosterCard(
                     title = series.name,
-                    imageUrl = KomgaUrls.seriesThumbnail(baseUrl, series.id),
+                    imageUrl = imageUrls.seriesThumbnail(series.id).orEmpty(),
                     subtitle = stringResource(R.string.series_books_count, series.booksCount),
                     onClick = { onNavigateToSeries(series.id) },
                 )

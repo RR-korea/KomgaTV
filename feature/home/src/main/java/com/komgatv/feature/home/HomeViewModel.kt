@@ -2,11 +2,11 @@ package com.komgatv.feature.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.data.repository.BookRepository
 import com.komgatv.core.data.repository.LibraryRepository
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.Library
-import com.komgatv.core.network.ServerSessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -54,15 +54,12 @@ sealed interface HomeUiState {
 class HomeViewModel @Inject constructor(
     private val libraryRepository: LibraryRepository,
     private val bookRepository: BookRepository,
-    private val sessionManager: ServerSessionManager,
+    val imageUrls: ImageUrls,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    /** 현재 세션의 기본 URL */
-    val baseUrl: String
-        get() = sessionManager.session.value?.baseUrl ?: ""
 
     init {
         loadHomeData()

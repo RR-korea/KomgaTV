@@ -7,7 +7,6 @@ import com.komgatv.core.model.Book
 import com.komgatv.core.model.BookMetadata
 import com.komgatv.core.model.Library
 import com.komgatv.core.model.ReadProgress
-import com.komgatv.core.network.ServerSessionManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -26,20 +25,18 @@ class HomeViewModelTest {
 
     private lateinit var fakeLibraryRepository: FakeLibraryRepository
     private lateinit var fakeBookRepository: FakeBookRepository
-    private lateinit var fakeSessionManager: ServerSessionManager
 
     @Before
     fun setUp() {
         fakeLibraryRepository = FakeLibraryRepository()
         fakeBookRepository = FakeBookRepository()
-        fakeSessionManager = ServerSessionManager("http://example.com:8080")
     }
 
     private fun createViewModel(): HomeViewModel {
         return HomeViewModel(
             libraryRepository = fakeLibraryRepository,
             bookRepository = fakeBookRepository,
-            sessionManager = fakeSessionManager,
+            imageUrls = FakeImageUrls,
         )
     }
 
@@ -69,7 +66,7 @@ class HomeViewModelTest {
         assertEquals("만화", successState.libraries.first().name)
         assertEquals(1, successState.continueReading.size)
         assertEquals("원피스 1권", successState.continueReading.first().name)
-        assertEquals("http://example.com:8080", viewModel.baseUrl)
+        assertEquals("http://example.com:8080/api/v1/books/b1/thumbnail", viewModel.imageUrls.bookThumbnail("b1"))
     }
 
     @Test
