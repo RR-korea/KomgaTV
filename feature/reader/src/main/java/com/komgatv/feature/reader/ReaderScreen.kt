@@ -1,6 +1,5 @@
 package com.komgatv.feature.reader
 
-import android.view.KeyEvent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -26,29 +25,40 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import com.komgatv.core.ui.components.ProgressBar
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import com.komgatv.core.ui.components.ProgressBar
 
 /**
  * 전체 화면 만화 페이지 리더
  *
- * D-Pad 좌/우로 이전/다음 페이지를 탐색하고,
- * 중앙/선택 버튼으로 페이지 번호와 진행률 오버레이를 토글합니다.
- * 3-페이지 규칙(이전/현재/다음)에 따라 메모리에 유지합니다.
+ * D-Pad 포커스 기반 onPreviewKeyEvent를 사용하여 리모컨 이벤트를 처리합니다:
+ * - 좌/우: 이전/다음 페이지 (시리즈의 readingDirection이 RIGHT_TO_LEFT인 경우 반전)
+ * - OK (DPAD_CENTER, ENTER): 오버레이 토글
+ * - 위/아래 (오버레이 표시 시): 10페이지 점프 (위: +10, 아래: -10)
+ * - Back: 진행 저장 후 종료
+ *
+ * 이웃 페이지(±2)는 화면 크기에 맞춰 백그라운드 프리로드됩니다.
  *
  * @param bookId 읽을 책 ID
- * @param onNavigateBack 뒤로가기 콜백 (진행 상태 저장 후 호출)
- * @param onRegisterKeyEventHandler 액티비티 레벨 키 핸들러 등록
+ * @param onNavigateBack 뒤로가기 콜백
  * @param viewModel 리더 ViewModel
  */
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -56,7 +66,6 @@ import coil3.request.crossfade
 fun ReaderScreen(
     bookId: String,
     onNavigateBack: () -> Unit,
-    onRegisterKeyEventHandler: ((KeyEvent) -> Boolean) -> Unit = {},
     viewModel: ReaderViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -85,7 +94,7 @@ fun ReaderScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "페이지 로딩 중...",
+                    text = stringResource(R.string.reader_loading_page),
                     color = Color.White,
                     style = MaterialTheme.typography.bodyLarge,
                 )
@@ -100,7 +109,7 @@ fun ReaderScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "오류: ${state.message}",
+                    text = stringResource(R.string.reader_error_prefix, state.message),
                     color = Color.Red,
                     style = MaterialTheme.typography.bodyLarge,
                 )
@@ -111,9 +120,11 @@ fun ReaderScreen(
             ReaderContent(
                 state = state,
                 focusRequester = focusRequester,
-                onNextPage = { viewModel.nextPage() },
-                onPreviousPage = { viewModel.previousPage() },
+                onDpadLeft = { viewModel.onDpadLeft() },
+                onDpadRight = { viewModel.onDpadRight() },
                 onToggleOverlay = { viewModel.toggleOverlay() },
+                onJumpForward = { viewModel.jumpForward(10) },
+                onJumpBackward = { viewModel.jumpBackward(10) },
                 onNavigateBack = {
                     viewModel.saveProgressOnExit()
                     onNavigateBack()
@@ -124,24 +135,47 @@ fun ReaderScreen(
 }
 
 /**
- * 리더 콘텐츠 (실제 페이지 표시)
+ * 리더 콘텐츠 컴포저블 (페이지 표시, 프리로드, 오버레이, 키 이벤트 처리)
  */
 @Composable
 private fun ReaderContent(
     state: ReaderUiState.Reading,
     focusRequester: FocusRequester,
-    onNextPage: () -> Unit,
-    onPreviousPage: () -> Unit,
+    onDpadLeft: () -> Unit,
+    onDpadRight: () -> Unit,
     onToggleOverlay: () -> Unit,
+    onJumpForward: () -> Unit,
+    onJumpBackward: () -> Unit,
     onNavigateBack: () -> Unit,
 ) {
     val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
 
-    val currentPageRequest = remember(state.currentPageUrl) {
+    // 화면 크기 계산 (화면 크기 디코딩 및 OOM 방지)
+    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.roundToPx() }
+    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.roundToPx() }
+
+    // 현재 페이지 이미지 요청 (화면 크기 디코딩)
+    val currentPageRequest = remember(state.currentPageUrl, screenWidthPx, screenHeightPx) {
         ImageRequest.Builder(context)
             .data(state.currentPageUrl)
+            .size(screenWidthPx, screenHeightPx)
             .crossfade(false)
             .build()
+    }
+
+    // 이웃 페이지(±2) 백그라운드 프리로드
+    LaunchedEffect(state.preloadUrls, screenWidthPx, screenHeightPx) {
+        val imageLoader = SingletonImageLoader.get(context)
+        state.preloadUrls.forEach { preloadUrl ->
+            val preloadRequest = ImageRequest.Builder(context)
+                .data(preloadUrl)
+                .size(screenWidthPx, screenHeightPx)
+                .crossfade(false)
+                .build()
+            imageLoader.enqueue(preloadRequest)
+        }
     }
 
     Box(
@@ -150,26 +184,41 @@ private fun ReaderContent(
             .background(Color.Black)
             .focusRequester(focusRequester)
             .focusable()
-            .onKeyEvent { keyEvent ->
-                if (keyEvent.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) {
-                    return@onKeyEvent false
+            .onPreviewKeyEvent { keyEvent ->
+                if (keyEvent.type != KeyEventType.KeyDown) {
+                    return@onPreviewKeyEvent false
                 }
 
-                when (keyEvent.nativeKeyEvent.keyCode) {
-                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        onNextPage()
+                when (keyEvent.key) {
+                    Key.DirectionLeft -> {
+                        onDpadLeft()
                         true
                     }
-                    KeyEvent.KEYCODE_DPAD_LEFT -> {
-                        onPreviousPage()
+                    Key.DirectionRight -> {
+                        onDpadRight()
                         true
                     }
-                    KeyEvent.KEYCODE_DPAD_CENTER,
-                    KeyEvent.KEYCODE_ENTER -> {
+                    Key.DirectionCenter, Key.Enter -> {
                         onToggleOverlay()
                         true
                     }
-                    KeyEvent.KEYCODE_BACK -> {
+                    Key.DirectionUp -> {
+                        if (state.showOverlay) {
+                            onJumpForward()
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    Key.DirectionDown -> {
+                        if (state.showOverlay) {
+                            onJumpBackward()
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    Key.Back -> {
                         onNavigateBack()
                         true
                     }
@@ -179,24 +228,14 @@ private fun ReaderContent(
     ) {
         AsyncImage(
             model = currentPageRequest,
-            contentDescription = "${state.currentPage}/${state.totalPages} 페이지",
+            contentDescription = stringResource(
+                R.string.reader_page_content_description,
+                state.currentPage,
+                state.totalPages,
+            ),
             contentScale = ContentScale.Fit,
             modifier = Modifier.fillMaxSize(),
         )
-
-        if (state.nextPageUrl != null) {
-            val nextPageRequest = remember(state.nextPageUrl) {
-                ImageRequest.Builder(context)
-                    .data(state.nextPageUrl)
-                    .crossfade(false)
-                    .build()
-            }
-            AsyncImage(
-                model = nextPageRequest,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(0f),
-            )
-        }
 
         AnimatedVisibility(
             visible = state.showOverlay,
@@ -228,12 +267,17 @@ private fun ReaderContent(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
-                            text = "${state.currentPage} / ${state.totalPages}",
+                            text = stringResource(
+                                R.string.reader_page_progress_format,
+                                state.currentPage,
+                                state.totalPages,
+                            ),
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White,
                         )
+                        val percent = (state.currentPage.toFloat() / state.totalPages * 100).toInt()
                         Text(
-                            text = "${(state.currentPage.toFloat() / state.totalPages * 100).toInt()}%",
+                            text = stringResource(R.string.reader_page_percent_format, percent),
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White,
                         )
