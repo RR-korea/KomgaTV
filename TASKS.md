@@ -13,14 +13,14 @@
 
 ---
 
-## T0. 개발 환경 (이 PC)
+## T0. 개발 환경 (이 PC) — ✅ 완료 (docs/reports/T0.md)
 이 PC에는 JDK·Android SDK가 없다.
 - JDK 17 이상 설치 (winget `EclipseAdoptium.Temurin.21.JDK` 등). `JAVA_HOME` 설정.
 - Android SDK command-line tools 설치 → `platform-tools`, `platforms;android-<compileSdk>`, `build-tools;<최신>` 설치, 라이선스 동의. `ANDROID_HOME` 설정.
 - `local.properties`에 `sdk.dir` 작성 (gitignore 확인).
 - **완료 조건:** `java -version`, `sdkmanager --list_installed` 출력이 보고서에 있음.
 
-## T1. 빌드 초록불 — `task/T1-build`
+## T1. 빌드 초록불 — `task/T1-build` — ✅ 완료 (docs/reports/T1.md)
 LEAD_REVIEW §2의 B1~B7 전부와 D1·D2·D3·D4 구조 변경.
 1. Gradle wrapper 생성 (`gradlew`, `gradlew.bat`, `gradle/wrapper/gradle-wrapper.jar`), 버전은 D3.
 2. `settings.gradle.kts` 오타 수정, `:core:datastore` 모듈 추가.

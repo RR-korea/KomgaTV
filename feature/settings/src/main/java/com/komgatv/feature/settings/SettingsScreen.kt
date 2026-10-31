@@ -1,7 +1,6 @@
 package com.komgatv.feature.settings
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,19 +19,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.ListItem
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.RadioButton
 import androidx.tv.material3.Text
-import androidx.tv.material3.TextField
-import com.komgatv.core.data.preferences.ServerPreferences
+import com.komgatv.core.ui.components.TvTextField
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * 설정 화면
@@ -78,11 +73,10 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         var serverUrl by remember { mutableStateOf(uiState.serverUrl) }
-        TextField(
+        TvTextField(
             value = serverUrl,
             onValueChange = { serverUrl = it },
-            placeholder = { Text("http://192.168.1.100:25600") },
-            singleLine = true,
+            placeholder = "http://192.168.1.100:25600",
             modifier = Modifier.fillMaxWidth(),
         )
 
@@ -137,10 +131,9 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            TextField(
+            TvTextField(
                 value = username,
                 onValueChange = { username = it },
-                singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -150,10 +143,9 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            TextField(
+            TvTextField(
                 value = password,
                 onValueChange = { password = it },
-                singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -181,10 +173,9 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            TextField(
+            TvTextField(
                 value = apiKey,
                 onValueChange = { apiKey = it },
-                singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
             )

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.komgatv.core.data.repository.LibraryRepository
 import com.komgatv.core.data.repository.SeriesRepository
 import com.komgatv.core.model.Series
+import com.komgatv.core.network.ServerSessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,10 +42,14 @@ sealed interface LibraryUiState {
 class LibraryViewModel @Inject constructor(
     private val libraryRepository: LibraryRepository,
     private val seriesRepository: SeriesRepository,
+    private val sessionManager: ServerSessionManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<LibraryUiState>(LibraryUiState.Loading)
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
+
+    val baseUrl: String
+        get() = sessionManager.session.value?.baseUrl ?: ""
 
     private var currentLibraryId: String = ""
     private val PAGE_SIZE = 30
@@ -56,7 +61,7 @@ class LibraryViewModel @Inject constructor(
      */
     fun loadLibrary(libraryId: String) {
         if (currentLibraryId == libraryId && _uiState.value is LibraryUiState.Success) {
-            return // 이미 로드된 데이터가 있으면 재로드하지 않음
+            return
         }
 
         currentLibraryId = libraryId
@@ -66,7 +71,7 @@ class LibraryViewModel @Inject constructor(
             try {
                 // 라이브러리 이름 조회
                 val library = libraryRepository.getLibraryById(libraryId)
-                val libraryName = library?.name ?: "라이브러리"
+                val libraryName = library.name
 
                 // 첫 페이지 시리즈 로드
                 val result = seriesRepository.getSeries(
@@ -95,8 +100,6 @@ class LibraryViewModel @Inject constructor(
 
     /**
      * 추가 시리즈 로드 (페이지네이션)
-     *
-     * 현재 마지막 페이지가 아닌 경우에만 다음 페이지를 로드합니다.
      */
     fun loadMoreSeries() {
         val currentState = _uiState.value
@@ -104,7 +107,6 @@ class LibraryViewModel @Inject constructor(
         if (currentState.isLastPage || currentState.isLoadingMore) return
 
         viewModelScope.launch {
-            // 로딩 상태 업데이트
             _uiState.value = currentState.copy(isLoadingMore = true)
 
             try {

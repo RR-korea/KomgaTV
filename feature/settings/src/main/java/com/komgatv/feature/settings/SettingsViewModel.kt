@@ -3,8 +3,9 @@ package com.komgatv.feature.settings
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.komgatv.core.data.preferences.ServerPreferences
-import com.komgatv.core.network.KomgaApi
+import com.komgatv.core.datastore.ServerPreferences
+import com.komgatv.core.network.AuthMode
+import com.komgatv.core.network.ServerSessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,7 +47,7 @@ data class SettingsUiState(
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val serverPreferences: ServerPreferences,
-    private val komgaApi: KomgaApi,
+    private val sessionManager: ServerSessionManager,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
@@ -95,14 +96,13 @@ class SettingsViewModel @Inject constructor(
         apiKey: String = "",
     ) {
         try {
-            // 서버 URL 저장
-            serverPreferences.saveServerUrl(serverUrl)
-
-            // 인증 정보 저장
-            when (authMethod) {
-                "basic" -> serverPreferences.saveBasicAuth(username, password)
-                "apikey" -> serverPreferences.saveApiKey(apiKey)
+            val auth = if (authMethod == "apikey") {
+                AuthMode.ApiKey(apiKey)
+            } else {
+                AuthMode.Basic(username, password)
             }
+
+            sessionManager.connect(serverUrl, auth).getOrThrow()
 
             // UI 상태 업데이트
             _uiState.value = _uiState.value.copy(
@@ -122,18 +122,28 @@ class SettingsViewModel @Inject constructor(
     /**
      * 서버 연결 테스트
      *
-     * 라이브러리 목록 API를 호출하여 서버 연결 가능 여부를 확인합니다.
+     * 현재 입력된 정보 또는 저장된 정보로 서버 연결 가능 여부를 확인합니다.
      */
     suspend fun testConnection() {
         _uiState.value = _uiState.value.copy(connectionStatus = ConnectionStatus.Testing)
 
         try {
-            // 라이브러리 목록 조회로 연결 테스트
-            val libraries = komgaApi.getLibraries()
-            Timber.d("연결 테스트 성공: ${libraries.size}개 라이브러리 발견")
-            _uiState.value = _uiState.value.copy(connectionStatus = ConnectionStatus.Success)
+            val current = _uiState.value
+            val auth = if (current.authMethod == "apikey") {
+                AuthMode.ApiKey(current.apiKey)
+            } else {
+                AuthMode.Basic(current.username, current.password)
+            }
+            val result = sessionManager.connect(current.serverUrl, auth)
+            if (result.isSuccess) {
+                Timber.d("연결 테스트 성공: %s", result.getOrNull()?.email)
+                _uiState.value = _uiState.value.copy(connectionStatus = ConnectionStatus.Success)
+            } else {
+                Timber.e(result.exceptionOrNull(), "연결 테스트 실패")
+                _uiState.value = _uiState.value.copy(connectionStatus = ConnectionStatus.Failed)
+            }
         } catch (e: Exception) {
-            Timber.e(e, "연결 테스트 실패")
+            Timber.e(e, "연결 테스트 예외")
             _uiState.value = _uiState.value.copy(connectionStatus = ConnectionStatus.Failed)
         }
     }

@@ -21,31 +21,33 @@
 #### `core:model`
 ```
 도메인 모델 (순수 Kotlin data class)
-의존성: kotlinx.serialization만
+의존성: 없음
 ```
-- `Library`, `Series`, `SeriesMetadata`
+- `Library`, `Series`, `SeriesMetadata`, `ReadingDirection`
 - `Book`, `BookMetadata`, `ReadProgress`
-- `Page`, `PagedResponse<T>`
+
+#### `core:datastore`
+```
+서버 설정 저장 (다른 core 모듈에 의존하지 않음)
+의존성: DataStore, Hilt
+```
+- `ServerPreferences` — 서버 URL, 인증 방식, 자격 증명
 
 #### `core:network`
 ```
-Komga REST API 클라이언트
-의존성: Retrofit, OkHttp, kotlinx.serialization, Hilt
+Komga 서버 세션
+의존성: komga-client, Ktor(OkHttp 엔진), OkHttp, core:datastore, Hilt
 ```
-- `KomgaApi` — Retrofit 인터페이스
-- `dto/` — API 응답 DTO (서버 JSON 매핑)
-- `di/NetworkModule` — OkHttp, Retrofit, API 인스턴스 제공
-- `AuthInterceptor` — Basic Auth / API Key 주입
+- `ServerSessionManager` — 서버 설정을 관찰해 `KomgaSession`(OkHttpClient + KomgaClientFactory)을 `StateFlow`로 제공. 인증 헤더(Basic / `X-API-Key`)는 OkHttp 인터셉터가 붙인다.
+- `di/NetworkModule` — 현재 세션을 따라가는 `Call.Factory` (Coil 이미지 요청용)
 
 #### `core:data`
 ```
-Repository 패턴 + 로컬 캐시
-의존성: core:network, core:model, Room, DataStore, Hilt
+Repository 패턴
+의존성: core:network, core:model, Hilt
 ```
 - `repository/` — LibraryRepository, SeriesRepository, BookRepository
-- `mapper/` — DTO ↔ Domain 모델 변환
-- `preferences/ServerPreferences` — 서버 URL, 인증 정보
-- `cache/` — Room DB (시리즈·책 메타데이터 오프라인 캐시)
+- `mapper/` — komga-client 모델 → 도메인 모델 변환
 
 #### `core:ui`
 ```

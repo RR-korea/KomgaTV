@@ -5,7 +5,7 @@
 거실 TV에서 만화, 웹툰, e북 라이브러리를 리모컨 하나로 탐색하고 읽을 수 있는 앱입니다.
 
 ![Android TV](https://img.shields.io/badge/Android_TV-11+-3DDC84?logo=android&logoColor=white)
-![Kotlin](https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?logo=kotlin&logoColor=white)
+![Kotlin](https://img.shields.io/badge/Kotlin-2.4.21-7F52FF?logo=kotlin&logoColor=white)
 ![Compose](https://img.shields.io/badge/Jetpack_Compose_for_TV-1.1.0-4285F4?logo=jetpackcompose&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
@@ -28,17 +28,17 @@
 
 | 영역 | 기술 |
 |---|---|
-| **언어** | Kotlin 2.1.0 (JVM) |
-| **UI** | Jetpack Compose for TV (`tv-material`, `tv-foundation`) |
+| **언어** | Kotlin 2.4.21 (JVM) |
+| **UI** | Jetpack Compose for TV (`tv-material`) + 표준 Lazy 레이아웃 |
 | **이미지** | Coil 3 (RGB_565 모드, TV 최적화) |
-| **네트워크** | Retrofit + OkHttp + kotlinx.serialization |
+| **네트워크** | [komga-client](https://github.com/Snd-R/komga-client) (Ktor, OkHttp 엔진 — Coil과 OkHttpClient 공유) |
 | **아키텍처** | Clean Architecture + MVI |
 | **DI** | Hilt |
 | **네비게이션** | Compose Navigation |
 | **비동기** | Kotlin Coroutines + Flow |
-| **로컬 저장** | DataStore (설정), Room (캐시) |
+| **로컬 저장** | DataStore (서버 설정) |
 | **로그** | Timber |
-| **빌드** | Gradle 8.11.1, AGP 8.7.3, Version Catalog |
+| **빌드** | Gradle 9.8.2, AGP 9.5.0 (내장 Kotlin), Version Catalog, `build-logic` 컨벤션 플러그인 |
 
 자세한 기술 사양은 [TECH_SPEC.md](docs/TECH_SPEC.md)를 참조하세요.
 
@@ -60,7 +60,8 @@ KomgaTV/
 ├── core/                         # 공유 핵심 모듈
 │   ├── model/                    # 도메인 모델 (Library, Series, Book)
 │   ├── network/                  # Komga REST API 클라이언트
-│   ├── data/                     # Repository, DataStore, 캐시
+│   ├── datastore/                # 서버 설정 저장 (DataStore)
+│   ├── data/                     # Repository (komga-client → 도메인 모델)
 │   └── ui/                       # 공유 TV 컴포넌트 (PosterCard, TVRow)
 │
 ├── feature/                      # 화면별 기능 모듈
@@ -82,9 +83,8 @@ KomgaTV/
 
 ### 요구 사항
 
-- **Android Studio** Ladybug (2024.2.1) 이상
-- **JDK** 17+
-- **Android SDK** 35
+- **JDK** 17+ (21 권장)
+- **Android SDK** — compileSdk 37 (platform `android-37.2`), targetSdk 36, minSdk 30
 - 실행 대상: Android TV 에뮬레이터 또는 실제 TV 디바이스
 
 ### 빌드
@@ -172,5 +172,5 @@ MIT License — [LICENSE](LICENSE) 참조
 
 - [Komga](https://github.com/gotson/komga) — 셀프호스팅 만화/e북 미디어 서버
 - [Komelia](https://github.com/Snd-R/Komelia) — Komga 크로스플랫폼 클라이언트 (아키텍처 참조)
-- [KMReader](https://github.com/pvalenta/KMReader) — Apple TV용 Komga 리더 (TV UX 참조)
+- [KMReader](https://github.com/kmworks/kmreader) — Apple TV용 Komga 리더 (TV UX 참조)
 - [Jetpack Compose for TV](https://developer.android.com/training/tv/playback/compose) — Google 공식 TV UI 프레임워크
