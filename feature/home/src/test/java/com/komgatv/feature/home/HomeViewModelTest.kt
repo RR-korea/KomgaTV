@@ -1,5 +1,6 @@
 package com.komgatv.feature.home
 
+import com.komgatv.core.model.LoadError
 import com.komgatv.core.data.repository.BookPageResult
 import com.komgatv.core.data.repository.BookRepository
 import com.komgatv.core.data.repository.LibraryRepository
@@ -78,7 +79,7 @@ class HomeViewModelTest {
         val state = viewModel.uiState.value
         assertTrue("Error 상태여야 함", state is HomeUiState.Error)
         val errorState = state as HomeUiState.Error
-        assertEquals("라이브러리 네트워크 에러", errorState.message)
+        assertEquals(LoadError.UNKNOWN, errorState.error)
     }
 
     @Test
@@ -90,7 +91,7 @@ class HomeViewModelTest {
         val state = viewModel.uiState.value
         assertTrue("Error 상태여야 함", state is HomeUiState.Error)
         val errorState = state as HomeUiState.Error
-        assertEquals("도서 조회 실패", errorState.message)
+        assertEquals(LoadError.UNKNOWN, errorState.error)
     }
 
     @Test

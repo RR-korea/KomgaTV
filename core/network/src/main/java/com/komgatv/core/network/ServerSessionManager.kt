@@ -4,8 +4,6 @@ import com.komgatv.core.datastore.ServerConfig
 import com.komgatv.core.datastore.ServerPreferences
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
-import io.ktor.client.plugins.ResponseException
-import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -162,7 +160,7 @@ class ServerSessionManager @Inject constructor(
     suspend fun connect(url: String, auth: AuthMode): Result<KomgaUser> {
         val trimmedUrl = url.trim()
         if (trimmedUrl.isBlank()) {
-            return Result.failure(ServerConnectionException.InvalidUrl("서버 주소를 입력해주세요."))
+            return Result.failure(ServerConnectionException.InvalidUrl("Server URL is empty"))
         }
 
         val httpUrl = trimmedUrl.toHttpUrlOrNull()
@@ -200,7 +198,7 @@ class ServerSessionManager @Inject constructor(
         while (current != null) {
             when {
                 // 401 Unauthorized 검사
-                current is ResponseException && current.response.status == HttpStatusCode.Unauthorized -> {
+                current.isHttpUnauthorized() -> {
                     return ServerConnectionException.Unauthorized(cause = throwable)
                 }
                 // SSL / 자체 서명 인증서 관련 오류
@@ -227,7 +225,7 @@ class ServerSessionManager @Inject constructor(
         }
 
         return ServerConnectionException.Other(
-            message = throwable.message ?: "알 수 없는 오류가 발생했습니다.",
+            message = throwable.message ?: throwable.toString(),
             cause = throwable,
         )
     }

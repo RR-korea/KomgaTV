@@ -13,4 +13,6 @@ dependencies {
     api(project(":core:model"))
     api(project(":core:network"))
     implementation(libs.kotlinx.coroutines.android)
+
+    testImplementation(libs.junit)
 }

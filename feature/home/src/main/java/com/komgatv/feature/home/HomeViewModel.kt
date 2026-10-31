@@ -2,11 +2,13 @@ package com.komgatv.feature.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.komgatv.core.data.error.toLoadError
 import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.data.repository.BookRepository
 import com.komgatv.core.data.repository.LibraryRepository
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.Library
+import com.komgatv.core.model.LoadError
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
@@ -38,12 +40,8 @@ sealed interface HomeUiState {
         val libraries: List<Library> = emptyList(),
     ) : HomeUiState
 
-    /**
-     * 에러 발생
-     *
-     * @property message 에러 메시지
-     */
-    data class Error(val message: String) : HomeUiState
+    /** 에러 발생 — 화면이 [error] 종류를 현재 언어 문구로 보여준다 */
+    data class Error(val error: LoadError) : HomeUiState
 }
 
 /**
@@ -95,9 +93,7 @@ class HomeViewModel @Inject constructor(
                 Timber.e(e, "홈 데이터 로드 실패")
                 // 보이는 내용이 있으면 그대로 두고, 처음 읽기에 실패했을 때만 오류 화면을 보인다
                 if (showing != null) return@launch
-                _uiState.value = HomeUiState.Error(
-                    message = e.localizedMessage ?: "홈 화면 데이터를 불러올 수 없습니다"
-                )
+                _uiState.value = HomeUiState.Error(e.toLoadError())
             }
         }
     }
