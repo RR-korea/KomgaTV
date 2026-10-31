@@ -133,6 +133,10 @@ class SearchViewModelTest {
             val totalPages = (all.size + pageSize - 1) / pageSize
             emit(SeriesPageResult(chunk, totalPages, all.size.toLong(), page, page >= totalPages - 1))
         }
+
+        override suspend fun getNewSeries(size: Int): List<Series> = emptyList()
+
+        override suspend fun getUpdatedSeries(size: Int): List<Series> = emptyList()
     }
 
     private object FakeImageUrls : ImageUrls {

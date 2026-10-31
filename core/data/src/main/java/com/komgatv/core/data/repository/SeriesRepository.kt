@@ -21,6 +21,12 @@ interface SeriesRepository {
     fun getSeries(page: Int = 0, size: Int = 20, libraryId: String? = null): Flow<SeriesPageResult>
     suspend fun getSeriesById(seriesId: String): Series
     fun searchSeries(query: String, page: Int = 0, size: Int = 20): Flow<SeriesPageResult>
+
+    /** 최근 추가된 시리즈 */
+    suspend fun getNewSeries(size: Int = 20): List<Series>
+
+    /** 최근에 책이 더해진 시리즈 */
+    suspend fun getUpdatedSeries(size: Int = 20): List<Series>
 }
 
 /** 시리즈 목록 한 페이지. currentPage는 0부터 시작한다. */
@@ -50,6 +56,16 @@ class SeriesRepositoryImpl @Inject constructor(
     override fun searchSeries(query: String, page: Int, size: Int): Flow<SeriesPageResult> = flow {
         emit(fetch(KomgaSeriesSearch(fullTextSearch = query), page, size, KomgaSort.Unsorted))
     }
+
+    override suspend fun getNewSeries(size: Int): List<Series> =
+        sessionManager.requireClient().seriesClient()
+            .getNewSeries(libraryIds = emptyList(), oneshot = null, deleted = false, pageRequest = KomgaPageRequest(size = size))
+            .content.map { it.toDomain() }
+
+    override suspend fun getUpdatedSeries(size: Int): List<Series> =
+        sessionManager.requireClient().seriesClient()
+            .getUpdatedSeries(libraryIds = emptyList(), oneshot = null, deleted = false, pageRequest = KomgaPageRequest(size = size))
+            .content.map { it.toDomain() }
 
     private suspend fun fetch(search: KomgaSeriesSearch, page: Int, size: Int, sort: KomgaSort): SeriesPageResult =
         sessionManager.requireClient().seriesClient()

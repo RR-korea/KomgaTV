@@ -5,11 +5,15 @@ import com.komgatv.core.data.repository.BookPageResult
 import com.komgatv.core.data.repository.BookRepository
 import com.komgatv.core.data.repository.LibraryRepository
 import com.komgatv.core.data.repository.ReadProgressEvents
+import com.komgatv.core.data.repository.SeriesPageResult
+import com.komgatv.core.data.repository.SeriesRepository
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.BookMetadata
 import com.komgatv.core.model.BookPage
 import com.komgatv.core.model.Library
 import com.komgatv.core.model.ReadProgress
+import com.komgatv.core.model.Series
+import com.komgatv.core.model.SeriesMetadata
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -30,6 +34,7 @@ class HomeViewModelTest {
     private lateinit var fakeLibraryRepository: FakeLibraryRepository
     private lateinit var fakeBookRepository: FakeBookRepository
     private val progressEvents = ReadProgressEvents()
+    private val fakeSeriesRepository = FakeSeriesRepository()
 
     @Before
     fun setUp() {
@@ -41,9 +46,40 @@ class HomeViewModelTest {
         return HomeViewModel(
             libraryRepository = fakeLibraryRepository,
             bookRepository = fakeBookRepository,
+            seriesRepository = fakeSeriesRepository,
             progressEvents = progressEvents,
             imageUrls = FakeImageUrls,
         )
+    }
+
+    @Test
+    fun `다음 권과 최근 추가된 시리즈 줄을 함께 읽는다`() = runTest {
+        val book = Book(
+            id = "next-1", seriesId = "s1", seriesTitle = "원피스", name = "원피스 2권", number = 2,
+            pageCount = 100, metadata = BookMetadata("원피스 2권", "", "2"), readProgress = null,
+        )
+        fakeBookRepository.onDeckToReturn = listOf(book)
+        fakeSeriesRepository.newSeriesToReturn = listOf(
+            Series("s9", "lib", "새 시리즈", 3, 0, 0, SeriesMetadata("새 시리즈", "", "ONGOING", "", emptyList(), null)),
+        )
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as HomeUiState.Success
+        assertEquals(listOf("next-1"), state.onDeck.map { it.id })
+        assertEquals(listOf("s9"), state.newSeries.map { it.id })
+    }
+
+    @Test
+    fun `선택 줄이 실패해도 홈은 열리고 그 줄만 비어 있다`() = runTest {
+        fakeBookRepository.failOnDeck = true
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as HomeUiState.Success
+        assertTrue(state.onDeck.isEmpty())
     }
 
     @Test
@@ -180,5 +216,31 @@ class HomeViewModelTest {
 
         override suspend fun updateReadProgress(bookId: String, page: Int, completed: Boolean) {
         }
+
+        var onDeckToReturn = listOf<Book>()
+        var failOnDeck = false
+
+        override suspend fun getBooksOnDeck(size: Int): List<Book> {
+            if (failOnDeck) throw RuntimeException("on deck 실패")
+            return onDeckToReturn
+        }
+
+        override suspend fun getLatestBooks(size: Int): List<Book> = emptyList()
+
+        override fun searchBooks(query: String, page: Int, size: Int): Flow<BookPageResult> = throw NotImplementedError()
+    }
+
+    private class FakeSeriesRepository : SeriesRepository {
+        var newSeriesToReturn = listOf<Series>()
+
+        override fun getSeries(page: Int, size: Int, libraryId: String?): Flow<SeriesPageResult> = throw NotImplementedError()
+
+        override suspend fun getSeriesById(seriesId: String): Series = throw NotImplementedError()
+
+        override fun searchSeries(query: String, page: Int, size: Int): Flow<SeriesPageResult> = throw NotImplementedError()
+
+        override suspend fun getNewSeries(size: Int): List<Series> = newSeriesToReturn
+
+        override suspend fun getUpdatedSeries(size: Int): List<Series> = emptyList()
     }
 }
