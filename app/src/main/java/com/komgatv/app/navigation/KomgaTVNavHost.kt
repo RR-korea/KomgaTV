@@ -9,6 +9,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.komgatv.feature.home.HomeScreen
 import com.komgatv.feature.library.LibraryScreen
+import com.komgatv.feature.library.SeriesDetailScreen
 import com.komgatv.feature.reader.ReaderScreen
 import com.komgatv.feature.settings.SettingsScreen
 
@@ -37,9 +38,6 @@ sealed class Screen(val route: String) {
         fun createRoute(bookId: String) = "reader/$bookId"
     }
 
-    /** 검색 화면 */
-    data object Search : Screen("search")
-
     /** 설정 화면 - 서버 연결 및 캐시 관리 */
     data object Settings : Screen("settings")
 }
@@ -66,17 +64,8 @@ fun KomgaTVNavHost(
                 onNavigateToLibrary = { libraryId ->
                     navController.navigate(Screen.Library.createRoute(libraryId))
                 },
-                onNavigateToSeries = { seriesId ->
-                    navController.navigate(Screen.SeriesDetail.createRoute(seriesId))
-                },
                 onNavigateToReader = { bookId ->
                     navController.navigate(Screen.Reader.createRoute(bookId))
-                },
-                onNavigateToSearch = {
-                    navController.navigate(Screen.Search.route)
-                },
-                onNavigateToSettings = {
-                    navController.navigate(Screen.Settings.route)
                 },
             )
         }
@@ -106,7 +95,13 @@ fun KomgaTVNavHost(
             ),
         ) { backStackEntry ->
             val seriesId = backStackEntry.arguments?.getString("seriesId") ?: return@composable
-            // TODO: SeriesDetailScreen 구현
+            SeriesDetailScreen(
+                seriesId = seriesId,
+                onNavigateToReader = { bookId ->
+                    navController.navigate(Screen.Reader.createRoute(bookId))
+                },
+                onNavigateBack = { navController.popBackStack() },
+            )
         }
 
         // 리더 화면
@@ -121,11 +116,6 @@ fun KomgaTVNavHost(
                 bookId = bookId,
                 onNavigateBack = { navController.popBackStack() },
             )
-        }
-
-        // 검색 화면
-        composable(Screen.Search.route) {
-            // TODO: SearchScreen 구현
         }
 
         // 설정 화면

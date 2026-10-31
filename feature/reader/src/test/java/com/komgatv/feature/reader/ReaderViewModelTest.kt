@@ -336,6 +336,10 @@ class ReaderViewModelTest {
             throw NotImplementedError()
         }
 
+        override fun getBooksInProgress(page: Int, size: Int): Flow<BookPageResult> {
+            throw NotImplementedError()
+        }
+
         override suspend fun getBookById(bookId: String): Book {
             return books[bookId] ?: throw NoSuchElementException("Book not found: $bookId")
         }
