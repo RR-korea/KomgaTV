@@ -51,17 +51,19 @@ sealed class Screen(val route: String) {
  * 앱의 모든 화면에 대한 네비게이션 그래프를 구성합니다.
  * D-Pad 네비게이션에 최적화되어 있습니다.
  *
+ * @param startDestination 시작 화면 라우트 (기본값: 홈)
  * @param onRegisterKeyEventHandler 액티비티 레벨 키 이벤트 핸들러 등록 콜백
  * @param navController 네비게이션 컨트롤러
  */
 @Composable
 fun KomgaTVNavHost(
+    startDestination: String = Screen.Home.route,
     onRegisterKeyEventHandler: ((KeyEvent) -> Boolean) -> Unit = {},
     navController: NavHostController = rememberNavController(),
 ) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Home.route,
+        startDestination = startDestination,
     ) {
         // 홈 화면
         composable(Screen.Home.route) {
@@ -135,7 +137,24 @@ fun KomgaTVNavHost(
         // 설정 화면
         composable(Screen.Settings.route) {
             SettingsScreen(
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = {
+                    if (navController.previousBackStackEntry != null) {
+                        navController.popBackStack()
+                    } else {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Settings.route) { inclusive = true }
+                        }
+                    }
+                },
+                onConnectSuccess = {
+                    if (navController.previousBackStackEntry != null) {
+                        navController.popBackStack()
+                    } else {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Settings.route) { inclusive = true }
+                        }
+                    }
+                },
             )
         }
     }

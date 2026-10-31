@@ -1,0 +1,53 @@
+package com.komgatv.core.datastore
+
+import com.komgatv.core.datastore.crypto.KeystoreCredentialEncryptor
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+
+class KeystoreCredentialEncryptorTest {
+
+    private lateinit var encryptor: KeystoreCredentialEncryptor
+
+    @Before
+    fun setUp() {
+        encryptor = KeystoreCredentialEncryptor()
+    }
+
+    @Test
+    fun encrypt_and_decrypt_returns_original_text() {
+        val original = "mySecretPassword123!@#"
+        val encrypted = encryptor.encrypt(original)
+
+        assertNotEquals(original, encrypted)
+        assertTrue(encrypted.isNotBlank())
+
+        val decrypted = encryptor.decrypt(encrypted)
+        assertEquals(original, decrypted)
+    }
+
+    @Test
+    fun encrypt_and_decrypt_korean_and_special_characters() {
+        val original = "한글비밀번호-키값_@#123!?"
+        val encrypted = encryptor.encrypt(original)
+
+        assertNotEquals(original, encrypted)
+        val decrypted = encryptor.decrypt(encrypted)
+        assertEquals(original, decrypted)
+    }
+
+    @Test
+    fun encrypt_empty_string_returns_empty() {
+        val encrypted = encryptor.encrypt("")
+        assertEquals("", encrypted)
+    }
+
+    @Test
+    fun decrypt_empty_or_corrupt_string_returns_empty() {
+        assertEquals("", encryptor.decrypt(""))
+        assertEquals("", encryptor.decrypt("invalid-base64-string!@#"))
+        assertEquals("", encryptor.decrypt("dGVzdA==")) // 너무 짧은 암호문 (IV 바이트 미달)
+    }
+}

@@ -4,6 +4,8 @@ import com.komgatv.core.datastore.ServerConfig
 import com.komgatv.core.datastore.ServerPreferences
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.ResponseException
+import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -12,15 +14,26 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import okhttp3.Credentials
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import snd.komga.client.KomgaClientFactory
 import snd.komga.client.user.KomgaUser
 import timber.log.Timber
+import java.io.InterruptedIOException
+import java.net.ConnectException
+import java.net.MalformedURLException
+import java.net.SocketException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
+import java.security.cert.CertificateException
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import javax.net.ssl.SSLException
+import javax.net.ssl.SSLHandshakeException
+import javax.net.ssl.SSLPeerUnverifiedException
 
 /**
  * 인증 방식 구분
@@ -143,20 +156,82 @@ class ServerSessionManager @Inject constructor(
      *
      * @param url Komga 서버 URL
      * @param auth 인증 정보 (Basic 또는 ApiKey)
-     * @return 연결 성공 시 KomgaUser, 실패 시 Result.failure
+     * @return 연결 성공 시 KomgaUser, 실패 시 ServerConnectionException을 담은 Result.failure
      */
-    suspend fun connect(url: String, auth: AuthMode): Result<KomgaUser> = runCatching {
-        val tempSession = buildSession(url, auth)
-        val user = tempSession.komgaClient.userClient().getMe()
-
-        serverPreferences.saveServerUrl(url)
-        when (auth) {
-            is AuthMode.Basic -> serverPreferences.saveBasicAuth(auth.username, auth.password)
-            is AuthMode.ApiKey -> serverPreferences.saveApiKey(auth.apiKey)
+    suspend fun connect(url: String, auth: AuthMode): Result<KomgaUser> {
+        val trimmedUrl = url.trim()
+        if (trimmedUrl.isBlank()) {
+            return Result.failure(ServerConnectionException.InvalidUrl("서버 주소를 입력해주세요."))
         }
 
-        _session.value = tempSession
-        user
+        val httpUrl = trimmedUrl.toHttpUrlOrNull()
+        if (httpUrl == null || (httpUrl.scheme != "http" && httpUrl.scheme != "https")) {
+            return Result.failure(ServerConnectionException.InvalidUrl())
+        }
+
+        val cleanUrl = trimmedUrl.trimEnd('/')
+
+        return try {
+            val tempSession = buildSession(cleanUrl, auth)
+            val user = tempSession.komgaClient.userClient().getMe()
+
+            serverPreferences.saveServerUrl(cleanUrl)
+            when (auth) {
+                is AuthMode.Basic -> serverPreferences.saveBasicAuth(auth.username, auth.password)
+                is AuthMode.ApiKey -> serverPreferences.saveApiKey(auth.apiKey)
+            }
+
+            _session.value = tempSession
+            Result.success(user)
+        } catch (e: Throwable) {
+            Timber.e(e, "Komga 서버 연결 실패: %s", cleanUrl)
+            Result.failure(classifyException(e))
+        }
+    }
+
+    /**
+     * 연결 시도 중 발생한 예외를 원인별 ServerConnectionException으로 분류합니다.
+     */
+    fun classifyException(throwable: Throwable): ServerConnectionException {
+        var current: Throwable? = throwable
+        while (current != null) {
+            when {
+                // 401 Unauthorized 검사
+                current is ResponseException && current.response.status == HttpStatusCode.Unauthorized -> {
+                    return ServerConnectionException.Unauthorized(cause = throwable)
+                }
+                current.message?.contains("401") == true -> {
+                    return ServerConnectionException.Unauthorized(cause = throwable)
+                }
+                // SSL / 자체 서명 인증서 관련 오류
+                current is SSLException ||
+                    current is SSLHandshakeException ||
+                    current is SSLPeerUnverifiedException ||
+                    current is CertificateException -> {
+                    return ServerConnectionException.SslError(cause = throwable)
+                }
+                // 주소 / DNS 오류
+                current is UnknownHostException ||
+                    current is MalformedURLException -> {
+                    return ServerConnectionException.InvalidUrl(cause = throwable)
+                }
+                // 연결 불가 / 타임아웃 / 연결 거부
+                current is ConnectException ||
+                    current is SocketTimeoutException ||
+                    current is SocketException ||
+                    current is InterruptedIOException ||
+                    current.message?.contains("Failed to connect") == true ||
+                    current.message?.contains("Connection refused") == true -> {
+                    return ServerConnectionException.Unreachable(cause = throwable)
+                }
+            }
+            current = current.cause
+        }
+
+        return ServerConnectionException.Other(
+            message = throwable.message ?: "알 수 없는 오류가 발생했습니다.",
+            cause = throwable,
+        )
     }
 
     /**

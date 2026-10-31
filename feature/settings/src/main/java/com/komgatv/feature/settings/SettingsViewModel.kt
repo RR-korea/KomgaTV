@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.komgatv.core.datastore.ServerPreferences
 import com.komgatv.core.network.AuthMode
+import com.komgatv.core.network.ServerConnectionException
 import com.komgatv.core.network.ServerSessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -18,13 +19,20 @@ import java.io.File
 import javax.inject.Inject
 
 /**
- * 연결 테스트 상태
+ * 서버 연결 테스트 및 검증 결과
  */
-enum class ConnectionStatus {
-    None,       // 테스트 전
-    Testing,    // 테스트 중
-    Success,    // 연결 성공
-    Failed,     // 연결 실패
+sealed interface ConnectionResult {
+    data object None : ConnectionResult
+    data object Testing : ConnectionResult
+    data object Success : ConnectionResult
+    sealed interface Failed : ConnectionResult {
+        data object InvalidUrl : Failed
+        data object Unreachable : Failed
+        data object Unauthorized : Failed
+        data object SslError : Failed
+        data object MissingFields : Failed
+        data class Other(val message: String? = null) : Failed
+    }
 }
 
 /**
@@ -36,13 +44,16 @@ data class SettingsUiState(
     val username: String = "",
     val password: String = "",
     val apiKey: String = "",
-    val connectionStatus: ConnectionStatus = ConnectionStatus.None,
+    val connectionResult: ConnectionResult = ConnectionResult.None,
+    val isSaving: Boolean = false,
+    val saveSuccess: Boolean = false,
+    val cacheCleared: Boolean = false,
 )
 
 /**
  * 설정 화면 ViewModel
  *
- * 서버 연결 설정의 저장, 로드, 연결 테스트, 캐시 관리를 담당합니다.
+ * Komga 서버 연결 설정의 로드, 실시간 입력 상태 관리, 연결 검증, 저장 및 캐시 삭제를 담당합니다.
  */
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -58,7 +69,7 @@ class SettingsViewModel @Inject constructor(
         loadSettings()
     }
 
-    /** 저장된 설정 로드 */
+    /** 저장된 서버 설정 로드 */
     private fun loadSettings() {
         viewModelScope.launch {
             try {
@@ -66,9 +77,9 @@ class SettingsViewModel @Inject constructor(
                 val authMethod = serverPreferences.authMethod.first()
                 val authConfig = serverPreferences.authConfig.first()
 
-                _uiState.value = SettingsUiState(
+                _uiState.value = _uiState.value.copy(
                     serverUrl = serverUrl,
-                    authMethod = authMethod,
+                    authMethod = if (authMethod.isNotBlank()) authMethod else "basic",
                     username = authConfig.username,
                     password = authConfig.password,
                     apiKey = authConfig.apiKey,
@@ -79,89 +90,166 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun updateServerUrl(url: String) {
+        _uiState.value = _uiState.value.copy(
+            serverUrl = url,
+            connectionResult = ConnectionResult.None,
+            saveSuccess = false,
+        )
+    }
+
+    fun updateAuthMethod(method: String) {
+        _uiState.value = _uiState.value.copy(
+            authMethod = method,
+            connectionResult = ConnectionResult.None,
+            saveSuccess = false,
+        )
+    }
+
+    fun updateUsername(username: String) {
+        _uiState.value = _uiState.value.copy(
+            username = username,
+            connectionResult = ConnectionResult.None,
+            saveSuccess = false,
+        )
+    }
+
+    fun updatePassword(password: String) {
+        _uiState.value = _uiState.value.copy(
+            password = password,
+            connectionResult = ConnectionResult.None,
+            saveSuccess = false,
+        )
+    }
+
+    fun updateApiKey(apiKey: String) {
+        _uiState.value = _uiState.value.copy(
+            apiKey = apiKey,
+            connectionResult = ConnectionResult.None,
+            saveSuccess = false,
+        )
+    }
+
     /**
-     * 설정 저장
-     *
-     * @param serverUrl 서버 URL
-     * @param authMethod 인증 방식 (basic / apikey)
-     * @param username Basic Auth 사용자명
-     * @param password Basic Auth 비밀번호
-     * @param apiKey API 키
+     * 현재 입력된 값으로 서버 연결만 테스트 (저장하지 않음)
      */
-    suspend fun saveSettings(
-        serverUrl: String,
-        authMethod: String,
-        username: String = "",
-        password: String = "",
-        apiKey: String = "",
-    ) {
-        try {
-            val auth = if (authMethod == "apikey") {
-                AuthMode.ApiKey(apiKey)
-            } else {
-                AuthMode.Basic(username, password)
+    fun testConnection() {
+        viewModelScope.launch {
+            val state = _uiState.value
+            val url = state.serverUrl.trim()
+            val auth = when (state.authMethod) {
+                "apikey" -> {
+                    if (url.isBlank() || state.apiKey.isBlank()) {
+                        _uiState.value = _uiState.value.copy(
+                            connectionResult = ConnectionResult.Failed.MissingFields
+                        )
+                        return@launch
+                    }
+                    AuthMode.ApiKey(state.apiKey.trim())
+                }
+                else -> {
+                    if (url.isBlank() || state.username.isBlank() || state.password.isBlank()) {
+                        _uiState.value = _uiState.value.copy(
+                            connectionResult = ConnectionResult.Failed.MissingFields
+                        )
+                        return@launch
+                    }
+                    AuthMode.Basic(state.username.trim(), state.password)
+                }
             }
 
-            sessionManager.connect(serverUrl, auth).getOrThrow()
+            _uiState.value = _uiState.value.copy(connectionResult = ConnectionResult.Testing)
 
-            // UI 상태 업데이트
+            try {
+                val tempSession = sessionManager.buildSession(url, auth)
+                tempSession.komgaClient.userClient().getMe()
+                _uiState.value = _uiState.value.copy(connectionResult = ConnectionResult.Success)
+            } catch (e: Throwable) {
+                Timber.e(e, "연결 테스트 실패")
+                _uiState.value = _uiState.value.copy(
+                    connectionResult = mapExceptionToConnectionResult(e)
+                )
+            }
+        }
+    }
+
+    /**
+     * 서버 연결을 검증하고 성공 시 설정을 영구 저장합니다.
+     */
+    fun saveSettings() {
+        viewModelScope.launch {
+            val state = _uiState.value
+            val url = state.serverUrl.trim()
+            val auth = when (state.authMethod) {
+                "apikey" -> {
+                    if (url.isBlank() || state.apiKey.isBlank()) {
+                        _uiState.value = _uiState.value.copy(
+                            connectionResult = ConnectionResult.Failed.MissingFields
+                        )
+                        return@launch
+                    }
+                    AuthMode.ApiKey(state.apiKey.trim())
+                }
+                else -> {
+                    if (url.isBlank() || state.username.isBlank() || state.password.isBlank()) {
+                        _uiState.value = _uiState.value.copy(
+                            connectionResult = ConnectionResult.Failed.MissingFields
+                        )
+                        return@launch
+                    }
+                    AuthMode.Basic(state.username.trim(), state.password)
+                }
+            }
+
             _uiState.value = _uiState.value.copy(
-                serverUrl = serverUrl,
-                authMethod = authMethod,
-                username = username,
-                password = password,
-                apiKey = apiKey,
+                isSaving = true,
+                connectionResult = ConnectionResult.Testing,
             )
 
-            Timber.d("설정 저장 완료: $serverUrl, 인증 방식: $authMethod")
-        } catch (e: Exception) {
-            Timber.e(e, "설정 저장 실패")
-        }
-    }
-
-    /**
-     * 서버 연결 테스트
-     *
-     * 현재 입력된 정보 또는 저장된 정보로 서버 연결 가능 여부를 확인합니다.
-     */
-    suspend fun testConnection() {
-        _uiState.value = _uiState.value.copy(connectionStatus = ConnectionStatus.Testing)
-
-        try {
-            val current = _uiState.value
-            val auth = if (current.authMethod == "apikey") {
-                AuthMode.ApiKey(current.apiKey)
-            } else {
-                AuthMode.Basic(current.username, current.password)
-            }
-            val result = sessionManager.connect(current.serverUrl, auth)
+            val result = sessionManager.connect(url, auth)
             if (result.isSuccess) {
-                Timber.d("연결 테스트 성공: %s", result.getOrNull()?.email)
-                _uiState.value = _uiState.value.copy(connectionStatus = ConnectionStatus.Success)
+                Timber.d("서버 연결 및 저장 성공: %s", url)
+                _uiState.value = _uiState.value.copy(
+                    isSaving = false,
+                    connectionResult = ConnectionResult.Success,
+                    saveSuccess = true,
+                )
             } else {
-                Timber.e(result.exceptionOrNull(), "연결 테스트 실패")
-                _uiState.value = _uiState.value.copy(connectionStatus = ConnectionStatus.Failed)
+                val ex = result.exceptionOrNull() ?: Exception("Unknown error")
+                Timber.e(ex, "서버 연결 및 저장 실패: %s", url)
+                _uiState.value = _uiState.value.copy(
+                    isSaving = false,
+                    connectionResult = mapExceptionToConnectionResult(ex),
+                    saveSuccess = false,
+                )
             }
-        } catch (e: Exception) {
-            Timber.e(e, "연결 테스트 예외")
-            _uiState.value = _uiState.value.copy(connectionStatus = ConnectionStatus.Failed)
+        }
+    }
+
+    private fun mapExceptionToConnectionResult(e: Throwable): ConnectionResult.Failed {
+        return when (val ex = (e as? ServerConnectionException) ?: sessionManager.classifyException(e)) {
+            is ServerConnectionException.InvalidUrl -> ConnectionResult.Failed.InvalidUrl
+            is ServerConnectionException.Unreachable -> ConnectionResult.Failed.Unreachable
+            is ServerConnectionException.Unauthorized -> ConnectionResult.Failed.Unauthorized
+            is ServerConnectionException.SslError -> ConnectionResult.Failed.SslError
+            is ServerConnectionException.Other -> ConnectionResult.Failed.Other(ex.message)
         }
     }
 
     /**
-     * 이미지 캐시 삭제
-     *
-     * Coil의 디스크 캐시 디렉터리를 삭제합니다.
+     * 이미지 디스크 캐시 삭제
      */
-    suspend fun clearImageCache() {
-        try {
-            val cacheDir = File(context.cacheDir, "image_cache")
-            if (cacheDir.exists()) {
-                cacheDir.deleteRecursively()
-                Timber.d("이미지 캐시 삭제 완료: ${cacheDir.absolutePath}")
+    fun clearImageCache() {
+        viewModelScope.launch {
+            try {
+                val cacheDir = File(context.cacheDir, "image_cache")
+                if (cacheDir.exists()) {
+                    cacheDir.deleteRecursively()
+                }
+                _uiState.value = _uiState.value.copy(cacheCleared = true)
+            } catch (e: Exception) {
+                Timber.e(e, "이미지 캐시 삭제 실패")
             }
-        } catch (e: Exception) {
-            Timber.e(e, "이미지 캐시 삭제 실패")
         }
     }
 }

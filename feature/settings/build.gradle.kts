@@ -10,4 +10,8 @@ android {
 
 dependencies {
     implementation(project(":core:datastore"))
+
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.okhttp.mockwebserver)
 }
