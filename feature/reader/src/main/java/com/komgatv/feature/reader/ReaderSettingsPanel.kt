@@ -9,14 +9,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,7 +34,6 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -48,7 +47,7 @@ import com.komgatv.core.model.ScaleType
  * D-pad 전용 인터랙션을 제공합니다:
  * - 상/하: 설정 항목 간 포커스 이동
  * - 좌/우 또는 Center/Enter: 설정 값 순환 변경
- * - 열릴 때 첫 항목에 자동 포커스
+ * - 열릴 때 첫 항목에 자동 포커스, Back은 리더 화면이 받아 패널을 닫는다
  */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -63,7 +62,6 @@ fun ReaderSettingsPanel(
     onReadingDirectionChange: (ReadingDirection) -> Unit,
     onScaleTypeChange: (ScaleType) -> Unit,
     onStretchToFitChange: (Boolean) -> Unit,
-    onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val firstFocusRequester = remember { FocusRequester() }
@@ -83,16 +81,15 @@ fun ReaderSettingsPanel(
                 .fillMaxHeight()
                 .width(420.dp)
                 .background(Color(0xFF1E1E1E))
-                .padding(32.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 32.dp, vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
                 text = stringResource(R.string.reader_settings_title),
                 style = MaterialTheme.typography.headlineSmall,
                 color = Color.White,
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
 
             // 1. 쪽 배치
             val layoutOptions = listOf(
@@ -176,14 +173,11 @@ fun ReaderSettingsPanel(
                 onNext = { onStretchToFitChange(!stretchToFit) },
             )
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            Button(
-                onClick = onClose,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(text = stringResource(R.string.reader_close_settings))
-            }
+            Text(
+                text = stringResource(R.string.reader_settings_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray,
+            )
         }
     }
 }

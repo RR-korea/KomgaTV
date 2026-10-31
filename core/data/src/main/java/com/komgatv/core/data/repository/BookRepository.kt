@@ -24,8 +24,8 @@ interface BookRepository {
     fun getBooksInProgress(page: Int = 0, size: Int = 20): Flow<BookPageResult>
     suspend fun getBookById(bookId: String): Book
 
-    /** 책의 페이지 목록(크기/메타데이터 포함)을 조회합니다. 기본값은 빈 목록입니다. */
-    suspend fun getBookPages(bookId: String): List<BookPage> = emptyList()
+    /** 책의 페이지 목록(번호·가로·세로 크기). 두 쪽 보기의 펼침 계산에 쓴다. */
+    suspend fun getBookPages(bookId: String): List<BookPage>
 
     /** page는 1부터 시작한다. */
     suspend fun updateReadProgress(bookId: String, page: Int, completed: Boolean)

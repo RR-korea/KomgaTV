@@ -9,6 +9,7 @@ import com.komgatv.core.datastore.ReaderPreferences
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.BookMetadata
 import com.komgatv.core.model.BookPage
+import com.komgatv.core.model.LoadError
 import com.komgatv.core.model.PageLayout
 import com.komgatv.core.model.ReadProgress
 import com.komgatv.core.model.ReaderSettings
@@ -22,7 +23,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -132,6 +132,29 @@ class ReaderViewModelTest {
     }
 
     @Test
+    fun `방향 우선순위 - 시리즈가 WEBTOON이면 페이지 리더는 저장된 기본값을 쓴다`() = runTest(testDispatcher) {
+        readerPreferences.saveReadingDirection(ReadingDirection.RIGHT_TO_LEFT)
+        val series = createTestSeries(id = "s_webtoon", direction = ReadingDirection.WEBTOON)
+        val book = createTestBook(id = "b1", seriesId = "s_webtoon", pageCount = 10)
+        seriesRepository.seriesMap[series.id] = series
+        bookRepository.books[book.id] = book
+
+        viewModel.loadBook(book.id)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as ReaderUiState.Reading
+        assertEquals(ReadingDirection.RIGHT_TO_LEFT, state.readingDirection)
+    }
+
+    @Test
+    fun `로드 실패 - 책이 없으면 오류 종류를 내보낸다`() = runTest(testDispatcher) {
+        viewModel.loadBook("missing")
+        advanceUntilIdle()
+
+        assertEquals(ReaderUiState.Error(LoadError.UNKNOWN), viewModel.uiState.value)
+    }
+
+    @Test
     fun `방향 변경 - 리더에서 방향을 바꾸면 지금 책에 바로 적용되고 기본값으로 저장된다`() = runTest(testDispatcher) {
         val series = createTestSeries(id = "s1", direction = ReadingDirection.LEFT_TO_RIGHT)
         val book = createTestBook(id = "b1", seriesId = "s1", pageCount = 10)
@@ -153,7 +176,7 @@ class ReaderViewModelTest {
         assertEquals(ReadingDirection.RIGHT_TO_LEFT, state.readingDirection)
 
         // 기본값으로도 저장됨
-        assertEquals(ReadingDirection.RIGHT_TO_LEFT, readerPreferences.readingDirection.first())
+        assertEquals(ReadingDirection.RIGHT_TO_LEFT, readerPreferences.readerSettings.first().readingDirection)
     }
 
     @Test
@@ -262,13 +285,13 @@ class ReaderViewModelTest {
         viewModel.loadBook(book.id)
         advanceUntilIdle()
 
-        viewModel.nextPage()
+        viewModel.nextSpread()
         advanceTimeBy(500L)
         runCurrent()
-        viewModel.nextPage()
+        viewModel.nextSpread()
         advanceTimeBy(500L)
         runCurrent()
-        viewModel.nextPage()
+        viewModel.nextSpread()
         runCurrent()
 
         // 아직 2초 미경과
@@ -293,7 +316,7 @@ class ReaderViewModelTest {
         viewModel.loadBook(book.id)
         advanceUntilIdle()
 
-        viewModel.nextPage()
+        viewModel.nextSpread()
         advanceTimeBy(300L)
         assertTrue(bookRepository.progressUpdates.isEmpty())
 
@@ -321,17 +344,9 @@ class ReaderViewModelTest {
         // 현재 펼침: index 2 ([5, 6])
         assertEquals(2, state.currentSpreadIndex)
         // 앞뒤 2개 펼침 인덱스: 0([1, 2]), 1([3, 4]), 3([7, 8]), 4([9, 10])
-        val expectedPreloadUrls = listOf(
-            "http://localhost:8080/api/v1/books/b1/pages/1",
-            "http://localhost:8080/api/v1/books/b1/pages/2",
-            "http://localhost:8080/api/v1/books/b1/pages/3",
-            "http://localhost:8080/api/v1/books/b1/pages/4",
-            "http://localhost:8080/api/v1/books/b1/pages/7",
-            "http://localhost:8080/api/v1/books/b1/pages/8",
-            "http://localhost:8080/api/v1/books/b1/pages/9",
-            "http://localhost:8080/api/v1/books/b1/pages/10",
-        )
-        assertEquals(expectedPreloadUrls, state.preloadUrls)
+        val url = { n: Int -> "http://localhost:8080/api/v1/books/b1/pages/$n" }
+        val expected = listOf(listOf(url(1), url(2)), listOf(url(3), url(4)), listOf(url(7), url(8)), listOf(url(9), url(10)))
+        assertEquals(expected, state.preloadSpreads)
     }
 
     @Test
@@ -358,7 +373,7 @@ class ReaderViewModelTest {
         assertEquals(PageLayout.DOUBLE_PAGES, state.pageLayout)
         // 여전히 5페이지가 포함된 펼침이어야 함
         assertTrue(state.currentSpread.containsPage(5))
-        assertEquals(PageLayout.DOUBLE_PAGES, readerPreferences.pageLayout.first())
+        assertEquals(PageLayout.DOUBLE_PAGES, readerPreferences.readerSettings.first().pageLayout)
     }
 
     @Test
@@ -402,8 +417,8 @@ class ReaderViewModelTest {
         val state = viewModel.uiState.value as ReaderUiState.Reading
         assertEquals(ScaleType.FIT_WIDTH, state.scaleType)
         assertFalse(state.stretchToFit)
-        assertEquals(ScaleType.FIT_WIDTH, readerPreferences.scaleType.first())
-        assertFalse(readerPreferences.stretchToFit.first())
+        assertEquals(ScaleType.FIT_WIDTH, readerPreferences.readerSettings.first().scaleType)
+        assertFalse(readerPreferences.readerSettings.first().stretchToFit)
     }
 
     @Test
@@ -418,19 +433,19 @@ class ReaderViewModelTest {
         advanceUntilIdle()
 
         // 10페이지 앞으로 (+10)
-        viewModel.jumpForward(10)
+        viewModel.jumpPages(10)
         var state = viewModel.uiState.value as ReaderUiState.Reading
-        assertEquals(15, state.currentPage)
+        assertEquals(15, state.currentSpread.pages.first().number)
 
         // 10페이지 뒤로 (-10)
-        viewModel.jumpBackward(10)
+        viewModel.jumpPages(-10)
         state = viewModel.uiState.value as ReaderUiState.Reading
-        assertEquals(5, state.currentPage)
+        assertEquals(5, state.currentSpread.pages.first().number)
 
         // 최소값 1로 제한
-        viewModel.jumpBackward(10)
+        viewModel.jumpPages(-10)
         state = viewModel.uiState.value as ReaderUiState.Reading
-        assertEquals(1, state.currentPage)
+        assertEquals(1, state.currentSpread.pages.first().number)
     }
 
     private fun createTestSeries(id: String, direction: ReadingDirection? = null) = Series(
@@ -520,10 +535,6 @@ class ReaderViewModelTest {
         private val _settings = MutableStateFlow(initialSettings)
         override val readerSettings: Flow<ReaderSettings> = _settings.asStateFlow()
 
-        override val pageLayout: Flow<PageLayout> = _settings.map { it.pageLayout }
-        override val scaleType: Flow<ScaleType> = _settings.map { it.scaleType }
-        override val stretchToFit: Flow<Boolean> = _settings.map { it.stretchToFit }
-        override val readingDirection: Flow<ReadingDirection> = _settings.map { it.readingDirection }
 
         override suspend fun savePageLayout(layout: PageLayout) {
             _settings.value = _settings.value.copy(pageLayout = layout)
@@ -539,10 +550,6 @@ class ReaderViewModelTest {
 
         override suspend fun saveReadingDirection(direction: ReadingDirection) {
             _settings.value = _settings.value.copy(readingDirection = direction)
-        }
-
-        override suspend fun clearAll() {
-            _settings.value = ReaderSettings()
         }
     }
 

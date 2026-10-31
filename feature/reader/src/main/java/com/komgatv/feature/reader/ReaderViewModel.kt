@@ -2,16 +2,19 @@ package com.komgatv.feature.reader
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.komgatv.core.data.error.toLoadError
 import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.data.repository.BookRepository
 import com.komgatv.core.data.repository.SeriesRepository
 import com.komgatv.core.datastore.ReaderPreferences
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.BookPage
+import com.komgatv.core.model.LoadError
 import com.komgatv.core.model.PageLayout
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.ScaleType
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -40,7 +43,7 @@ sealed interface ReaderUiState {
      * @property totalSpreads 전체 펼침 수
      * @property totalPages 전체 페이지 수
      * @property spreadPageUrls 현재 펼침의 페이지 이미지 절대 URL 목록 (1개 또는 2개)
-     * @property preloadUrls 프리로드 대상 펼침(앞뒤 2개)의 이미지 URL 목록
+     * @property preloadSpreads 프리로드할 앞뒤 2개 펼침, 펼침마다 이미지 URL 목록 (화면이 펼침 쪽 수로 디코딩 크기를 정한다)
      * @property readingDirection 현재 적용된 읽기 방향
      * @property pageLayout 현재 적용된 페이지 배치 레이아웃
      * @property layoutOffset 쪽 맞춤 밀기 적용 여부
@@ -56,7 +59,7 @@ sealed interface ReaderUiState {
         val totalSpreads: Int,
         val totalPages: Int,
         val spreadPageUrls: List<String>,
-        val preloadUrls: List<String>,
+        val preloadSpreads: List<List<String>>,
         val readingDirection: ReadingDirection,
         val pageLayout: PageLayout,
         val layoutOffset: Boolean,
@@ -64,14 +67,10 @@ sealed interface ReaderUiState {
         val stretchToFit: Boolean,
         val showOverlay: Boolean = false,
         val showSettingsPanel: Boolean = false,
-    ) : ReaderUiState {
-        /** 하위 호환 및 단일 페이지 참조용 프로퍼티 */
-        val currentPage: Int get() = currentSpread.pages.firstOrNull()?.number ?: 1
-        val currentPageUrl: String get() = spreadPageUrls.firstOrNull().orEmpty()
-    }
+    ) : ReaderUiState
 
-    /** 에러 상태 */
-    data class Error(val message: String) : ReaderUiState
+    /** 책을 불러오지 못함 — 화면이 오류 종류를 문구로 바꾼다 */
+    data class Error(val error: LoadError) : ReaderUiState
 }
 
 /**
@@ -137,18 +136,26 @@ class ReaderViewModel @Inject constructor(
                 currentBook = book
 
                 val series = seriesRepository.getSeriesById(book.seriesId)
-                // 읽기 방향 우선순위: 시리즈 메타데이터 > 저장된 기본값
-                val direction = series.metadata.readingDirection ?: savedSettings.readingDirection
-                currentReadingDirection = direction
+                // 읽기 방향 우선순위: 시리즈 메타데이터 > 저장된 기본값.
+                // 페이지 리더는 LTR/RTL만 다룬다. VERTICAL·WEBTOON은 세로 스크롤 모드(T6) 전까지 기본값으로 읽는다.
+                currentReadingDirection = series.metadata.readingDirection
+                    ?.takeIf { it == ReadingDirection.LEFT_TO_RIGHT || it == ReadingDirection.RIGHT_TO_LEFT }
+                    ?: savedSettings.readingDirection
 
                 currentLayout = savedSettings.pageLayout
                 currentScaleType = savedSettings.scaleType
                 currentStretchToFit = savedSettings.stretchToFit
                 layoutOffset = false // 세션 동안만 적용되므로 책 로드 시 false 초기화
 
-                // 페이지 메타데이터(크기 등) 조회, 실패 시 fallback
-                val fetchedPages = runCatching { bookRepository.getBookPages(bookId) }
-                    .getOrNull().orEmpty()
+                // 페이지 크기 목록. 못 받으면 크기 없이(모두 세로로 보고) 쪽 수만큼 만든다.
+                val fetchedPages = try {
+                    bookRepository.getBookPages(bookId)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Timber.w(e, "페이지 목록 조회 실패, 크기 없이 진행: $bookId")
+                    emptyList()
+                }
 
                 currentBookPages = if (fetchedPages.isNotEmpty()) {
                     fetchedPages
@@ -175,11 +182,11 @@ class ReaderViewModel @Inject constructor(
                 lastSavedPage = book.readProgress?.page
 
                 updateReadingState()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.e(e, "책 로드 실패: $bookId")
-                _uiState.value = ReaderUiState.Error(
-                    message = e.localizedMessage ?: "책을 불러올 수 없습니다"
-                )
+                _uiState.value = ReaderUiState.Error(e.toLoadError())
             }
         }
     }
@@ -220,12 +227,6 @@ class ReaderViewModel @Inject constructor(
         applySpreadChange(currentSpreadIndex - 1)
     }
 
-    /** 하위 호환용 다음 페이지 */
-    fun nextPage() = nextSpread()
-
-    /** 하위 호환용 이전 페이지 */
-    fun previousPage() = previousSpread()
-
     /**
      * 페이지 단위 점프 (오버레이 조작 등)
      *
@@ -242,12 +243,6 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    /** 10페이지 앞으로 점프 */
-    fun jumpForward(count: Int = 10) = jumpPages(count)
-
-    /** 10페이지 뒤로 점프 */
-    fun jumpBackward(count: Int = 10) = jumpPages(-count)
-
     /** 정보 오버레이 토글 */
     fun toggleOverlay() {
         val state = _uiState.value as? ReaderUiState.Reading ?: return
@@ -256,6 +251,12 @@ class ReaderViewModel @Inject constructor(
             showOverlay = newOverlay,
             showSettingsPanel = if (!newOverlay) false else state.showSettingsPanel,
         )
+    }
+
+    /** 정보 오버레이 닫기 (설정 패널도 함께 닫는다) */
+    fun closeOverlay() {
+        val state = _uiState.value as? ReaderUiState.Reading ?: return
+        _uiState.value = state.copy(showOverlay = false, showSettingsPanel = false)
     }
 
     /** 보기 설정 패널 열기 */
@@ -411,9 +412,9 @@ class ReaderViewModel @Inject constructor(
         val currentSpread = currentSpreads.getOrNull(currentSpreadIndex)
             ?: PageSpread(emptyList())
 
-        val totalPages = currentBookPages.size.coerceAtLeast(book.pageCount).coerceAtLeast(1)
+        val totalPages = currentBookPages.size.coerceAtLeast(1)
         val spreadUrls = currentSpread.pages.mapNotNull { imageUrls.page(currentBookId, it.number) }
-        val preloadUrls = buildPreloadUrls(currentBookId, currentSpreadIndex, currentSpreads)
+        val preloadSpreads = buildPreloadSpreads(currentBookId, currentSpreadIndex, currentSpreads)
 
         val existingOverlay = (_uiState.value as? ReaderUiState.Reading)?.showOverlay ?: false
         val existingSettings = (_uiState.value as? ReaderUiState.Reading)?.showSettingsPanel ?: false
@@ -425,7 +426,7 @@ class ReaderViewModel @Inject constructor(
             totalSpreads = currentSpreads.size,
             totalPages = totalPages,
             spreadPageUrls = spreadUrls,
-            preloadUrls = preloadUrls,
+            preloadSpreads = preloadSpreads,
             readingDirection = currentReadingDirection,
             pageLayout = currentLayout,
             layoutOffset = layoutOffset,
@@ -437,13 +438,13 @@ class ReaderViewModel @Inject constructor(
     }
 
     /**
-     * 앞뒤 2개 펼침의 모든 페이지 절대 URL 목록을 생성합니다.
+     * 앞뒤 2개 펼침의 페이지 절대 URL 목록 (펼침 단위).
      */
-    private fun buildPreloadUrls(
+    private fun buildPreloadSpreads(
         bookId: String,
         spreadIndex: Int,
         spreads: List<PageSpread>,
-    ): List<String> {
+    ): List<List<String>> {
         val targetIndices = listOf(
             spreadIndex - 2,
             spreadIndex - 1,
@@ -451,7 +452,7 @@ class ReaderViewModel @Inject constructor(
             spreadIndex + 2,
         ).filter { it in spreads.indices }
 
-        return targetIndices.flatMap { idx ->
+        return targetIndices.map { idx ->
             spreads[idx].pages.mapNotNull { page ->
                 imageUrls.page(bookId, page.number)
             }

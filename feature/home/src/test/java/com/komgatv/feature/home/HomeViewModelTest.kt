@@ -6,6 +6,7 @@ import com.komgatv.core.data.repository.BookRepository
 import com.komgatv.core.data.repository.LibraryRepository
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.BookMetadata
+import com.komgatv.core.model.BookPage
 import com.komgatv.core.model.Library
 import com.komgatv.core.model.ReadProgress
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -147,6 +148,10 @@ class HomeViewModelTest {
         }
 
         override suspend fun getBookById(bookId: String): Book {
+            throw NotImplementedError()
+        }
+
+        override suspend fun getBookPages(bookId: String): List<BookPage> {
             throw NotImplementedError()
         }
 

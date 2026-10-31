@@ -22,104 +22,59 @@ private val Context.readerDataStore: DataStore<Preferences> by preferencesDataSt
 )
 
 /**
- * 리더 보기 설정 인터페이스
+ * 리더 전역 보기 설정 (모든 책에 쓰는 기본값)
  */
 interface ReaderPreferences {
     val readerSettings: Flow<ReaderSettings>
-    val pageLayout: Flow<PageLayout>
-    val scaleType: Flow<ScaleType>
-    val stretchToFit: Flow<Boolean>
-    val readingDirection: Flow<ReadingDirection>
 
     suspend fun savePageLayout(layout: PageLayout)
     suspend fun saveScaleType(scaleType: ScaleType)
     suspend fun saveStretchToFit(stretch: Boolean)
     suspend fun saveReadingDirection(direction: ReadingDirection)
-    suspend fun clearAll()
 }
 
 /**
- * DataStore 기반 리더 보기 설정 구현체
- *
- * Komelia의 ImageReaderSettings 기본값을 따릅니다:
- * - pageLayout: SINGLE_PAGE
- * - scaleType: SCREEN
- * - stretchToFit: true
- * - readingDirection: LEFT_TO_RIGHT
+ * DataStore 기반 구현. 저장된 값이 없거나 알 수 없는 값이면 [ReaderSettings]의 기본값(Komelia와 같음)을 쓴다.
  */
 @Singleton
 class DefaultReaderPreferences @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : ReaderPreferences {
 
-    companion object {
-        private val KEY_PAGE_LAYOUT = stringPreferencesKey("page_layout")
-        private val KEY_SCALE_TYPE = stringPreferencesKey("scale_type")
-        private val KEY_STRETCH_TO_FIT = booleanPreferencesKey("stretch_to_fit")
-        private val KEY_READING_DIRECTION = stringPreferencesKey("reading_direction")
+    private companion object {
+        val KEY_PAGE_LAYOUT = stringPreferencesKey("page_layout")
+        val KEY_SCALE_TYPE = stringPreferencesKey("scale_type")
+        val KEY_STRETCH_TO_FIT = booleanPreferencesKey("stretch_to_fit")
+        val KEY_READING_DIRECTION = stringPreferencesKey("reading_direction")
+        val DEFAULTS = ReaderSettings()
     }
 
     override val readerSettings: Flow<ReaderSettings> = context.readerDataStore.data.map { prefs ->
-        val layout = prefs[KEY_PAGE_LAYOUT]?.let { runCatching { PageLayout.valueOf(it) }.getOrNull() }
-            ?: PageLayout.SINGLE_PAGE
-        val scale = prefs[KEY_SCALE_TYPE]?.let { runCatching { ScaleType.valueOf(it) }.getOrNull() }
-            ?: ScaleType.SCREEN
-        val stretch = prefs[KEY_STRETCH_TO_FIT] ?: true
-        val direction = prefs[KEY_READING_DIRECTION]?.let { runCatching { ReadingDirection.valueOf(it) }.getOrNull() }
-            ?: ReadingDirection.LEFT_TO_RIGHT
-
         ReaderSettings(
-            pageLayout = layout,
-            scaleType = scale,
-            stretchToFit = stretch,
-            readingDirection = direction,
+            pageLayout = enumOrNull<PageLayout>(prefs[KEY_PAGE_LAYOUT]) ?: DEFAULTS.pageLayout,
+            scaleType = enumOrNull<ScaleType>(prefs[KEY_SCALE_TYPE]) ?: DEFAULTS.scaleType,
+            stretchToFit = prefs[KEY_STRETCH_TO_FIT] ?: DEFAULTS.stretchToFit,
+            readingDirection = enumOrNull<ReadingDirection>(prefs[KEY_READING_DIRECTION])
+                ?: DEFAULTS.readingDirection,
         )
     }
 
-    override val pageLayout: Flow<PageLayout> = context.readerDataStore.data.map { prefs ->
-        prefs[KEY_PAGE_LAYOUT]?.let { runCatching { PageLayout.valueOf(it) }.getOrNull() }
-            ?: PageLayout.SINGLE_PAGE
-    }
-
-    override val scaleType: Flow<ScaleType> = context.readerDataStore.data.map { prefs ->
-        prefs[KEY_SCALE_TYPE]?.let { runCatching { ScaleType.valueOf(it) }.getOrNull() }
-            ?: ScaleType.SCREEN
-    }
-
-    override val stretchToFit: Flow<Boolean> = context.readerDataStore.data.map { prefs ->
-        prefs[KEY_STRETCH_TO_FIT] ?: true
-    }
-
-    override val readingDirection: Flow<ReadingDirection> = context.readerDataStore.data.map { prefs ->
-        prefs[KEY_READING_DIRECTION]?.let { runCatching { ReadingDirection.valueOf(it) }.getOrNull() }
-            ?: ReadingDirection.LEFT_TO_RIGHT
-    }
-
     override suspend fun savePageLayout(layout: PageLayout) {
-        context.readerDataStore.edit { prefs ->
-            prefs[KEY_PAGE_LAYOUT] = layout.name
-        }
+        context.readerDataStore.edit { it[KEY_PAGE_LAYOUT] = layout.name }
     }
 
     override suspend fun saveScaleType(scaleType: ScaleType) {
-        context.readerDataStore.edit { prefs ->
-            prefs[KEY_SCALE_TYPE] = scaleType.name
-        }
+        context.readerDataStore.edit { it[KEY_SCALE_TYPE] = scaleType.name }
     }
 
     override suspend fun saveStretchToFit(stretch: Boolean) {
-        context.readerDataStore.edit { prefs ->
-            prefs[KEY_STRETCH_TO_FIT] = stretch
-        }
+        context.readerDataStore.edit { it[KEY_STRETCH_TO_FIT] = stretch }
     }
 
     override suspend fun saveReadingDirection(direction: ReadingDirection) {
-        context.readerDataStore.edit { prefs ->
-            prefs[KEY_READING_DIRECTION] = direction.name
-        }
-    }
-
-    override suspend fun clearAll() {
-        context.readerDataStore.edit { it.clear() }
+        context.readerDataStore.edit { it[KEY_READING_DIRECTION] = direction.name }
     }
 }
+
+private inline fun <reified T : Enum<T>> enumOrNull(name: String?): T? =
+    name?.let { value -> enumValues<T>().firstOrNull { it.name == value } }

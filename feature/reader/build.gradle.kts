@@ -10,6 +10,7 @@ android {
 
 dependencies {
     implementation(project(":core:datastore"))
+    implementation(libs.androidx.activity.compose)
     implementation(libs.coil.compose)
 
     testImplementation(libs.junit)

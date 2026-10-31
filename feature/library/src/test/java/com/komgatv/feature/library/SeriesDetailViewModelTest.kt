@@ -7,6 +7,7 @@ import com.komgatv.core.data.repository.SeriesPageResult
 import com.komgatv.core.data.repository.SeriesRepository
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.BookMetadata
+import com.komgatv.core.model.BookPage
 import com.komgatv.core.model.ReadProgress
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.Series
@@ -221,6 +222,10 @@ class SeriesDetailViewModelTest {
         }
 
         override suspend fun getBookById(bookId: String): Book {
+            throw NotImplementedError()
+        }
+
+        override suspend fun getBookPages(bookId: String): List<BookPage> {
             throw NotImplementedError()
         }
 
