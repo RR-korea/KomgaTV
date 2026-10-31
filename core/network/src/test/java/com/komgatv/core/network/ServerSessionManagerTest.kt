@@ -132,6 +132,28 @@ class ServerSessionManagerTest {
     }
 
     @Test
+    fun connect_with_sub_path_keeps_path_prefix() = runTest {
+        // 리버스 프록시 뒤 하위 경로(https://host/komga)에 있는 서버
+        mockWebServer.start()
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody(
+                    """{"id":"1","email":"a@example.com","roles":[],"sharedAllLibraries":true,""" +
+                        """"sharedLibrariesIds":[],"labelsAllow":[],"labelsExclude":[]}"""
+                )
+        )
+
+        val serverUrl = mockWebServer.url("/komga").toString()
+        val result = sessionManager.connect(serverUrl, AuthMode.Basic("admin", "password123"))
+
+        assertTrue(result.exceptionOrNull()?.toString(), result.isSuccess)
+        assertEquals("/komga/api/v2/users/me", mockWebServer.takeRequest().path)
+        assertEquals(serverUrl, sessionManager.session.value?.baseUrl)
+    }
+
+    @Test
     fun connect_failure_401_returns_unauthorized_exception() = runTest {
         mockWebServer.start()
         mockWebServer.enqueue(
