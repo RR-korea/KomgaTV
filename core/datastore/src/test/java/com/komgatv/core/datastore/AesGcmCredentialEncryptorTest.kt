@@ -1,19 +1,22 @@
 package com.komgatv.core.datastore
 
-import com.komgatv.core.datastore.crypto.KeystoreCredentialEncryptor
+import com.komgatv.core.datastore.crypto.AesGcmCredentialEncryptor
+import javax.crypto.KeyGenerator
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
-class KeystoreCredentialEncryptorTest {
+class AesGcmCredentialEncryptorTest {
 
-    private lateinit var encryptor: KeystoreCredentialEncryptor
+    private lateinit var encryptor: AesGcmCredentialEncryptor
 
     @Before
     fun setUp() {
-        encryptor = KeystoreCredentialEncryptor()
+        // Android Keystore는 JVM에 없으므로 같은 AES-GCM 경로를 일반 AES 키로 검증한다.
+        val key = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
+        encryptor = AesGcmCredentialEncryptor { key }
     }
 
     @Test
@@ -42,6 +45,13 @@ class KeystoreCredentialEncryptorTest {
     fun encrypt_empty_string_returns_empty() {
         val encrypted = encryptor.encrypt("")
         assertEquals("", encrypted)
+    }
+
+    @Test
+    fun decrypt_with_different_key_returns_empty() {
+        val otherKey = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
+        val encrypted = AesGcmCredentialEncryptor { otherKey }.encrypt("secret")
+        assertEquals("", encryptor.decrypt(encrypted))
     }
 
     @Test

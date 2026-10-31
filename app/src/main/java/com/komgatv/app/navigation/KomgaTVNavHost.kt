@@ -1,6 +1,5 @@
 package com.komgatv.app.navigation
 
-import android.view.KeyEvent
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -10,6 +9,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.komgatv.feature.home.HomeScreen
 import com.komgatv.feature.library.LibraryScreen
+import com.komgatv.feature.library.SeriesDetailScreen
 import com.komgatv.feature.reader.ReaderScreen
 import com.komgatv.feature.settings.SettingsScreen
 
@@ -38,9 +38,6 @@ sealed class Screen(val route: String) {
         fun createRoute(bookId: String) = "reader/$bookId"
     }
 
-    /** 검색 화면 */
-    data object Search : Screen("search")
-
     /** 설정 화면 - 서버 연결 및 캐시 관리 */
     data object Settings : Screen("settings")
 }
@@ -51,16 +48,25 @@ sealed class Screen(val route: String) {
  * 앱의 모든 화면에 대한 네비게이션 그래프를 구성합니다.
  * D-Pad 네비게이션에 최적화되어 있습니다.
  *
- * @param startDestination 시작 화면 라우트 (기본값: 홈)
- * @param onRegisterKeyEventHandler 액티비티 레벨 키 이벤트 핸들러 등록 콜백
+ * @param startDestination 시작 화면 (저장된 서버가 없으면 설정 화면)
  * @param navController 네비게이션 컨트롤러
  */
 @Composable
 fun KomgaTVNavHost(
-    startDestination: String = Screen.Home.route,
-    onRegisterKeyEventHandler: ((KeyEvent) -> Boolean) -> Unit = {},
+    startDestination: String,
     navController: NavHostController = rememberNavController(),
 ) {
+    // 설정이 첫 화면이면 돌아갈 곳이 없으므로 홈으로 교체한다.
+    val leaveSettings: () -> Unit = {
+        if (navController.previousBackStackEntry != null) {
+            navController.popBackStack()
+        } else {
+            navController.navigate(Screen.Home.route) {
+                popUpTo(Screen.Settings.route) { inclusive = true }
+            }
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = startDestination,
@@ -71,14 +77,8 @@ fun KomgaTVNavHost(
                 onNavigateToLibrary = { libraryId ->
                     navController.navigate(Screen.Library.createRoute(libraryId))
                 },
-                onNavigateToSeries = { seriesId ->
-                    navController.navigate(Screen.SeriesDetail.createRoute(seriesId))
-                },
                 onNavigateToReader = { bookId ->
                     navController.navigate(Screen.Reader.createRoute(bookId))
-                },
-                onNavigateToSearch = {
-                    navController.navigate(Screen.Search.route)
                 },
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
@@ -111,7 +111,13 @@ fun KomgaTVNavHost(
             ),
         ) { backStackEntry ->
             val seriesId = backStackEntry.arguments?.getString("seriesId") ?: return@composable
-            // TODO: SeriesDetailScreen 구현
+            SeriesDetailScreen(
+                seriesId = seriesId,
+                onNavigateToReader = { bookId ->
+                    navController.navigate(Screen.Reader.createRoute(bookId))
+                },
+                onNavigateBack = { navController.popBackStack() },
+            )
         }
 
         // 리더 화면
@@ -125,36 +131,14 @@ fun KomgaTVNavHost(
             ReaderScreen(
                 bookId = bookId,
                 onNavigateBack = { navController.popBackStack() },
-                onRegisterKeyEventHandler = onRegisterKeyEventHandler,
             )
-        }
-
-        // 검색 화면
-        composable(Screen.Search.route) {
-            // TODO: SearchScreen 구현
         }
 
         // 설정 화면
         composable(Screen.Settings.route) {
             SettingsScreen(
-                onNavigateBack = {
-                    if (navController.previousBackStackEntry != null) {
-                        navController.popBackStack()
-                    } else {
-                        navController.navigate(Screen.Home.route) {
-                            popUpTo(Screen.Settings.route) { inclusive = true }
-                        }
-                    }
-                },
-                onConnectSuccess = {
-                    if (navController.previousBackStackEntry != null) {
-                        navController.popBackStack()
-                    } else {
-                        navController.navigate(Screen.Home.route) {
-                            popUpTo(Screen.Settings.route) { inclusive = true }
-                        }
-                    }
-                },
+                onNavigateBack = leaveSettings,
+                onConnectSuccess = leaveSettings,
             )
         }
     }

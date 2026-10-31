@@ -2,15 +2,14 @@ package com.komgatv.feature.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.data.repository.LibraryRepository
 import com.komgatv.core.data.repository.SeriesRepository
 import com.komgatv.core.model.Series
-import com.komgatv.core.network.ServerSessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -36,23 +35,23 @@ sealed interface LibraryUiState {
 /**
  * 라이브러리 화면 ViewModel
  *
- * 특정 라이브러리의 시리즈 목록을 페이지네이션으로 관리합니다.
+ * 특정 라이브러리의 시리즈 목록을 페이지네이션(페이지 크기 50)으로 관리합니다.
  */
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val libraryRepository: LibraryRepository,
     private val seriesRepository: SeriesRepository,
-    private val sessionManager: ServerSessionManager,
+    val imageUrls: ImageUrls,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<LibraryUiState>(LibraryUiState.Loading)
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
 
-    val baseUrl: String
-        get() = sessionManager.session.value?.baseUrl ?: ""
 
     private var currentLibraryId: String = ""
-    private val PAGE_SIZE = 30
+    companion object {
+        const val PAGE_SIZE = 50
+    }
 
     /**
      * 라이브러리 데이터 로드
@@ -69,19 +68,16 @@ class LibraryViewModel @Inject constructor(
             _uiState.value = LibraryUiState.Loading
 
             try {
-                // 라이브러리 이름 조회
+                // 라이브러리 정보 조회
                 val library = libraryRepository.getLibraryById(libraryId)
                 val libraryName = library.name
 
-                // 첫 페이지 시리즈 로드
+                // 첫 페이지 시리즈 로드 (페이지 크기 50)
                 val result = seriesRepository.getSeries(
                     page = 0,
                     size = PAGE_SIZE,
                     libraryId = libraryId,
-                ).catch { e ->
-                    Timber.e(e, "시리즈 로드 실패")
-                    throw e
-                }.first()
+                ).first()
 
                 _uiState.value = LibraryUiState.Success(
                     libraryName = libraryName,
@@ -99,7 +95,7 @@ class LibraryViewModel @Inject constructor(
     }
 
     /**
-     * 추가 시리즈 로드 (페이지네이션)
+     * 추가 시리즈 로드 (무한 스크롤 페이지네이션)
      */
     fun loadMoreSeries() {
         val currentState = _uiState.value

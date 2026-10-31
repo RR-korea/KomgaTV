@@ -6,6 +6,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.ResponseException
 import io.ktor.http.HttpStatusCode
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -183,7 +184,9 @@ class ServerSessionManager @Inject constructor(
 
             _session.value = tempSession
             Result.success(user)
-        } catch (e: Throwable) {
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
             Timber.e(e, "Komga 서버 연결 실패: %s", cleanUrl)
             Result.failure(classifyException(e))
         }
@@ -198,9 +201,6 @@ class ServerSessionManager @Inject constructor(
             when {
                 // 401 Unauthorized 검사
                 current is ResponseException && current.response.status == HttpStatusCode.Unauthorized -> {
-                    return ServerConnectionException.Unauthorized(cause = throwable)
-                }
-                current.message?.contains("401") == true -> {
                     return ServerConnectionException.Unauthorized(cause = throwable)
                 }
                 // SSL / 자체 서명 인증서 관련 오류
@@ -219,9 +219,7 @@ class ServerSessionManager @Inject constructor(
                 current is ConnectException ||
                     current is SocketTimeoutException ||
                     current is SocketException ||
-                    current is InterruptedIOException ||
-                    current.message?.contains("Failed to connect") == true ||
-                    current.message?.contains("Connection refused") == true -> {
+                    current is InterruptedIOException -> {
                     return ServerConnectionException.Unreachable(cause = throwable)
                 }
             }

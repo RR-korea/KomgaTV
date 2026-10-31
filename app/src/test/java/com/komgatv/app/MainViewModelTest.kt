@@ -77,13 +77,11 @@ class MainViewModelTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
     private lateinit var fakePreferences: FakeServerPreferences
-    private lateinit var viewModel: MainViewModel
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         fakePreferences = FakeServerPreferences()
-        viewModel = MainViewModel(fakePreferences)
     }
 
     @After
@@ -93,6 +91,7 @@ class MainViewModelTest {
 
     @Test
     fun unconfigured_server_starts_at_settings() = runTest(testDispatcher) {
+        val viewModel = MainViewModel(fakePreferences)
         val readyState = viewModel.uiState.first { it is MainUiState.Ready } as MainUiState.Ready
         assertEquals(Screen.Settings.route, readyState.startDestination)
     }
@@ -101,11 +100,22 @@ class MainViewModelTest {
     fun configured_server_starts_at_home() = runTest(testDispatcher) {
         fakePreferences.saveServerUrl("http://192.168.1.100:25600")
         fakePreferences.saveBasicAuth("user@example.com", "password")
+        val viewModel = MainViewModel(fakePreferences)
 
-        val readyState = viewModel.uiState.first {
-            it is MainUiState.Ready && it.startDestination == Screen.Home.route
-        } as MainUiState.Ready
+        val readyState = viewModel.uiState.first { it is MainUiState.Ready } as MainUiState.Ready
 
         assertEquals(Screen.Home.route, readyState.startDestination)
+    }
+
+    @Test
+    fun start_destination_does_not_change_after_connecting() = runTest(testDispatcher) {
+        val viewModel = MainViewModel(fakePreferences)
+        viewModel.uiState.first { it is MainUiState.Ready }
+
+        // 실행 중 연결에 성공해도 시작 화면을 다시 정하지 않는다 (내비게이션 그래프 재생성 방지).
+        fakePreferences.saveServerUrl("http://192.168.1.100:25600")
+        fakePreferences.saveBasicAuth("user@example.com", "password")
+
+        assertEquals(MainUiState.Ready(Screen.Settings.route), viewModel.uiState.value)
     }
 }

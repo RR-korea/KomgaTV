@@ -9,6 +9,7 @@ import snd.komga.client.book.KomgaBook
 import snd.komga.client.book.KomgaBookId
 import snd.komga.client.book.KomgaBookReadProgressUpdateRequest
 import snd.komga.client.book.KomgaBookSearch
+import snd.komga.client.book.KomgaReadStatus
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.common.KomgaSort.KomgaBooksSort
 import snd.komga.client.common.Page
@@ -19,6 +20,7 @@ import javax.inject.Singleton
 
 interface BookRepository {
     fun getBooks(seriesId: String, page: Int = 0, size: Int = 20): Flow<BookPageResult>
+    fun getBooksInProgress(page: Int = 0, size: Int = 20): Flow<BookPageResult>
     suspend fun getBookById(bookId: String): Book
 
     /** page는 1부터 시작한다. */
@@ -48,9 +50,23 @@ class BookRepositoryImpl @Inject constructor(
         emit(result.toBookPageResult())
     }
 
+    override fun getBooksInProgress(page: Int, size: Int): Flow<BookPageResult> = flow {
+        val condition = allOfBooks {
+            readStatus { isEqualTo(KomgaReadStatus.IN_PROGRESS) }
+        }.toBookCondition()
+        val result = sessionManager.requireClient().bookClient().getBookList(
+            search = KomgaBookSearch(condition = condition),
+            pageRequest = KomgaPageRequest(
+                pageIndex = page,
+                size = size,
+                sort = KomgaBooksSort.byReadDateDesc(),
+            ),
+        )
+        emit(result.toBookPageResult())
+    }
+
     override suspend fun getBookById(bookId: String): Book =
         sessionManager.requireClient().bookClient().getOne(KomgaBookId(bookId)).toDomain()
-
 
     override suspend fun updateReadProgress(bookId: String, page: Int, completed: Boolean) {
         sessionManager.requireClient().bookClient().markReadProgress(

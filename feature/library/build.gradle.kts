@@ -7,3 +7,10 @@ plugins {
 android {
     namespace = "com.komgatv.feature.library"
 }
+
+dependencies {
+    implementation(libs.coil.compose)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+}

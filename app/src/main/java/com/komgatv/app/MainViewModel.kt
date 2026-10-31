@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.take
 import javax.inject.Inject
 
 /**
@@ -22,7 +23,8 @@ sealed interface MainUiState {
 /**
  * 메인 액티비티 ViewModel
  *
- * 서버 설정 여부를 감지하여 시작 화면(세션 없음: 설정, 세션 있음: 홈)을 결정합니다.
+ * 앱을 켤 때 저장된 서버 설정을 한 번 읽어 시작 화면(없음: 설정, 있음: 홈)을 정한다.
+ * 실행 중 설정이 바뀌어도 다시 정하지 않는다 — 시작 화면이 바뀌면 내비게이션 그래프가 통째로 재생성된다.
  */
 @HiltViewModel
 class MainViewModel @Inject constructor(
@@ -30,6 +32,7 @@ class MainViewModel @Inject constructor(
 ) : ViewModel() {
 
     val uiState: StateFlow<MainUiState> = serverPreferences.serverConfig
+        .take(1)
         .map { config ->
             val startDestination = if (config.isConfigured) {
                 Screen.Home.route

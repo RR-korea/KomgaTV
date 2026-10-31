@@ -10,6 +10,9 @@
 - 작업 끝에 `docs/reports/T<n>.md`에 기록: 바꾼 것, 실행한 명령과 결과(마지막 30줄), 남은 문제.
 - 코드 주석은 한국어, 기존 스타일 유지. 쓰지 않는 코드·의존성은 남기지 않는다.
 - 비밀번호·API Key·서버 주소를 저장소에 커밋하지 않는다.
+- 테스트 때문에 운영 코드를 바꾸지 않는다 (테스트 전용 생성자, nullable 의존성 금지). 인터페이스를 주입받고 테스트에서는 가짜 구현을 쓴다.
+- 이미지 URL은 `core:data`의 `ImageUrls`를 주입받아 만든다. 화면·ViewModel이 `ServerSessionManager`나 baseUrl을 직접 다루지 않는다.
+- 보고서의 "경고 0"은 lint 결과 파일(`*/build/reports/lint-results-debug.txt`)을 실제로 확인한 뒤에만 쓴다.
 
 ---
 
@@ -43,13 +46,13 @@ LEAD_REVIEW §2의 B1~B7 전부와 D1·D2·D3·D4 구조 변경.
 - 모든 입력·버튼이 D-pad만으로 도달 가능, 화면 진입 시 첫 입력칸에 포커스.
 - **완료 조건:** `MockWebServer` 단위 테스트 — 성공(200 /api/v2/users/me), 401, 연결 거부 3가지. `./gradlew testDebugUnitTest` 통과.
 
-## T3. 탐색 — `task/T3-browse`
+## T3. 탐색 — `task/T3-browse` — ✅ 완료 (docs/reports/T3.md)
 - 홈(단순 버전): 라이브러리 목록 행 + "읽는 중" 행(`read_status=IN_PROGRESS` 책). 캐러셀은 아직 없음.
 - 라이브러리 → 시리즈 그리드(무한 스크롤, 페이지 크기 50) → 시리즈 상세(책 목록, 진행률) → 리더.
 - 뒤로 가기 시 이전 화면의 **포커스 위치 복원**.
 - **완료 조건:** 빌드 + 리모컨 조작 시나리오를 `docs/reports/T3.md`에 표로 (키 → 기대 포커스).
 
-## T4. 리더 — `task/T4-reader`
+## T4. 리더 — `task/T4-reader` — ✅ 완료 (docs/reports/T4.md)
 - 좌/우 = 이전/다음 페이지, OK = 오버레이, 위/아래(오버레이) = 10페이지 점프, Back = 종료+진행 저장.
 - 책의 `readingDirection`이 RIGHT_TO_LEFT면 좌/우를 뒤집는다.
 - 이웃 페이지 프리로드(±2), 화면 크기로 디코딩.

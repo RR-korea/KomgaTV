@@ -5,7 +5,7 @@ package com.komgatv.core.datastore.crypto
  */
 interface CredentialEncryptor {
     /**
-     * 평문을 AES-GCM으로 암호화하여 Base64 문자열로 반환합니다.
+     * 평문을 AES-GCM으로 암호화하여 Base64 문자열로 반환합니다. 실패하면 예외를 던집니다.
      */
     fun encrypt(plainText: String): String
 
