@@ -2,11 +2,11 @@ package com.komgatv.feature.reader
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.data.repository.BookRepository
 import com.komgatv.core.data.repository.SeriesRepository
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.ReadingDirection
-import com.komgatv.core.network.ServerSessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -61,7 +61,7 @@ sealed interface ReaderUiState {
 class ReaderViewModel @Inject constructor(
     private val bookRepository: BookRepository,
     private val seriesRepository: SeriesRepository,
-    private val sessionManager: ServerSessionManager,
+    private val imageUrls: ImageUrls,
 ) : ViewModel() {
 
     companion object {
@@ -294,12 +294,6 @@ class ReaderViewModel @Inject constructor(
     /**
      * 페이지 이미지 절대 URL 생성
      */
-    private fun buildPageUrl(bookId: String, pageNumber: Int): String {
-        val baseUrl = sessionManager.session.value?.baseUrl ?: ""
-        return if (baseUrl.isNotBlank()) {
-            "${baseUrl.trimEnd('/')}/api/v1/books/$bookId/pages/$pageNumber"
-        } else {
-            ""
-        }
-    }
+    private fun buildPageUrl(bookId: String, pageNumber: Int): String =
+        imageUrls.page(bookId, pageNumber).orEmpty()
 }

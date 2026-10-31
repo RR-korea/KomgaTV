@@ -31,9 +31,8 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -149,12 +148,10 @@ private fun ReaderContent(
     onNavigateBack: () -> Unit,
 ) {
     val context = LocalContext.current
-    val configuration = LocalConfiguration.current
-    val density = LocalDensity.current
-
-    // 화면 크기 계산 (화면 크기 디코딩 및 OOM 방지)
-    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.roundToPx() }
-    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.roundToPx() }
+    // 화면 크기(px)로 디코딩해 2GB RAM 기기에서도 OOM을 피한다.
+    val containerSize = LocalWindowInfo.current.containerSize
+    val screenWidthPx = containerSize.width
+    val screenHeightPx = containerSize.height
 
     // 현재 페이지 이미지 요청 (화면 크기 디코딩)
     val currentPageRequest = remember(state.currentPageUrl, screenWidthPx, screenHeightPx) {

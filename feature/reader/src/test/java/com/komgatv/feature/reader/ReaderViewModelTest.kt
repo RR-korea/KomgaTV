@@ -10,7 +10,7 @@ import com.komgatv.core.model.ReadProgress
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.Series
 import com.komgatv.core.model.SeriesMetadata
-import com.komgatv.core.network.ServerSessionManager
+import com.komgatv.core.data.image.ImageUrls
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -46,7 +46,6 @@ class ReaderViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var bookRepository: FakeBookRepository
     private lateinit var seriesRepository: FakeSeriesRepository
-    private lateinit var sessionManager: ServerSessionManager
     private lateinit var viewModel: ReaderViewModel
 
     @Before
@@ -54,8 +53,7 @@ class ReaderViewModelTest {
         Dispatchers.setMain(testDispatcher)
         bookRepository = FakeBookRepository()
         seriesRepository = FakeSeriesRepository()
-        sessionManager = ServerSessionManager("http://localhost:8080")
-        viewModel = ReaderViewModel(bookRepository, seriesRepository, sessionManager)
+        viewModel = ReaderViewModel(bookRepository, seriesRepository, FakeImageUrls)
     }
 
     @After
@@ -361,5 +359,12 @@ class ReaderViewModelTest {
         override fun searchSeries(query: String, page: Int, size: Int): Flow<SeriesPageResult> {
             throw NotImplementedError()
         }
+    }
+
+    private object FakeImageUrls : ImageUrls {
+        private const val BASE = "http://localhost:8080"
+        override fun seriesThumbnail(seriesId: String) = "$BASE/api/v1/series/$seriesId/thumbnail"
+        override fun bookThumbnail(bookId: String) = "$BASE/api/v1/books/$bookId/thumbnail"
+        override fun page(bookId: String, pageNumber: Int) = "$BASE/api/v1/books/$bookId/pages/$pageNumber"
     }
 }
