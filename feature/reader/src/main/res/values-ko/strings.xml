@@ -21,13 +21,13 @@
     <string name="end_page_next">다음 권</string>
     <string name="end_page_finding_next">다음 권을 찾는 중…</string>
     <string name="end_page_last_book">이 시리즈의 마지막 권입니다.</string>
-    <string name="end_page_hint_next">다음 쪽 키 / OK: 다음 권 읽기 · Back: 나가기</string>
-    <string name="end_page_hint_last">이전 쪽 키: 마지막 쪽으로 · Back: 나가기</string>
+    <string name="end_page_hint_next">%1$s / OK: 다음 권 읽기 · Back: 나가기</string>
+    <string name="end_page_hint_last">%1$s: 마지막 쪽으로 · Back: 나가기</string>
     <string name="reader_page_load_failed">이 쪽을 불러오지 못했습니다.\n다른 쪽으로 갔다 오면 다시 받습니다.</string>
     <string name="start_page_current">지금 권</string>
     <string name="start_page_previous">이전 권</string>
     <string name="start_page_finding_previous">이전 권을 찾는 중…</string>
     <string name="start_page_first_book">이 시리즈의 첫 권입니다.</string>
-    <string name="start_page_hint_previous">이전 쪽 키 / OK: 이전 권 마지막 쪽 · Back: 나가기</string>
-    <string name="start_page_hint_first">다음 쪽 키: 첫 쪽으로 · Back: 나가기</string>
+    <string name="start_page_hint_previous">%1$s / OK: 이전 권 마지막 쪽 · Back: 나가기</string>
+    <string name="start_page_hint_first">%1$s: 첫 쪽으로 · Back: 나가기</string>
 </resources>

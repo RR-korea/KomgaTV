@@ -30,6 +30,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.distinctUntilChanged
+import com.komgatv.core.model.ReadingDirection
+import com.komgatv.feature.reader.BoundaryLayout
 import com.komgatv.feature.reader.EndPageView
 import com.komgatv.feature.reader.PageLoadFailed
 import com.komgatv.feature.reader.PageLoadingIndicator
@@ -92,7 +94,7 @@ internal fun ContinuousPages(
         // 책 첫 카드 — 1쪽 위에 이전 권을 보인다 (위 한 번 더 = 이전 권 끝)
         item(key = START_KEY) {
             val info = startPage ?: ReaderUiState.StartPage("", null, null, null, previousResolved = false)
-            StartPageView(info, Modifier.fillMaxWidth().height(boundaryCardHeight()))
+            StartPageView(info, BoundaryLayout.of(toNext = false, ReadingDirection.LEFT_TO_RIGHT, continuous = true), Modifier.fillMaxWidth().height(boundaryCardHeight()))
         }
         items(tiles, key = { it.key }) { tile ->
             TileItem(tile, loadTile, filterQuality)
@@ -100,7 +102,7 @@ internal fun ContinuousPages(
         // 책 끝 카드 — KMReader처럼 마지막 쪽 다음에 다음 권을 보인다 (아래 한 번 더 = 다음 권)
         item(key = END_KEY) {
             val info = endPage ?: ReaderUiState.EndPage("", null, null, null, nextResolved = false)
-            EndPageView(info, Modifier.fillMaxWidth().height(boundaryCardHeight()))
+            EndPageView(info, BoundaryLayout.of(toNext = true, ReadingDirection.LEFT_TO_RIGHT, continuous = true), Modifier.fillMaxWidth().height(boundaryCardHeight()))
         }
     }
 }
