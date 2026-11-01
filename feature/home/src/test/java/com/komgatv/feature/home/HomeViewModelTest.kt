@@ -267,6 +267,8 @@ class HomeViewModelTest {
         override suspend fun markUnread(bookId: String) = Unit
 
         override suspend fun analyze(bookId: String) = Unit
+
+        override suspend fun getNextBook(bookId: String): Book? = null
     }
 
     private class FakeSeriesRepository : SeriesRepository {

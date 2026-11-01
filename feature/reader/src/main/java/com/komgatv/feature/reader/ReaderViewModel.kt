@@ -94,6 +94,8 @@ sealed interface ReaderUiState {
         val seriesCustomized: Boolean = false,
         val showOverlay: Boolean = false,
         val showSettingsPanel: Boolean = false,
+        /** 책 끝 화면 (마지막 쪽 다음) — null이면 아님 */
+        val endPage: EndPage? = null,
     ) : ReaderUiState {
         /** 보기 설정 패널이 보여 주는 값 */
         val settings: ReaderSettings
@@ -109,11 +111,24 @@ sealed interface ReaderUiState {
             )
     }
 
+    /**
+     * 책 끝 화면 (KMReader처럼 다 읽은 책과 다음 권을 나란히). 앞으로 한 번 더 = 다음 권 첫 쪽.
+     *
+     * @property nextBook 다음 권. 아직 찾는 중이면 [nextResolved]가 false, 마지막 권이면 null
+     */
+    data class EndPage(
+        val finishedTitle: String,
+        val finishedThumbnail: String?,
+        val nextBook: Book?,
+        val nextThumbnail: String?,
+        val nextResolved: Boolean,
+    )
+
     /** 책을 불러오지 못함 — 화면이 오류 종류를 문구로 바꾼다 */
     data class Error(val error: LoadError) : ReaderUiState
 
-    /** EPUB — 페이지 이미지가 아니라 글 리더로 연다 */
-    data object Epub : ReaderUiState
+    /** EPUB — 페이지 이미지가 아니라 글 리더로 연다 (다음 권으로 넘어온 EPUB이면 그 책) */
+    data class Epub(val bookId: String) : ReaderUiState
 }
 
 /**
@@ -137,6 +152,9 @@ class ReaderViewModel @Inject constructor(
     companion object {
         /** 진행 저장 디바운스 시간 (2초) */
         const val SAVE_DEBOUNCE_MILLIS = 2000L
+
+        /** 책 끝까지 남은 펼침(쪽)이 이 수 이하면 다음 권을 미리 찾는다 */
+        const val NEXT_BOOK_LOOKAHEAD = 3
     }
 
     private val _uiState = MutableStateFlow<ReaderUiState>(ReaderUiState.Loading)
@@ -171,6 +189,12 @@ class ReaderViewModel @Inject constructor(
     private var currentContinuousPageSpacing: Int = 0
     private var currentImageEnhancement: ImageEnhancement = ImageEnhancement.OFF
     private var currentSeriesId: String = ""
+
+    // 다음 권 (KMReader처럼 책 끝 근처에서 미리 찾고 첫 쪽을 미리 받는다)
+    private var nextBook: Book? = null
+    private var nextBookResolved = false
+    private var nextBookJob: Job? = null
+    private var showingEndPage = false
     private var seriesCustomized = false
 
     private var saveProgressJob: Job? = null
@@ -194,7 +218,12 @@ class ReaderViewModel @Inject constructor(
      * 책 및 시리즈 데이터를 로드하고 시작 위치를 설정합니다.
      * 이어 읽기: 완독(completed)이거나 진행이 없으면 1쪽, 아니면 저장된 쪽부터 시작합니다.
      */
-    fun loadBook(bookId: String) {
+    fun loadBook(bookId: String) = loadBook(bookId, seamless = false)
+
+    /**
+     * @param seamless 다음 권으로 넘어갈 때 — 로딩 화면 없이 지금 화면(책 끝)을 둔 채 불러와 바꾼다
+     */
+    private fun loadBook(bookId: String, seamless: Boolean) {
         if (currentBookId == bookId && _uiState.value is ReaderUiState.Reading) {
             return
         }
@@ -202,14 +231,18 @@ class ReaderViewModel @Inject constructor(
         currentBookId = bookId
         hasProgressChanged = false
         saveProgressJob?.cancel()
+        nextBookJob?.cancel()
+        nextBook = null
+        nextBookResolved = false
+        showingEndPage = false
 
         viewModelScope.launch {
-            _uiState.value = ReaderUiState.Loading
+            if (!seamless) _uiState.value = ReaderUiState.Loading
 
             try {
                 val book = bookRepository.getBookById(bookId)
                 if (book.mediaProfile == MediaProfile.EPUB) {
-                    _uiState.value = ReaderUiState.Epub
+                    _uiState.value = ReaderUiState.Epub(bookId)
                     return@launch
                 }
                 currentBook = book
@@ -307,14 +340,64 @@ class ReaderViewModel @Inject constructor(
 
     /** Paged: 다음 펼침으로 이동 */
     fun nextSpread() {
-        if (currentSpreadIndex >= currentSpreads.lastIndex) return
-        applySpreadChange(currentSpreadIndex + 1)
+        when {
+            // 책 끝 화면에서 앞으로 = 다음 권
+            showingEndPage -> openNextBook()
+            // 마지막 펼침에서 앞으로 = 책 끝 화면 (마지막 쪽 진행·완독은 이미 저장 예약됨)
+            currentSpreadIndex >= currentSpreads.lastIndex -> showEndPage()
+            else -> applySpreadChange(currentSpreadIndex + 1)
+        }
     }
 
-    /** Paged: 이전 펼침으로 이동 */
+    /** Paged: 이전 펼침으로 이동 (책 끝 화면이면 마지막 펼침으로) */
     fun previousSpread() {
+        if (showingEndPage) {
+            showingEndPage = false
+            updateReadingState()
+            return
+        }
         if (currentSpreadIndex <= 0) return
         applySpreadChange(currentSpreadIndex - 1)
+    }
+
+    /** 책 끝 화면을 보인다 — 다음 권을 아직 안 찾았으면 지금 찾는다 */
+    fun showEndPage() {
+        showingEndPage = true
+        resolveNextBook()
+        updateReadingState()
+    }
+
+    /** 다음 권을 같은 화면에서 이어 연다 (지금 책 진행을 먼저 바로 저장) */
+    fun openNextBook() {
+        val next = nextBook ?: return
+        saveProgressOnExit()
+        loadBook(next.id, seamless = true)
+    }
+
+    /**
+     * 다음 권을 한 번만 찾고, 찾으면 첫 쪽들을 미리 받게 한다 (KMReader의 다음 세그먼트 미리 불러오기).
+     * 책 끝 근처(남은 펼침 [NEXT_BOOK_LOOKAHEAD] 이하)에서 부른다.
+     */
+    private fun resolveNextBook() {
+        if (nextBookResolved || nextBookJob?.isActive == true) return
+        val bookId = currentBookId
+        nextBookJob = viewModelScope.launch {
+            val found = try {
+                bookRepository.getNextBook(bookId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.w(e, "다음 권 찾기 실패: $bookId")
+                null
+            }
+            if (bookId != currentBookId) return@launch
+            nextBook = found
+            nextBookResolved = true
+            if (found != null && currentReaderType == ReaderType.CONTINUOUS) {
+                runCatching { tileSource.prefetch(found.id, 1) }
+            }
+            updateReadingState()
+        }
     }
 
     /** Continuous: 맨 위 타일이 쪽 중간이면 그 쪽 처음, 쪽 처음이면 이전 쪽 처음으로 */
@@ -326,8 +409,27 @@ class ReaderViewModel @Inject constructor(
 
     /** Continuous: 맨 위에 보이는 쪽의 다음 쪽 처음으로 */
     private fun nextContinuousPage() {
+        if (showingEndPage) {
+            openNextBook()
+            return
+        }
         val top = firstVisibleTile?.pageNumber ?: currentContinuousPage
-        if (top < currentBookPages.size) scrollToPage(top + 1)
+        if (top < currentBookPages.size) {
+            scrollToPage(top + 1)
+        } else {
+            // 마지막 쪽에서 다음 = 책 끝 카드로
+            scrollToTileIndex = currentTiles.size
+            showEndPage()
+        }
+    }
+
+    /** Continuous: 맨 아래 책 끝 카드가 화면에 보이는지 */
+    fun onContinuousEndVisible(visible: Boolean) {
+        if (currentReaderType != ReaderType.CONTINUOUS || visible == showingEndPage) return
+        if (visible) showEndPage() else {
+            showingEndPage = false
+            updateReadingState()
+        }
     }
 
     private fun scrollToPage(pageNumber: Int) {
@@ -585,6 +687,7 @@ class ReaderViewModel @Inject constructor(
             _uiState.value = it.copy(currentContinuousPage = progress.pageNumber)
         }
         preloadNextContinuousPages(currentBookId, progress.pageNumber)
+        if (progress.pageNumber >= totalPages - NEXT_BOOK_LOOKAHEAD) resolveNextBook()
         scheduleProgressSave(progress.pageNumber, totalPages, progress.completed)
     }
 
@@ -643,6 +746,7 @@ class ReaderViewModel @Inject constructor(
     }
 
     private fun applySpreadChange(newSpreadIndex: Int) {
+        if (newSpreadIndex >= currentSpreads.lastIndex - NEXT_BOOK_LOOKAHEAD) resolveNextBook()
         val state = _uiState.value as? ReaderUiState.Reading ?: return
         currentSpreadIndex = newSpreadIndex
         hasProgressChanged = true
@@ -731,7 +835,8 @@ class ReaderViewModel @Inject constructor(
 
         val totalPages = currentBookPages.size.coerceAtLeast(1)
         val spreadUrls = currentSpread.pages.mapNotNull { imageUrls.page(currentBookId, it.number) }
-        val preloadSpreads = buildPreloadSpreads(currentBookId, currentSpreadIndex, currentSpreads)
+        val preloadSpreads = buildPreloadSpreads(currentBookId, currentSpreadIndex, currentSpreads) +
+            nextBookPreload()
 
         val existingOverlay = (_uiState.value as? ReaderUiState.Reading)?.showOverlay ?: false
         val existingSettings = (_uiState.value as? ReaderUiState.Reading)?.showSettingsPanel ?: false
@@ -759,7 +864,26 @@ class ReaderViewModel @Inject constructor(
             seriesCustomized = seriesCustomized,
             showOverlay = existingOverlay,
             showSettingsPanel = existingSettings,
+            endPage = if (showingEndPage) {
+                ReaderUiState.EndPage(
+                    finishedTitle = book.displayName(),
+                    finishedThumbnail = imageUrls.bookThumbnail(book.id),
+                    nextBook = nextBook,
+                    nextThumbnail = nextBook?.let { imageUrls.bookThumbnail(it.id) },
+                    nextResolved = nextBookResolved,
+                )
+            } else {
+                null
+            },
         )
+    }
+
+    /** 마지막 펼침 근처면 다음 권 첫 두 쪽도 미리 받는다 — 넘어갈 때 바로 보이게 */
+    private fun nextBookPreload(): List<List<String>> {
+        val next = nextBook ?: return emptyList()
+        if (currentReaderType != ReaderType.PAGED) return emptyList()
+        if (currentSpreadIndex < currentSpreads.lastIndex - 1 && !showingEndPage) return emptyList()
+        return listOf(listOfNotNull(imageUrls.page(next.id, 1)), listOfNotNull(imageUrls.page(next.id, 2)))
     }
 
     private fun buildPreloadSpreads(

@@ -57,6 +57,9 @@ interface BookRepository {
     /** EPUB 읽은 자리. 읽은 적 없으면 null */
     suspend fun getEpubPosition(bookId: String): EpubPosition?
 
+    /** 같은 시리즈의 다음 권 (Komga 정렬 순서). 마지막 권이면 null */
+    suspend fun getNextBook(bookId: String): Book?
+
     /** 다 읽음으로 표시 */
     suspend fun markRead(bookId: String)
 
@@ -148,6 +151,10 @@ class BookRepositoryImpl @Inject constructor(
         val self = if (title.isNotEmpty() && href != null) listOf(EpubTocEntry(title, href, depth)) else emptyList()
         self + flattenToc(link.children, depth + 1)
     }
+
+    // 다음 권이 없으면 komga-client가 null을 돌려준다 (서버 404)
+    override suspend fun getNextBook(bookId: String): Book? =
+        sessionManager.requireClient().bookClient().getBookSiblingNext(KomgaBookId(bookId))?.toDomain()
 
     override suspend fun markRead(bookId: String) {
         sessionManager.requireClient().bookClient().markReadProgress(
