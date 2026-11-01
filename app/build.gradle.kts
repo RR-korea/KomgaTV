@@ -11,7 +11,8 @@ val appVersionCode = 15
 val appVersionName = "1.0.0"
 
 base {
-    archivesName = "KomgaTV-v$appVersionName-b$appVersionCode"
+    // 번역 시험판(translate 브랜치) — main 앱과 따로 설치된다
+    archivesName = "KomgaTV-translate-v$appVersionName-b$appVersionCode"
 }
 
 android {
@@ -19,6 +20,8 @@ android {
 
     defaultConfig {
         applicationId = "com.komgatv.app"
+        // translate 브랜치만: 앱 아이디를 달리해 main 앱 옆에 따로 설치 (서버 연결도 따로)
+        applicationIdSuffix = ".translate"
         versionCode = appVersionCode
         versionName = appVersionName
     }
