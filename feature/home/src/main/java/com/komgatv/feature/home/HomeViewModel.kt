@@ -7,6 +7,7 @@ import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.data.repository.BookRepository
 import com.komgatv.core.data.repository.LibraryRepository
 import com.komgatv.core.data.repository.ReadProgressEvents
+import com.komgatv.core.datastore.HomePreferences
 import com.komgatv.core.data.repository.SeriesRepository
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.Library
@@ -67,6 +68,7 @@ class HomeViewModel @Inject constructor(
     private val bookRepository: BookRepository,
     private val seriesRepository: SeriesRepository,
     private val progressEvents: ReadProgressEvents,
+    private val homePreferences: HomePreferences,
     val imageUrls: ImageUrls,
 ) : ViewModel() {
 
@@ -105,9 +107,10 @@ class HomeViewModel @Inject constructor(
                         optionalRow("최근 업데이트된 시리즈") { seriesRepository.getUpdatedSeries(ROW_SIZE) }
                     }
 
+                    val reading = readingRows(continueReading.await(), onDeck.await())
                     _uiState.value = HomeUiState.Success(
-                        continueReading = continueReading.await(),
-                        onDeck = onDeck.await(),
+                        continueReading = reading.continueReading,
+                        onDeck = reading.onDeck,
                         latestBooks = latestBooks.await(),
                         newSeries = newSeries.await(),
                         updatedSeries = updatedSeries.await(),
@@ -135,6 +138,31 @@ class HomeViewModel @Inject constructor(
         emptyList()
     }
 
+    /** "읽는 중에서 빼기"로 뺀 시리즈를 거른다. 뺀 뒤에 다시 읽은 시리즈는 다시 보이고 기록을 지운다 */
+    private suspend fun readingRows(continueReading: List<Book>, onDeck: List<Book>): ReadingRows {
+        val rows = filterReadingRows(continueReading, onDeck, homePreferences.hiddenReadingSeries.first())
+        homePreferences.unhideReadingSeries(rows.reactivated)
+        return rows
+    }
+
+    /**
+     * 이 책의 시리즈를 "읽는 중"과 "다음 권"에서 뺀다 (서버의 읽기 진행은 그대로).
+     * 그 시리즈를 다시 읽으면 다시 보인다.
+     */
+    fun hideFromReading(book: Book) {
+        viewModelScope.launch {
+            // TV 시계가 서버보다 늦어도 방금 읽은 책이 "다시 읽음"으로 보이지 않게 서버의 읽은 시각보다 뒤로
+            val at = maxOf(System.currentTimeMillis(), book.readProgress?.readDateMillis ?: 0L)
+            homePreferences.hideReadingSeries(book.seriesId, at)
+            (_uiState.value as? HomeUiState.Success)?.let { state ->
+                _uiState.value = state.copy(
+                    continueReading = state.continueReading.filter { it.seriesId != book.seriesId },
+                    onDeck = state.onDeck.filter { it.seriesId != book.seriesId },
+                )
+            }
+        }
+    }
+
     /** 읽는 중인 책 목록 로드 (IN_PROGRESS, 최근 읽은 순) */
     private suspend fun loadContinueReading(): List<Book> {
         return bookRepository.getBooksInProgress(page = 0, size = ROW_SIZE).first().books
@@ -147,8 +175,9 @@ class HomeViewModel @Inject constructor(
             coroutineScope {
                 val continueReading = async { loadContinueReading() }
                 val onDeck = async { optionalRow("다음 권") { bookRepository.getBooksOnDeck(ROW_SIZE) } }
+                val reading = readingRows(continueReading.await(), onDeck.await())
                 (_uiState.value as? HomeUiState.Success)?.let {
-                    _uiState.value = it.copy(continueReading = continueReading.await(), onDeck = onDeck.await())
+                    _uiState.value = it.copy(continueReading = reading.continueReading, onDeck = reading.onDeck)
                 }
             }
         } catch (e: CancellationException) {

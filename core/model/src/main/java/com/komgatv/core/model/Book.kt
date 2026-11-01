@@ -24,6 +24,8 @@ data class BookMetadata(
 data class ReadProgress(
     val page: Int,
     val completed: Boolean,
+    /** 마지막으로 읽은 시각 (epoch ms, 서버 기준). 모르면 null */
+    val readDateMillis: Long? = null,
 )
 
 /**
@@ -89,6 +91,22 @@ data class EpubPosition(
     val totalProgression: Float,
 )
 
-/** 보여 줄 책 이름 — 이름이 파일 해시처럼 보이면(16자 이상 16진수) 시리즈 제목을 쓴다 */
-fun Book.displayName(): String =
-    if (name.length >= 16 && name.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }) seriesTitle else name
+/** 이름이 파일 해시처럼 보이는지 (16자 이상 16진수 — EPUB 등은 파일 이름이 해시인 경우가 있다) */
+private val Book.hasHashName: Boolean
+    get() = name.length >= 16 && name.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }
+
+/** 보여 줄 책 이름 — 이름이 파일 해시처럼 보이면 시리즈 제목을 쓴다 */
+fun Book.displayName(): String = if (hasHashName) seriesTitle else name
+
+/**
+ * 시리즈 밖(홈·검색) 카드 제목. 해시 이름이면 시리즈 제목, "01"처럼 번호뿐이면 "시리즈 01".
+ * (해시에도 a~f 글자가 있어 "글자가 있으면 그대로"만으로는 걸러지지 않는다)
+ */
+fun Book.cardTitle(): String = when {
+    hasHashName -> seriesTitle
+    name.any { it.isLetter() } -> name
+    else -> "$seriesTitle $name"
+}
+
+/** 카드 제목에 시리즈 이름이 이미 들어 있는지 — 아니면 부제목으로 시리즈 이름을 보인다 */
+fun Book.cardTitleShowsSeries(): Boolean = cardTitle().startsWith(seriesTitle)

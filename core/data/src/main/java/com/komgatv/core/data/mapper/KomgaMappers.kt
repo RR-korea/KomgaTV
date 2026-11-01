@@ -51,7 +51,9 @@ internal fun KomgaBook.toDomain() = Book(
         summary = metadata.summary,
         number = metadata.number,
     ),
-    readProgress = readProgress?.let { ReadProgress(page = it.page, completed = it.completed) },
+    readProgress = readProgress?.let {
+        ReadProgress(page = it.page, completed = it.completed, readDateMillis = it.readDate.toEpochMilliseconds())
+    },
     mediaProfile = when (media.mediaProfile) {
         snd.komga.client.book.MediaProfile.EPUB -> MediaProfile.EPUB
         snd.komga.client.book.MediaProfile.PDF -> MediaProfile.PDF

@@ -23,7 +23,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.tv.material3.Button
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.komgatv.core.model.Book
 import com.komgatv.core.model.Library
+import com.komgatv.core.model.cardTitle
 import kotlinx.coroutines.delay
 
 /**
@@ -58,6 +60,41 @@ internal fun LibraryActionsDialog(
                 ) { Text(stringResource(R.string.library_action_empty_trash)) }
                 Text(
                     text = stringResource(R.string.library_action_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * "읽는 중"·"다음 권" 책 메뉴 (OK를 길게) — 이 시리즈를 두 줄에서 뺀다. Back으로 닫는다.
+ */
+@Composable
+internal fun ReadingActionsDialog(
+    book: Book,
+    onHide: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val firstFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { firstFocus.requestFocus() }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .width(440.dp)
+                .background(Color(0xFF1E1E1E), RoundedCornerShape(12.dp))
+                .padding(24.dp),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(text = book.cardTitle(), style = MaterialTheme.typography.titleMedium, color = Color.White)
+                Button(
+                    onClick = { onHide(); onDismiss() },
+                    modifier = Modifier.fillMaxWidth().focusRequester(firstFocus),
+                ) { Text(stringResource(R.string.reading_action_hide)) }
+                Text(
+                    text = stringResource(R.string.reading_action_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray,
                 )

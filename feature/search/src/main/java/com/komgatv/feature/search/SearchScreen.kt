@@ -33,6 +33,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import com.komgatv.core.data.image.ImageUrls
+import com.komgatv.core.model.cardTitle
 import com.komgatv.core.ui.components.PosterCard
 import com.komgatv.core.ui.components.TVRow
 import com.komgatv.core.ui.components.TvTextField
@@ -184,8 +185,8 @@ private fun ResultRows(
                     val key = "book:${book.id}"
                     PosterCard(
                         modifier = Modifier.focusRequester(entryFocus.requesterFor(key)),
-                        // 책 이름이 "01"처럼 번호뿐이면 시리즈 이름을 붙인다
-                        title = if (book.name.any { it.isLetter() }) book.name else "${book.seriesTitle} ${book.name}",
+                        // 번호뿐인 이름엔 시리즈 이름을 붙이고, 해시 이름이면 시리즈 이름을 쓴다
+                        title = book.cardTitle(),
                         imageUrl = imageUrls.bookThumbnail(book.id).orEmpty(),
                         subtitle = book.seriesTitle,
                         onClick = {
