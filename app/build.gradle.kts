@@ -6,13 +6,21 @@ plugins {
     alias(libs.plugins.komgatv.hilt)
 }
 
+// 버전 — APK 파일 이름에도 들어간다 (KomgaTV-v0.2.0-b2-debug.apk)
+val appVersionCode = 2
+val appVersionName = "0.2.0"
+
+base {
+    archivesName = "KomgaTV-v$appVersionName-b$appVersionCode"
+}
+
 android {
     namespace = "com.komgatv.app"
 
     defaultConfig {
         applicationId = "com.komgatv.app"
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
     }
 
     buildTypes {
