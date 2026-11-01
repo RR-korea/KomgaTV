@@ -223,6 +223,7 @@ class EpubViewModelTest {
         override suspend fun analyze(bookId: String) = Unit
 
         override suspend fun getNextBook(bookId: String): Book? = null
+        override suspend fun getPreviousBook(bookId: String): Book? = null
     }
 
     private class FakeReaderPreferences : ReaderPreferences {

@@ -322,5 +322,6 @@ class SeriesDetailViewModelTest {
         }
 
         override suspend fun getNextBook(bookId: String): Book? = null
+        override suspend fun getPreviousBook(bookId: String): Book? = null
     }
 }
