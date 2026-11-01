@@ -115,7 +115,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `읽는 중에서 빼면 그 시리즈가 읽는 중과 다음 권에서 빠지고, 다시 읽으면 돌아온다`() = runTest {
+    fun `읽는 중에서 빼면 서버 진행을 지우고 그 시리즈가 두 줄에서 빠지며, 다시 읽으면 돌아온다`() = runTest {
         val reading = Book(
             id = "k9", seriesId = "kingdom", seriesTitle = "킹덤", name = "킹덤 09권", number = 9,
             pageCount = 210, metadata = BookMetadata("킹덤 09권", "", "9"),
@@ -132,7 +132,8 @@ class HomeViewModelTest {
         var state = viewModel.uiState.value as HomeUiState.Success
         assertTrue(state.continueReading.isEmpty())
         assertTrue(state.onDeck.isEmpty())
-        // 서버 진행은 건드리지 않는다
+        // 읽던 책은 서버 진행도 지운다, 다음 권은 지울 진행이 없다
+        assertEquals(listOf("k9"), fakeBookRepository.unread)
         assertTrue(homePreferences.hidden.value.containsKey("kingdom"))
 
         // 새로 읽어 서버의 읽은 시각이 뺀 시각보다 뒤 → 다시 보이고 뺀 기록을 지운다
@@ -313,7 +314,11 @@ class HomeViewModelTest {
 
         override suspend fun markRead(bookId: String) = Unit
 
-        override suspend fun markUnread(bookId: String) = Unit
+        val unread = mutableListOf<String>()
+
+        override suspend fun markUnread(bookId: String) {
+            unread += bookId
+        }
 
         override suspend fun analyze(bookId: String) = Unit
 

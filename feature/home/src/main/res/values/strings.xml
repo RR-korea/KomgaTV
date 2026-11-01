@@ -23,5 +23,5 @@
     <string name="library_action_done_trash">Trash emptied</string>
     <string name="library_action_failed">Could not do that (admin only, or server error)</string>
     <string name="reading_action_hide">Remove from Keep reading</string>
-    <string name="reading_action_hint">Hides this series from Keep reading and Up next on this TV. Your reading progress is kept, and the series comes back when you read it again. Back: close</string>
+    <string name="reading_action_hint">Clears the reading progress on the server (on every device) and hides this series from Keep reading and Up next. It comes back when you read it again. Back: close</string>
 </resources>
