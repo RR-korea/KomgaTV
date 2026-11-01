@@ -23,8 +23,16 @@ class ReaderSettingsCodecTest {
             continuousPadding = 0.15f,
             continuousPageSpacing = 24,
             imageEnhancement = ImageEnhancement.SHARPEN,
+            zoomPercent = 117,
         )
         assertEquals(s, ReaderSettingsCodec.decode(ReaderSettingsCodec.encode(s)))
+    }
+
+    @Test
+    fun `확대는 100~300 밖이면 끝값, 없으면 100`() {
+        assertEquals(300, ReaderSettingsCodec.decode("zoomPercent=999")!!.zoomPercent)
+        assertEquals(100, ReaderSettingsCodec.decode("zoomPercent=20")!!.zoomPercent)
+        assertEquals(100, ReaderSettingsCodec.decode("pageLayout=DOUBLE_PAGES")!!.zoomPercent)
     }
 
     @Test

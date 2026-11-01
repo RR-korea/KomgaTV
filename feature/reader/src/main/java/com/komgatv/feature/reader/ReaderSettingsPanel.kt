@@ -76,6 +76,7 @@ fun ReaderSettingsPanel(
                 firstFocus = firstFocus,
                 layoutOffset = layoutOffset,
                 onLayoutOffsetChange = onLayoutOffsetChange,
+                showZoom = true,
                 modifier = Modifier.fillMaxWidth(),
             )
             if (seriesCustomized) {

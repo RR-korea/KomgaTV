@@ -49,6 +49,7 @@ private val SPACING_STEPS = (0..8).map { it * 8 }
  * 한 줄에 항목 하나(왼쪽 이름, 오른쪽 값)라 TV 한 화면에 다 들어간다. 위/아래 = 항목, 좌/우·OK = 값 바꾸기 (바로 반영).
  *
  * @param layoutOffset 쪽 맞춤 밀기 — 리더에서만(세션 동안만) 보인다. null이면 줄을 그리지 않는다.
+ * @param showZoom 확대(줌인) 줄 — 작품별 설정(리더)에서만 보인다.
  */
 @Composable
 fun ViewSettingsForm(
@@ -58,6 +59,7 @@ fun ViewSettingsForm(
     firstFocus: FocusRequester? = null,
     layoutOffset: Boolean? = null,
     onLayoutOffsetChange: (Boolean) -> Unit = {},
+    showZoom: Boolean = false,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         OptionRow(
@@ -111,6 +113,15 @@ fun ViewSettingsForm(
                     current = settings.scaleType,
                     onChange = { onChange(settings.copy(scaleType = it)) },
                 )
+                if (showZoom) {
+                    // 크기 맞춤 결과를 1%씩 더 확대 — 길게 누르면 키 반복으로 빨리 바뀐다
+                    SettingRow(
+                        title = stringResource(R.string.view_zoom),
+                        value = stringResource(R.string.view_percent_value, settings.zoomPercent),
+                        onPrevious = { onChange(settings.copy(zoomPercent = stepZoom(settings.zoomPercent, -1))) },
+                        onNext = { onChange(settings.copy(zoomPercent = stepZoom(settings.zoomPercent, 1))) },
+                    )
+                }
             }
 
             ReaderType.CONTINUOUS -> {
@@ -148,6 +159,9 @@ fun ViewSettingsForm(
         )
     }
 }
+
+private fun stepZoom(current: Int, delta: Int): Int =
+    (current + delta).coerceIn(ReaderSettings.MIN_ZOOM_PERCENT, ReaderSettings.MAX_ZOOM_PERCENT)
 
 /**
  * 값 목록 중 하나를 고르는 줄. 좌 = 이전 값, 우·OK = 다음 값.
