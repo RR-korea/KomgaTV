@@ -50,7 +50,7 @@ class DefaultPageFileCache @Inject constructor(
     }
 
     private suspend fun download(bookId: String, pageNumber: Int, target: File) {
-        val client = sessionManager.session.value?.okHttpClient ?: throw NotConnectedException()
+        val client = sessionManager.session.value?.imageClient ?: throw NotConnectedException()
         val url = imageUrls.page(bookId, pageNumber) ?: throw NotConnectedException()
         val temp = File(target.parentFile, "${target.name}.tmp")
         try {

@@ -16,6 +16,12 @@ interface ImageUrls {
 
     /** pageNumber는 1부터 시작한다. */
     fun page(bookId: String, pageNumber: Int): String?
+
+    /**
+     * PDF 책의 한 쪽을 그림으로 그리지 않은 원래 모양(그 쪽만 담은 작은 PDF)으로.
+     * 서버가 쪽마다 그림을 그리는 시간(2~3초)이 없어지고, TV가 직접 그린다.
+     */
+    fun pdfPage(bookId: String, pageNumber: Int): String? = page(bookId, pageNumber)?.let { "$it/raw" }
 }
 
 @Singleton

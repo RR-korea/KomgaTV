@@ -854,6 +854,16 @@ class ReaderViewModelTest {
     }
 
     @Test
+    fun `PDF 책은 페이지 넘김에서 서버가 그리지 않은 원래 쪽(raw)을 받는다`() = runTest(testDispatcher) {
+        openBook()
+        bookRepository.books["b1"] = bookRepository.books["b1"]!!.copy(mediaProfile = MediaProfile.PDF)
+        advanceUntilIdle()
+
+        assertEquals(listOf("http://localhost:8080/api/v1/books/b1/pages/1/raw"), reading.spreadPageUrls)
+        assertTrue(reading.preloadSpreads.flatten().all { it.endsWith("/raw") })
+    }
+
+    @Test
     fun `EPUB 책은 EPUB 리더로 넘긴다`() = runTest(testDispatcher) {
         seriesRepository.seriesMap["s1"] = createTestSeries(id = "s1")
         bookRepository.books["e1"] = createTestBook(id = "e1", seriesId = "s1", pageCount = 0)

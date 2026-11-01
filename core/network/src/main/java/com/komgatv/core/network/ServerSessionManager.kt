@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import okhttp3.Credentials
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
+import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import snd.komga.client.KomgaClientFactory
@@ -45,15 +46,21 @@ sealed interface AuthMode {
 /**
  * 활성화된 Komga 서버 세션
  *
- * @property okHttpClient 인증 인터셉터가 적용된 OkHttpClient (Coil 이미지 요청에도 공유)
+ * @property okHttpClient 인증 인터셉터가 적용된 OkHttpClient (API 호출)
  * @property komgaClient Komga API 호출용 클라이언트 팩토리
  * @property baseUrl Komga 서버의 기본 URL (끝 슬래시 제외)
+ * @property imageClient 쪽·표지 이미지용 — 연결과 인증은 같고 요청 대기열만 따로라,
+ *   이미지를 많이 받는 중에도 진행 저장·목록 같은 API 호출이 기다리지 않는다. 같은 이미지를 동시에 부르면 한 번만 받는다.
  */
 data class KomgaSession(
     val okHttpClient: OkHttpClient,
     val komgaClient: KomgaClientFactory,
     val baseUrl: String,
+    val imageClient: OkHttpClient = okHttpClient,
 )
+
+/** 이미지 요청을 서버 하나에 동시에 몇 개까지 보낼지 (PDF는 서버가 쪽마다 그림을 그려 너무 많으면 서로 늦어진다) */
+private const val IMAGE_REQUESTS_PER_HOST = 4
 
 /**
  * Komga 서버 세션 단일 소유자
@@ -143,10 +150,16 @@ class ServerSessionManager @Inject constructor(
             .ktor(ktorClient)
             .build()
 
+        val imageClient = okHttpClient.newBuilder()
+            .apply { interceptors().add(0, InFlightDedupInterceptor()) }
+            .dispatcher(Dispatcher().apply { maxRequestsPerHost = IMAGE_REQUESTS_PER_HOST })
+            .build()
+
         return KomgaSession(
             okHttpClient = okHttpClient,
             komgaClient = komgaClient,
             baseUrl = cleanUrl,
+            imageClient = imageClient,
         )
     }
 

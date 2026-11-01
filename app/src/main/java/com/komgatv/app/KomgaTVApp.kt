@@ -12,6 +12,7 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.bitmapConfig
 import coil3.request.crossfade
 import coil3.util.DebugLogger
+import com.komgatv.feature.reader.pdf.PdfPageDecoder
 import dagger.hilt.android.HiltAndroidApp
 import okhttp3.Call
 import timber.log.Timber
@@ -43,7 +44,7 @@ class KomgaTVApp : Application(), SingletonImageLoader.Factory {
      *
      * - 인증 및 연결 풀 공유: 세션의 OkHttpClient 기반 OkHttpNetworkFetcherFactory
      * - 메모리 캐시: 가용 메모리의 20%
-     * - 디스크 캐시: 100MB
+     * - 디스크 캐시: 512MB (PDF 한 쪽은 0.2~0.9MB — 몇 권을 다시 봐도 서버에 다시 묻지 않게)
      * - RGB_565: 메모리 절약 (TV에서는 알파 채널 불필요)
      * - crossfade 비활성화: TV에서는 즉시 표시가 더 자연스러움
      */
@@ -55,6 +56,8 @@ class KomgaTVApp : Application(), SingletonImageLoader.Factory {
                         callFactory = { this@KomgaTVApp.callFactory }
                     )
                 )
+                // PDF 책의 쪽은 서버가 그린 그림 대신 그 쪽만 담은 PDF로 받아 TV에서 그린다
+                add(PdfPageDecoder.Factory())
             }
             .memoryCache {
                 MemoryCache.Builder()
@@ -64,7 +67,7 @@ class KomgaTVApp : Application(), SingletonImageLoader.Factory {
             .diskCache {
                 DiskCache.Builder()
                     .directory(context.cacheDir.resolve("image_cache"))
-                    .maxSizeBytes(100L * 1024 * 1024)
+                    .maxSizeBytes(512L * 1024 * 1024)
                     .build()
             }
             .bitmapConfig(Bitmap.Config.RGB_565)
