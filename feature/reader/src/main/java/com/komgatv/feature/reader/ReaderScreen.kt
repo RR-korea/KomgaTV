@@ -27,8 +27,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -52,6 +54,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Precision
@@ -165,7 +168,8 @@ private fun ReaderContent(
     val coroutineScope = rememberCoroutineScope()
     val continuous = state.readerType == ReaderType.CONTINUOUS
     val scrollable = !continuous && (state.scaleType == ScaleType.FIT_WIDTH || state.scaleType == ScaleType.ORIGINAL)
-    val listState = rememberLazyListState()
+    // 맨 위(0번)는 책 첫 카드 — 처음엔 그 아래 첫 타일에서
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = 1)
 
     // 세로 스크롤 타일은 화면 크기로 계획한다
     LaunchedEffect(screenWidthPx, screenHeightPx) {
@@ -224,14 +228,20 @@ private fun ReaderContent(
                     Key.DirectionRight -> viewModel.onDpadRight()
                     Key.DirectionCenter, Key.Enter -> when {
                         state.showOverlay -> viewModel.openSettingsPanel()
-                        // 책 끝 화면에서 OK = 다음 권
+                        // 책 끝 화면에서 OK = 다음 권, 책 첫 화면에서 OK = 이전 권
                         state.endPage != null -> viewModel.openNextBook()
+                        state.startPage != null -> viewModel.openPreviousBook()
                         else -> viewModel.toggleOverlay()
                     }
                     Key.DirectionUp -> if (state.showOverlay) {
                         viewModel.jumpPages(10)
                     } else if (continuous) {
-                        coroutineScope.launch { listState.animateScrollBy(-screenHeightPx.toFloat()) }
+                        // 책 첫 카드까지 올라왔으면 위 = 이전 권
+                        if (state.startPage != null && !listState.canScrollBackward) {
+                            viewModel.openPreviousBook()
+                        } else {
+                            coroutineScope.launch { listState.animateScrollBy(-screenHeightPx.toFloat()) }
+                        }
                     } else if (scrollable && scrollState.value > 0) {
                         coroutineScope.launch {
                             scrollState.animateScrollTo((scrollState.value - screenHeightPx / 2).coerceAtLeast(0))
@@ -271,6 +281,8 @@ private fun ReaderContent(
 
         if (!continuous && state.endPage != null) {
             EndPageView(state.endPage, Modifier.fillMaxSize())
+        } else if (!continuous && state.startPage != null) {
+            StartPageView(state.startPage, Modifier.fillMaxSize())
         } else if (continuous) {
             ContinuousPages(
                 tiles = state.continuousTiles,
@@ -283,6 +295,8 @@ private fun ReaderContent(
                 onVisibleTilesChanged = viewModel::onContinuousVisibleTilesChanged,
                 endPage = state.endPage,
                 onEndVisible = viewModel::onContinuousEndVisible,
+                startPage = state.startPage,
+                onStartVisible = viewModel::onContinuousStartVisible,
             )
         } else if (scrollable) {
             // 화면보다 클 수 있는 모드: 세로 스크롤, 작은 페이지는 가운데
@@ -371,21 +385,34 @@ private fun SpreadPages(
             val request = remember(url, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement) {
                 pageRequest(context, url, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement)
             }
-            AsyncImage(
-                model = request,
-                contentDescription = stringResource(
-                    R.string.reader_page_content_description,
-                    state.currentSpread.highestPageNumber,
-                    state.totalPages,
-                ),
-                contentScale = contentScale,
-                alignment = alignment,
-                filterQuality = ImageEnhancer.filterQuality(state.imageEnhancement),
+            // 받는 중이면 스피너, 실패하면 문구 — 빨리 넘길 때 검은 화면이 멈춘 것처럼 보이지 않게
+            var loadState by remember(request) { mutableStateOf<AsyncImagePainter.State>(AsyncImagePainter.State.Empty) }
+            Box(
                 modifier = Modifier
                     .weight(1f)
                     .then(if (scrollable) Modifier else Modifier.fillMaxHeight())
                     .then(pageModifier),
-            )
+                contentAlignment = Alignment.Center,
+            ) {
+                AsyncImage(
+                    model = request,
+                    contentDescription = stringResource(
+                        R.string.reader_page_content_description,
+                        state.currentSpread.highestPageNumber,
+                        state.totalPages,
+                    ),
+                    contentScale = contentScale,
+                    alignment = alignment,
+                    filterQuality = ImageEnhancer.filterQuality(state.imageEnhancement),
+                    onState = { loadState = it },
+                    modifier = pageModifier,
+                )
+                when (loadState) {
+                    is AsyncImagePainter.State.Loading, AsyncImagePainter.State.Empty -> PageLoadingIndicator()
+                    is AsyncImagePainter.State.Error -> PageLoadFailed()
+                    else -> Unit
+                }
+            }
         }
     }
 }
