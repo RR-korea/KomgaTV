@@ -21,6 +21,8 @@
     <string name="library_action_done_scan">스캔을 요청했습니다 — 서버가 지금 훑습니다</string>
     <string name="library_action_done_trash">휴지통을 비웠습니다</string>
     <string name="library_action_failed">하지 못했습니다 (관리자만 가능하거나 서버 오류)</string>
-    <string name="reading_action_hide">읽는 중에서 빼기</string>
-    <string name="reading_action_hint">서버의 읽기 진행을 지우고(다른 기기에서도 빠집니다) 이 시리즈를 "읽는 중"과 "다음 권"에서 뺍니다. 다시 읽으면 다시 나타납니다. Back: 닫기</string>
+    <string name="reading_action_hint">서버의 읽기 진행을 지우고(다른 기기에서도 빠집니다) 이 시리즈를 "읽는 중"과 "다음 권"에서 뺍니다. 다시 읽으면 다시 나타납니다.</string>
+    <string name="reading_action_question">이 시리즈를 읽는 중에서 뺄까요?</string>
+    <string name="reading_action_keep">유지</string>
+    <string name="reading_action_remove">제거</string>
 </resources>
