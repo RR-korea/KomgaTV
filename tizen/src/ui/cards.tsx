@@ -13,7 +13,17 @@ export function bookSubtitle(book: KomgaBook): string {
   return fmt(t.homeBookProgress, progress.page, book.media.pagesCount);
 }
 
-export function BookCard({ book, row, index }: { book: KomgaBook; row: string; index?: number }) {
+export function BookCard({
+  book,
+  row,
+  index,
+  onLongPress,
+}: {
+  book: KomgaBook;
+  row: string;
+  index?: number;
+  onLongPress?: () => void;
+}) {
   return (
     <PosterCard
       focusKey={`${row}-book-${book.id}`}
@@ -23,6 +33,7 @@ export function BookCard({ book, row, index }: { book: KomgaBook; row: string; i
       subtitle={bookSubtitle(book)}
       progress={bookProgress(book)}
       onClick={() => push({ name: 'reader', bookId: book.id })}
+      onLongPress={onLongPress}
     />
   );
 }

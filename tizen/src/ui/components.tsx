@@ -222,7 +222,14 @@ export function PosterCard({ focusKey, imagePath, title, subtitle, progress, onC
         {image.url ? (
           <img class="card-image" src={image.url} alt="" />
         ) : (
-          <div class="card-placeholder">{image.failed ? title.charAt(0) : ''}</div>
+          // 서버에 표지가 없으면(404 — 표지 그림이 없는 EPUB 등) 제목을 적은 대체 표지 (Android 0.3.0)
+          image.failed ? (
+            <div class="card-fallback">
+              <div class="card-fallback-title">{title}</div>
+            </div>
+          ) : (
+            <div class="card-placeholder" />
+          )
         )}
         {progress != null && (
           <div class="card-progress">

@@ -34,6 +34,8 @@ export interface KomgaSeries {
 export interface KomgaReadProgress {
   page: number;
   completed: boolean;
+  /** 마지막으로 읽은 시각 (ISO, 서버 기준) — 읽는 중에서 뺀 시리즈를 다시 읽었는지 볼 때 */
+  readDate?: string;
 }
 
 export interface KomgaBook {

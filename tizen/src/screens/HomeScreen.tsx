@@ -2,13 +2,16 @@
 // → 최근 업데이트된 시리즈 → 라이브러리. 빈 줄은 그리지 않는다.
 // 읽는 중·라이브러리는 필수(실패하면 오류 화면), 나머지 줄은 실패하면 그 줄만 빈다.
 // 돌아오면 진행 저장을 기다렸다가 조용히 새로고침하고 연 항목에 포커스.
+// 읽는 중·다음 권 책을 OK 길게 → 읽는 중에서 빼기 (Android 0.3.0~0.3.1).
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { readStatusIs } from '../api/conditions';
+import { bookDisplayTitle } from '../api/display';
 import { BookSort, type KomgaBook, type KomgaLibrary, type KomgaSeries, type Page } from '../api/types';
 import { t } from '../i18n';
 import { push, type RouteEntry } from '../platform/router';
-import { awaitWrites, type LoadError, requireSession, toLoadError } from '../state/session';
+import { filterReadingRows, hiddenAtFor, hideSeries, loadHidden, unhideSeries } from '../state/homeHidden';
+import { awaitWrites, type LoadError, requireSession, toLoadError, trackWrite } from '../state/session';
 import { BookCard, SeriesCard } from '../ui/cards';
 import { Button, ErrorView, LoadingView, Row, TextCard } from '../ui/components';
 import { useEntryFocus } from '../ui/entryFocus';
@@ -40,7 +43,10 @@ async function loadHome(): Promise<HomeData> {
     optional(client.getNewSeries(page)),
     optional(client.getUpdatedSeries(page)),
   ]);
-  return { reading: reading.content, onDeck, latestBooks, newSeries, updatedSeries, libraries };
+  // 읽는 중에서 뺀 시리즈를 거른다. 뺀 뒤에 다시 읽은 시리즈는 다시 보이고 기록을 지운다
+  const rows = filterReadingRows(reading.content, onDeck, loadHidden());
+  unhideSeries(rows.reactivated);
+  return { reading: rows.reading, onDeck: rows.onDeck, latestBooks, newSeries, updatedSeries, libraries };
 }
 
 /** 첫 줄의 첫 카드 키 (처음 들어올 때 포커스) */
@@ -69,6 +75,40 @@ export function HomeScreen({ entry, active }: { entry: RouteEntry; active: boole
   const [version, setVersion] = useState(0);
   /** OK 길게 누른 라이브러리 → 라이브러리 메뉴 (Android: 스캔·휴지통 비우기, 관리자) */
   const [menuLibrary, setMenuLibrary] = useState<KomgaLibrary | null>(null);
+  /** OK 길게 누른 읽는 중·다음 권 책 → 읽는 중에서 빼기 */
+  const [menuBook, setMenuBook] = useState<{ book: KomgaBook; row: string } | null>(null);
+
+  /**
+   * 이 책의 시리즈를 읽는 중·다음 권에서 뺀다. 읽던 책이면 서버의 읽기 진행도 지운다(다른 기기에서도 빠진다).
+   * 다음 권은 서버에서 지울 것이 없어 이 TV에서만 숨긴다 — 그 시리즈를 다시 읽으면 다시 보인다.
+   */
+  const hideFromReading = (book: KomgaBook, row: string) => {
+    if (!data) return;
+    const progress = book.readProgress;
+    if (progress && !progress.completed) {
+      // 서버에서 못 지워도 이 TV에서는 빠진 채로 둔다
+      void trackWrite(requireSession().client.markUnread(book.id)).catch(() => undefined);
+    }
+    hideSeries(book.seriesId, hiddenAtFor(book, Date.now()));
+    const keep = (list: KomgaBook[]) => list.filter((other) => other.seriesId !== book.seriesId);
+    const next = { ...data, reading: keep(data.reading), onDeck: keep(data.onDeck) };
+    // 포커스: 같은 줄에서 그 다음(없으면 앞) 카드, 줄이 비면 첫 줄
+    const list = row === 'reading' ? data.reading : data.onDeck;
+    const at = list.indexOf(book);
+    const rest = row === 'reading' ? next.reading : next.onDeck;
+    const after = list.slice(at + 1).filter((other) => other.seriesId !== book.seriesId)[0];
+    const before = list.slice(0, at).filter((other) => other.seriesId !== book.seriesId).pop();
+    const target = after ?? before;
+    const key = target && rest.length ? `${row}-book-${target.id}` : firstKey(next);
+    setData(next);
+    setTimeout(() => root.current && focusKeyOrFirst(root.current, key), 0);
+  };
+
+  const closeBookMenu = () => {
+    const key = menuBook ? `${menuBook.row}-book-${menuBook.book.id}` : undefined;
+    setMenuBook(null);
+    setTimeout(() => root.current && key && focusKeyOrFirst(root.current, key), 0);
+  };
 
   const libraryAction = (run: () => Promise<void>, done: string) =>
     run().then(
@@ -150,12 +190,12 @@ export function HomeScreen({ entry, active }: { entry: RouteEntry; active: boole
         <>
           <HomeRow id="reading" title={t.homeContinueReading} show={data.reading.length > 0}>
             {data.reading.map((book) => (
-              <BookCard key={book.id} book={book} row="reading" />
+              <BookCard key={book.id} book={book} row="reading" onLongPress={() => setMenuBook({ book, row: 'reading' })} />
             ))}
           </HomeRow>
           <HomeRow id="ondeck" title={t.homeOnDeck} show={data.onDeck.length > 0}>
             {data.onDeck.map((book) => (
-              <BookCard key={book.id} book={book} row="ondeck" />
+              <BookCard key={book.id} book={book} row="ondeck" onLongPress={() => setMenuBook({ book, row: 'ondeck' })} />
             ))}
           </HomeRow>
           <HomeRow id="latest" title={t.homeLatestBooks} show={data.latestBooks.length > 0}>
@@ -185,6 +225,20 @@ export function HomeScreen({ entry, active }: { entry: RouteEntry; active: boole
             ))}
           </Row>
         </>
+      )}
+      {menuBook && (
+        <ActionMenu
+          title={bookDisplayTitle(menuBook.book)}
+          hint={t.readingActionHint}
+          actions={[
+            {
+              key: 'menu-hide',
+              label: t.readingActionHide,
+              run: () => hideFromReading(menuBook.book, menuBook.row),
+            },
+          ]}
+          onClose={closeBookMenu}
+        />
       )}
       {menuLibrary && (
         <ActionMenu

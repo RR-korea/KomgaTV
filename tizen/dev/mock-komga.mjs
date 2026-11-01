@@ -57,8 +57,8 @@ for (const s of series) {
 // 읽는 중인 책 몇 권
 for (const [id, page] of [['S1B3', 7], ['S2B1', 12], ['S5B2', 3]]) {
   const book = books.find((b) => b.id === id);
-  book.readProgress = { page, completed: false };
   book.readDate = Date.now() - books.indexOf(book);
+  book.readProgress = { page, completed: false, readDate: new Date(book.readDate).toISOString() };
 }
 
 // EPUB 책 하나 (Android T12): S7B1, 3장, 둘째 장은 길고 그림이 있다. 둘째 장 처음에서 읽던 중
@@ -67,8 +67,8 @@ const EPUB_ID = 'S7B1';
   const book = books.find((b) => b.id === EPUB_ID);
   book.media = { pagesCount: 30, mediaProfile: 'EPUB' };
   book.metadata.title = 'a67879a1d4464860c3eedc980bd12118'; // 파일 해시 제목 → 시리즈 이름으로 보여야 한다
-  book.readProgress = { page: 10, completed: false };
   book.readDate = Date.now() - 10_000_000; // 읽는 중 줄의 맨 뒤
+  book.readProgress = { page: 10, completed: false, readDate: new Date(book.readDate).toISOString() };
 }
 const epubChapters = ['index_split_000.html', 'index_split_001.html', 'index_split_002.html'];
 const epubHtml = (i) =>
@@ -88,8 +88,8 @@ let epubProgression = {
 for (const book of books.filter((b) => b.seriesId === 'S8')) book.media = { pagesCount: 24, mediaProfile: 'PDF' };
 {
   const book = books.find((b) => b.id === 'S8B2');
-  book.readProgress = { page: 2, completed: false };
   book.readDate = Date.now() - 20_000_000;
+  book.readProgress = { page: 2, completed: false, readDate: new Date(book.readDate).toISOString() };
 }
 const fixtureJpeg = readFileSync(new URL('./fixtures/pdf-page.jpg', import.meta.url));
 /** JPEG 하나를 쪽 전체에 놓은 한 쪽 PDF (Komga raw 쪽과 같은 모양) */
@@ -268,6 +268,7 @@ async function api(req, res, path, url) {
     return found ? json(res, found) : json(res, {}, 404);
   }
   if ((m = path.match(/^api\/v1\/books\/([^/]+)\/thumbnail$/))) {
+    if (m[1] === EPUB_ID) return json(res, {}, 404); // 표지 그림 없는 EPUB (Android 0.3.0 대체 표지)
     return svg(res, 300, 450, m[1], (m[1].length * 53) % 360);
   }
   if ((m = path.match(/^api\/v1\/books\/([^/]+)\/pages$/))) {
@@ -284,8 +285,8 @@ async function api(req, res, path, url) {
   if ((m = path.match(/^api\/v1\/books\/([^/]+)\/read-progress$/)) && req.method === 'PATCH') {
     const book = books.find((b) => b.id === m[1]);
     const { page, completed } = await readBody(req);
-    book.readProgress = { page, completed };
     book.readDate = Date.now();
+    book.readProgress = { page, completed, readDate: new Date(book.readDate).toISOString() };
     console.log(`PATCH read-progress ${book.id} page=${page} completed=${completed}`);
     res.writeHead(204);
     return res.end();

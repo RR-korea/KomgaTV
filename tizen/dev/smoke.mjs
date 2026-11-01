@@ -574,6 +574,37 @@ try {
   await shot('pdf-double');
   await key('Escape');
   await page.waitForTimeout(800);
+
+  // 13. 표지 없는 EPUB → 제목을 적은 대체 표지 (Android 0.3.0)
+  const epubCard = await page.evaluate(() => {
+    const card = document.querySelector('[data-key="reading-book-S7B1"]');
+    return {
+      fallback: card?.querySelector('.card-fallback-title')?.textContent ?? '',
+      title: card?.querySelector('.card-title')?.textContent ?? '',
+    };
+  });
+  results.push(`${epubCard.fallback && epubCard.fallback === epubCard.title ? 'PASS' : 'FAIL'} 표지 없는 EPUB: 대체 표지에 제목 "${epubCard.fallback}"`);
+
+  // 14. 읽는 중에서 빼기 (Android 0.3.0~0.3.1): 서버 진행을 지우고 그 시리즈를 읽는 중·다음 권에서 뺀다
+  await page.evaluate(() => (document.querySelector('[data-key="reading-book-S8B2"]'))?.focus());
+  await expectFocus('PDF 책 카드 (읽는 중)', 'reading-book-S8B2');
+  const beforeHide = patches.length;
+  await longPress();
+  await expectFocus('읽는 중 책 OK 길게 → 빼기 메뉴', 'menu-hide');
+  await expectText('빼기 메뉴 안내', '.menu-hint', /서버의 읽기 진행을 지우고/);
+  await shot('reading-hide-menu');
+  await key('Enter');
+  await page.waitForTimeout(800);
+  results.push(`${patches.slice(beforeHide).some((p) => p === 'DELETE read-progress S8B2') ? 'PASS' : 'FAIL'} 빼기 → 서버 진행 지움: ${patches.slice(beforeHide).join(' | ')}`);
+  const s8Cards = () =>
+    page.evaluate(() => document.querySelectorAll('[data-key^="reading-book-S8"], [data-key^="ondeck-book-S8"]').length);
+  results.push(`${(await s8Cards()) === 0 ? 'PASS' : 'FAIL'} 빼면 그 시리즈가 읽는 중·다음 권에서 빠짐`);
+  await expectFocus('뺀 뒤 포커스는 같은 줄 카드', (k) => k?.startsWith('reading-book-'));
+  await shot('reading-after-hide');
+  // 다시 켜도 빠져 있다 (가짜 서버의 다음 권에는 진행을 지운 S8B2가 나오지만 이 TV에서 숨김)
+  await page.reload();
+  await page.waitForTimeout(2500);
+  results.push(`${(await s8Cards()) === 0 ? 'PASS' : 'FAIL'} 다시 켜도 빠진 채`);
 } finally {
   console.log(results.join('\n'));
   console.log(`errors: ${errors.length ? errors.join('\n') : 'none'}`);
