@@ -2,7 +2,16 @@ package com.komgatv.feature.reader
 
 import android.content.Context
 import androidx.activity.compose.BackHandler
+import android.os.SystemClock
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -27,6 +36,13 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
+import kotlin.math.roundToInt
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -35,7 +51,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -43,7 +58,6 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.ScaleFactor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -59,7 +73,9 @@ import coil3.request.Disposable
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Precision
+import timber.log.Timber
 import com.komgatv.core.model.ImageEnhancement
+import com.komgatv.core.model.PageTransition
 import com.komgatv.core.model.ReaderType
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.ScaleType
@@ -229,9 +245,16 @@ private fun ReaderContent(
         }
     }
 
-    val contentScale = remember(state.scaleType, state.stretchToFit) {
-        contentScaleFor(state.scaleType, state.stretchToFit)
-    }
+    val contentScale = remember(state.scaleType) { contentScaleFor(state.scaleType) }
+
+    // 확대(줌인): 크기 맞춤 결과를 펼침째(두 쪽이면 두 쪽 함께, 가운데 기준) 키운다.
+    // 화면 고정 모드에서는 ▲▼로 위아래를 본다 (반 칸씩, 쪽이 바뀌면 가운데로).
+    val zoom = state.zoomPercent / 100f
+    var panStep by remember(state.currentSpreadIndex, state.zoomPercent, state.scaleType) { mutableIntStateOf(0) }
+    val panOffset by animateFloatAsState(
+        targetValue = -panStep / PAN_STEPS.toFloat() * (zoom - 1f) * screenHeightPx / 2f,
+        label = "zoom-pan",
+    )
 
     Box(
         modifier = Modifier
@@ -268,6 +291,8 @@ private fun ReaderContent(
                         coroutineScope.launch {
                             scrollState.animateScrollTo((scrollState.value - screenHeightPx / 2).coerceAtLeast(0))
                         }
+                    } else if (!scrollable && zoom > 1f) {
+                        panStep = (panStep - 1).coerceAtLeast(-PAN_STEPS)
                     }
                     Key.DirectionDown -> if (state.showOverlay) {
                         viewModel.jumpPages(-10)
@@ -284,6 +309,8 @@ private fun ReaderContent(
                                 (scrollState.value + screenHeightPx / 2).coerceAtMost(scrollState.maxValue)
                             )
                         }
+                    } else if (!scrollable && zoom > 1f) {
+                        panStep = (panStep + 1).coerceAtMost(PAN_STEPS)
                     }
                     else -> return@onPreviewKeyEvent false
                 }
@@ -292,13 +319,15 @@ private fun ReaderContent(
             },
     ) {
         val spreadContent: @Composable () -> Unit = {
-            SpreadPages(
-                state = state,
-                contentScale = contentScale,
-                screenWidthPx = screenWidthPx,
-                screenHeightPx = screenHeightPx,
-                scrollable = scrollable,
-            )
+            AnimatedSpread(state) { shown ->
+                SpreadPages(
+                    state = shown,
+                    contentScale = contentScale,
+                    screenWidthPx = screenWidthPx,
+                    screenHeightPx = screenHeightPx,
+                    scrollable = scrollable,
+                )
+            }
         }
 
         if (!continuous && state.endPage != null) {
@@ -331,6 +360,7 @@ private fun ReaderContent(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .zoomedFromTop(zoom)
                         .heightIn(min = screenHeightDp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -338,7 +368,17 @@ private fun ReaderContent(
                 }
             }
         } else {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clipToBounds()
+                    .graphicsLayer {
+                        scaleX = zoom
+                        scaleY = zoom
+                        translationY = panOffset
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
                 spreadContent()
             }
         }
@@ -368,6 +408,68 @@ private fun ReaderContent(
             )
         }
     }
+}
+
+/** 이보다 빨리 연달아 넘기면 효과 없이 바로 바꾼다 (키를 누르고 있을 때 오히려 느려지지 않게) */
+private const val RAPID_FLIP_MILLIS = 300L
+private const val SLIDE_MILLIS = 180
+private const val FADE_MILLIS = 150
+
+/**
+ * 펼침이 바뀔 때 화면 전환 효과 — 이미 그린 화면을 옮기거나(밀기) 겹치기만(페이드) 해서 GPU 부담이 적다.
+ *
+ * 효과는 한 칸 앞·뒤로 넘길 때만, 읽기 방향을 따라간다(오른쪽→왼쪽이면 반대로 민다).
+ * 점프·책 바꿈·설정 변경, 빠른 연타, 아직 받지 않은 쪽(불러오는 중 표시)은 바로 바꾼다.
+ */
+@Composable
+private fun AnimatedSpread(state: ReaderUiState.Reading, content: @Composable (ReaderUiState.Reading) -> Unit) {
+    val context = LocalContext.current
+    // 효과는 펼침이 바뀔 때 한 번만 정한다 — transitionSpec은 같은 전환에도 여러 번 불린다
+    val decision = remember { TransitionDecision() }
+    AnimatedContent(
+        targetState = state,
+        contentKey = { it.spreadPageUrls },
+        transitionSpec = {
+            val target = targetState
+            if (target.spreadPageUrls != decision.urls) {
+                val now = SystemClock.uptimeMillis()
+                val rapid = now - decision.at < RAPID_FLIP_MILLIS
+                val ready = target.spreadPageUrls.all { url -> isInMemory(context, url) }
+                decision.urls = target.spreadPageUrls
+                decision.at = now
+                decision.animate = target.pageTransition != PageTransition.OFF && target.pageStep != 0 && !rapid && ready
+                Timber.d("펼침 전환: step=${target.pageStep} rapid=$rapid ready=$ready → ${if (decision.animate) target.pageTransition else "없음"}")
+            }
+            when {
+                !decision.animate -> EnterTransition.None togetherWith ExitTransition.None
+                target.pageTransition == PageTransition.FADE ->
+                    fadeIn(tween(FADE_MILLIS)) togetherWith fadeOut(tween(FADE_MILLIS))
+                else -> {
+                    // 다음 펼침은 읽는 쪽에서 들어온다: 왼쪽→오른쪽이면 오른쪽에서, 오른쪽→왼쪽이면 왼쪽에서
+                    val rtl = target.readingDirection == ReadingDirection.RIGHT_TO_LEFT
+                    val from = if ((target.pageStep > 0) != rtl) 1 else -1
+                    slideInHorizontally(tween(SLIDE_MILLIS)) { width -> from * width } togetherWith
+                        slideOutHorizontally(tween(SLIDE_MILLIS)) { width -> -from * width }
+                }
+            }.using(SizeTransform(clip = true))
+        },
+        label = "spread",
+    ) { shown ->
+        content(shown)
+    }
+}
+
+/** 마지막으로 정한 펼침 전환 (어느 펼침으로, 언제, 효과를 쓸지) */
+private class TransitionDecision {
+    var urls: List<String> = emptyList()
+    var at = 0L
+    var animate = false
+}
+
+/** 이 쪽이 이미 메모리에 있어 바로 그릴 수 있는지 */
+private fun isInMemory(context: Context, url: String): Boolean {
+    val cache = SingletonImageLoader.get(context).memoryCache ?: return false
+    return cache.keys.any { it.key == url }
 }
 
 /**
@@ -535,23 +637,35 @@ private fun pageRequest(
         .build()
 }
 
-/** Komelia의 크기 맞춤 + 작은 이미지 키우기(stretchToFit)를 Compose ContentScale로 */
-private fun contentScaleFor(scaleType: ScaleType, stretchToFit: Boolean): ContentScale {
-    val base = when (scaleType) {
-        ScaleType.SCREEN -> ContentScale.Fit
-        ScaleType.FIT_WIDTH -> ContentScale.FillWidth
-        ScaleType.FIT_HEIGHT -> ContentScale.FillHeight
-        ScaleType.ORIGINAL -> return ContentScale.None
-    }
-    return if (stretchToFit) base else NoUpscale(base)
-}
+/** 확대 상태에서 ▲▼ 한 번에 움직이는 양 — 넘치는 높이의 절반을 이만큼 나눈다 */
+private const val PAN_STEPS = 2
 
-/** 줄이기만 하고 키우지는 않는 ContentScale */
-private class NoUpscale(private val base: ContentScale) : ContentScale {
-    override fun computeScaleFactor(srcSize: Size, dstSize: Size): ScaleFactor {
-        val factor = base.computeScaleFactor(srcSize, dstSize)
-        return ScaleFactor(factor.scaleX.coerceAtMost(1f), factor.scaleY.coerceAtMost(1f))
+/**
+ * 스크롤 모드(너비 맞춤·원본)의 확대: 위쪽 가운데를 기준으로 키우고, 키운 높이만큼 자리를 차지해 끝까지 스크롤된다.
+ * 좌우로 넘치는 부분은 잘린다.
+ */
+private fun Modifier.zoomedFromTop(zoom: Float): Modifier =
+    if (zoom <= 1f) {
+        this
+    } else {
+        clipToBounds().layout { measurable, constraints ->
+            val placeable = measurable.measure(constraints)
+            layout(placeable.width, (placeable.height * zoom).roundToInt()) {
+                placeable.placeWithLayer(0, 0) {
+                    scaleX = zoom
+                    scaleY = zoom
+                    transformOrigin = TransformOrigin(0.5f, 0f)
+                }
+            }
+        }
     }
+
+/** Komelia의 크기 맞춤을 Compose ContentScale로 — 작은 쪽도 늘 맞춰 키운다 */
+private fun contentScaleFor(scaleType: ScaleType): ContentScale = when (scaleType) {
+    ScaleType.SCREEN -> ContentScale.Fit
+    ScaleType.FIT_WIDTH -> ContentScale.FillWidth
+    ScaleType.FIT_HEIGHT -> ContentScale.FillHeight
+    ScaleType.ORIGINAL -> ContentScale.None
 }
 
 /** 진행 표시에 쓰는 쪽 — 펼침에서 보이는 큰 쪽, 세로 스크롤에서 보이는 큰 쪽 */

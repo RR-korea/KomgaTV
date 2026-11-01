@@ -22,7 +22,6 @@
     <string name="view_scale_original">Original</string>
     <string name="view_side_padding">Side padding</string>
     <string name="view_page_spacing">Page spacing</string>
-    <string name="view_stretch">Stretch small images</string>
     <string name="view_enhancement">Image enhancement</string>
     <string name="view_enhancement_off">Off</string>
     <string name="view_enhancement_smooth">Smooth upscaling</string>
@@ -32,4 +31,9 @@
     <string name="view_dp_value">%1$d dp</string>
     <string name="view_on">On</string>
     <string name="view_off">Off</string>
+    <string name="view_zoom">Zoom</string>
+    <string name="view_transition">Page transition</string>
+    <string name="view_transition_off">Off</string>
+    <string name="view_transition_slide">Slide</string>
+    <string name="view_transition_fade">Fade</string>
 </resources>

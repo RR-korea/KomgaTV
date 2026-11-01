@@ -15,6 +15,7 @@ import com.komgatv.core.model.BookPage
 import com.komgatv.core.model.ImageEnhancement
 import com.komgatv.core.model.LoadError
 import com.komgatv.core.model.PageLayout
+import com.komgatv.core.model.PageTransition
 import com.komgatv.core.model.ReadProgress
 import com.komgatv.core.model.ReaderSettings
 import com.komgatv.core.model.ReaderType
@@ -412,7 +413,7 @@ class ReaderViewModelTest {
     }
 
     @Test
-    fun `설정 변경 - 크기 맞춤 및 작은 이미지 키우기 설정 저장`() = runTest(testDispatcher) {
+    fun `설정 변경 - 크기 맞춤 설정 저장`() = runTest(testDispatcher) {
         val series = createTestSeries(id = "s1")
         val book = createTestBook(id = "b1", seriesId = "s1", pageCount = 6)
         seriesRepository.seriesMap[series.id] = series
@@ -422,14 +423,11 @@ class ReaderViewModelTest {
         advanceUntilIdle()
 
         viewModel.setScaleType(ScaleType.FIT_WIDTH)
-        viewModel.setStretchToFit(false)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value as ReaderUiState.Reading
         assertEquals(ScaleType.FIT_WIDTH, state.scaleType)
-        assertFalse(state.stretchToFit)
         assertEquals(ScaleType.FIT_WIDTH, readerPreferences.series.value.values.single().scaleType)
-        assertFalse(readerPreferences.series.value.values.single().stretchToFit)
     }
 
     @Test
@@ -861,6 +859,67 @@ class ReaderViewModelTest {
 
         assertEquals(listOf("http://localhost:8080/api/v1/books/b1/pages/1/raw"), reading.spreadPageUrls)
         assertTrue(reading.preloadSpreads.flatten().all { it.endsWith("/raw") })
+    }
+
+    @Test
+    fun `확대 - 1% 단위로 바뀌고 100~120 안에서, 이 작품에만 저장된다`() = runTest(testDispatcher) {
+        openBook()
+        advanceUntilIdle()
+        assertEquals(100, reading.zoomPercent)
+
+        viewModel.applySettings(reading.settings.copy(zoomPercent = 101))
+        advanceUntilIdle()
+        assertEquals(101, reading.zoomPercent)
+        assertEquals(101, readerPreferences.series.value["s1"]!!.zoomPercent)
+        assertEquals(100, readerPreferences.readerSettings.first().zoomPercent)
+
+        viewModel.setZoomPercent(1000)
+        assertEquals(120, reading.zoomPercent)
+        viewModel.setZoomPercent(50)
+        assertEquals(100, reading.zoomPercent)
+    }
+
+    @Test
+    fun `확대 - 저장된 작품 확대로 열고, 기본값으로 되돌리면 100`() = runTest(testDispatcher) {
+        readerPreferences.series.value = mapOf("s1" to ReaderSettings(zoomPercent = 125))
+        openBook()
+        advanceUntilIdle()
+        assertEquals(125, reading.zoomPercent)
+
+        viewModel.resetSeriesSettings()
+        advanceUntilIdle()
+        assertEquals(100, reading.zoomPercent)
+    }
+
+    @Test
+    fun `화면 전환 - 한 칸 앞뒤는 방향, 점프·처음 열기·설정 변경은 0`() = runTest(testDispatcher) {
+        openBook(progress = ReadProgress(page = 5, completed = false))
+        advanceUntilIdle()
+        assertEquals(0, reading.pageStep)
+
+        viewModel.nextSpread()
+        assertEquals(1, reading.pageStep)
+        viewModel.previousSpread()
+        assertEquals(-1, reading.pageStep)
+
+        viewModel.jumpPages(3)
+        assertEquals(0, reading.pageStep)
+
+        viewModel.nextSpread()
+        viewModel.setPageLayout(PageLayout.DOUBLE_PAGES)
+        assertEquals(0, reading.pageStep)
+    }
+
+    @Test
+    fun `화면 전환 - 기본은 밀기, 바꾸면 이 작품에 저장`() = runTest(testDispatcher) {
+        openBook()
+        advanceUntilIdle()
+        assertEquals(PageTransition.SLIDE, reading.pageTransition)
+
+        viewModel.applySettings(reading.settings.copy(pageTransition = PageTransition.OFF))
+        advanceUntilIdle()
+        assertEquals(PageTransition.OFF, reading.pageTransition)
+        assertEquals(PageTransition.OFF, readerPreferences.series.value["s1"]!!.pageTransition)
     }
 
     @Test

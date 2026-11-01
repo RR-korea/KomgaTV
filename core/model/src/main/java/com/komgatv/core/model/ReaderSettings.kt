@@ -68,25 +68,48 @@ enum class ImageEnhancement {
 }
 
 /**
+ * 페이지 넘김 화면 전환 효과. 이미 그린 화면을 옮기거나 겹치기만 해서(GPU) 부담이 적다.
+ */
+enum class PageTransition {
+    /** 바로 바꾼다 */
+    OFF,
+
+    /** 읽는 방향으로 밀기 (0.18초) */
+    SLIDE,
+
+    /** 겹쳐 바꾸기 (0.15초) */
+    FADE,
+}
+
+/**
  * 리더 보기 설정 모델 (앱 전체 기본값, 또는 한 작품의 설정)
  *
  * @property readerType 리더 종류 (기본값: PAGED)
  * @property pageLayout 페이지 표시 방식 (기본값: SINGLE_PAGE)
  * @property scaleType 크기 맞춤 방식 (기본값: SCREEN)
- * @property stretchToFit 화면보다 작은 이미지를 확대할지 여부 (기본값: true)
  * @property readingDirection 기본 읽기 방향 (기본값: LEFT_TO_RIGHT)
  * @property continuousPadding 세로 스크롤 시 좌우 여백 (화면 너비 비율, 기본값: 0f)
  * @property continuousPageSpacing 세로 스크롤 시 쪽 사이 간격 dp (기본값: 0)
+ * @property zoomPercent 페이지 넘김에서 크기 맞춤으로 맞춘 결과를 더 확대(줌인)하는 비율 %
+ *   ([MIN_ZOOM_PERCENT]~[MAX_ZOOM_PERCENT], 1% 단위 — 100이면 확대 안 함, 120%까지면 충분하다는 사용자 의견).
+ *   스캔 여백을 잘라 크게 볼 때 — 작품별로만 바꾼다.
  */
 data class ReaderSettings(
     val readerType: ReaderType = ReaderType.PAGED,
     val pageLayout: PageLayout = PageLayout.SINGLE_PAGE,
     val scaleType: ScaleType = ScaleType.SCREEN,
-    val stretchToFit: Boolean = true,
     val readingDirection: ReadingDirection = ReadingDirection.LEFT_TO_RIGHT,
     val continuousPadding: Float = 0f,
     val continuousPageSpacing: Int = 0,
     val imageEnhancement: ImageEnhancement = ImageEnhancement.OFF,
     /** EPUB 글자 크기 (WebView textZoom, %) */
     val epubTextZoom: Int = 100,
-)
+    val zoomPercent: Int = MIN_ZOOM_PERCENT,
+    /** 페이지 넘김 화면 전환 효과 */
+    val pageTransition: PageTransition = PageTransition.SLIDE,
+) {
+    companion object {
+        const val MIN_ZOOM_PERCENT = 100
+        const val MAX_ZOOM_PERCENT = 120
+    }
+}

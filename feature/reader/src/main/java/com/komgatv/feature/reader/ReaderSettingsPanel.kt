@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -76,18 +77,25 @@ fun ReaderSettingsPanel(
                 firstFocus = firstFocus,
                 layoutOffset = layoutOffset,
                 onLayoutOffsetChange = onLayoutOffsetChange,
+                showZoom = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            if (seriesCustomized) {
-                OutlinedButton(onClick = onReset) {
-                    Text(stringResource(R.string.reader_settings_reset))
+            // 되돌리기 버튼과 키 안내를 한 줄에 — 항목이 늘어도 한 화면에 들어가게
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                if (seriesCustomized) {
+                    OutlinedButton(onClick = onReset) {
+                        Text(stringResource(R.string.reader_settings_reset))
+                    }
                 }
+                Text(
+                    text = stringResource(R.string.reader_settings_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray,
+                )
             }
-            Text(
-                text = stringResource(R.string.reader_settings_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray,
-            )
         }
     }
 }

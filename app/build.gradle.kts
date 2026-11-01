@@ -6,9 +6,9 @@ plugins {
     alias(libs.plugins.komgatv.hilt)
 }
 
-// 버전 — APK 파일 이름에도 들어간다 (KomgaTV-v0.2.4-b6-debug.apk)
-val appVersionCode = 6
-val appVersionName = "0.2.4"
+// 버전 — APK 파일 이름에도 들어간다 (KomgaTV-v0.2.9-b11-debug.apk)
+val appVersionCode = 11
+val appVersionName = "0.2.9"
 
 base {
     archivesName = "KomgaTV-v$appVersionName-b$appVersionCode"

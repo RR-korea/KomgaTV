@@ -15,6 +15,7 @@ import com.komgatv.core.model.MediaProfile
 import com.komgatv.core.model.displayName
 import com.komgatv.core.model.ImageEnhancement
 import com.komgatv.core.model.PageLayout
+import com.komgatv.core.model.PageTransition
 import com.komgatv.core.model.ReaderSettings
 import com.komgatv.core.model.ReaderType
 import com.komgatv.core.model.ReadingDirection
@@ -66,7 +67,6 @@ sealed interface ReaderUiState {
      * @property continuousPageSpacing 세로 스크롤 쪽 사이 간격 dp
      * @property currentContinuousPage 화면에 보이는 쪽 중 가장 큰 번호 (Continuous 모드, 진행 표시·저장용)
      * @property scrollToTileIndex 화면이 스크롤해야 할 타일 인덱스 (처음 열 때, 쪽 이동, 점프). 스크롤한 뒤 onTileScrolled
-     * @property stretchToFit 작은 이미지 확대 여부
      * @property showOverlay 정보 오버레이 표시 여부
      * @property showSettingsPanel 보기 설정 패널 표시 여부
      */
@@ -88,8 +88,16 @@ sealed interface ReaderUiState {
         val continuousPageSpacing: Int,
         val currentContinuousPage: Int,
         val scrollToTileIndex: Int? = null,
-        val stretchToFit: Boolean,
         val imageEnhancement: ImageEnhancement = ImageEnhancement.OFF,
+        /** 크기 맞춤 결과를 더 확대하는 비율 % (페이지 넘김) */
+        val zoomPercent: Int = ReaderSettings.MIN_ZOOM_PERCENT,
+        /** 페이지 넘김 화면 전환 효과 */
+        val pageTransition: PageTransition = PageTransition.SLIDE,
+        /**
+         * 지금 펼침으로 어떻게 왔는지 — +1 다음 펼침, −1 이전 펼침, 0 그 밖(처음 열기·점프·설정 변경).
+         * 화면 전환 효과는 ±1일 때만 쓴다.
+         */
+        val pageStep: Int = 0,
         /** 이 작품에 따로 저장된 보기 설정이 있다 (없으면 앱 기본값을 따른다) */
         val seriesCustomized: Boolean = false,
         val showOverlay: Boolean = false,
@@ -105,11 +113,12 @@ sealed interface ReaderUiState {
                 readerType = readerType,
                 pageLayout = pageLayout,
                 scaleType = scaleType,
-                stretchToFit = stretchToFit,
                 readingDirection = readingDirection,
                 continuousPadding = continuousPadding,
                 continuousPageSpacing = continuousPageSpacing,
                 imageEnhancement = imageEnhancement,
+                zoomPercent = zoomPercent,
+                pageTransition = pageTransition,
             )
     }
 
@@ -197,12 +206,14 @@ class ReaderViewModel @Inject constructor(
     private var currentReaderType: ReaderType = ReaderType.PAGED
     private var currentLayout: PageLayout = PageLayout.SINGLE_PAGE
     private var currentScaleType: ScaleType = ScaleType.SCREEN
-    private var currentStretchToFit: Boolean = true
     private var currentReadingDirection: ReadingDirection = ReadingDirection.LEFT_TO_RIGHT
     private var layoutOffset: Boolean = false
     private var currentContinuousPadding: Float = 0f
     private var currentContinuousPageSpacing: Int = 0
     private var currentImageEnhancement: ImageEnhancement = ImageEnhancement.OFF
+    private var currentZoomPercent: Int = ReaderSettings.MIN_ZOOM_PERCENT
+    private var currentPageTransition: PageTransition = PageTransition.SLIDE
+    private var pageStep = 0
     private var currentSeriesId: String = ""
 
     // 다음 권 (KMReader처럼 책 끝 근처에서 미리 찾고 첫 쪽을 미리 받는다)
@@ -261,6 +272,7 @@ class ReaderViewModel @Inject constructor(
         previousBook = null
         previousBookResolved = false
         showingStartPage = false
+        pageStep = 0
 
         viewModelScope.launch {
             if (!seamless) _uiState.value = ReaderUiState.Loading
@@ -380,7 +392,7 @@ class ReaderViewModel @Inject constructor(
             showingEndPage -> openNextBook()
             // 마지막 펼침에서 앞으로 = 책 끝 화면 (마지막 쪽 진행·완독은 이미 저장 예약됨)
             currentSpreadIndex >= currentSpreads.lastIndex -> showEndPage()
-            else -> applySpreadChange(currentSpreadIndex + 1)
+            else -> applySpreadChange(currentSpreadIndex + 1, step = 1)
         }
     }
 
@@ -396,7 +408,7 @@ class ReaderViewModel @Inject constructor(
             showingStartPage -> openPreviousBook()
             // 첫 펼침에서 뒤로 = 책 첫 화면
             currentSpreadIndex <= 0 -> showStartPage()
-            else -> applySpreadChange(currentSpreadIndex - 1)
+            else -> applySpreadChange(currentSpreadIndex - 1, step = -1)
         }
     }
 
@@ -576,7 +588,7 @@ class ReaderViewModel @Inject constructor(
             val targetPageNumber = (currentPageNumber + delta).coerceIn(1, state.totalPages)
             val targetSpreadIndex = currentSpreads.indexOfFirst { it.containsPage(targetPageNumber) }
             if (targetSpreadIndex >= 0 && targetSpreadIndex != currentSpreadIndex) {
-                applySpreadChange(targetSpreadIndex)
+                applySpreadChange(targetSpreadIndex, step = 0)
             }
         } else {
             val from = firstVisibleTile?.pageNumber ?: currentContinuousPage
@@ -657,17 +669,6 @@ class ReaderViewModel @Inject constructor(
         saveSeriesSettings()
     }
 
-    /** 작은 이미지 키우기(stretchToFit) 변경 */
-    fun setStretchToFit(stretch: Boolean) {
-        if (currentStretchToFit == stretch) return
-        currentStretchToFit = stretch
-        if (currentReaderType == ReaderType.CONTINUOUS) {
-            rebuildContinuousTiles()
-        }
-        updateReadingState()
-        saveSeriesSettings()
-    }
-
     /** 읽기 방향(ReadingDirection) 변경 */
     fun setReadingDirection(direction: ReadingDirection) {
         currentReadingDirection = direction
@@ -689,10 +690,28 @@ class ReaderViewModel @Inject constructor(
         if (new.pageLayout != currentLayout) setPageLayout(new.pageLayout)
         if (new.readingDirection != currentReadingDirection) setReadingDirection(new.readingDirection)
         if (new.scaleType != currentScaleType) setScaleType(new.scaleType)
-        if (new.stretchToFit != currentStretchToFit) setStretchToFit(new.stretchToFit)
         if (new.continuousPadding != currentContinuousPadding) setContinuousPadding(new.continuousPadding)
         if (new.continuousPageSpacing != currentContinuousPageSpacing) setContinuousPageSpacing(new.continuousPageSpacing)
         if (new.imageEnhancement != currentImageEnhancement) setImageEnhancement(new.imageEnhancement)
+        if (new.zoomPercent != currentZoomPercent) setZoomPercent(new.zoomPercent)
+        if (new.pageTransition != currentPageTransition) setPageTransition(new.pageTransition)
+    }
+
+    /** 화면 전환 효과 변경 — 이 작품에 저장 */
+    fun setPageTransition(transition: PageTransition) {
+        if (currentPageTransition == transition) return
+        currentPageTransition = transition
+        updateReadingState()
+        saveSeriesSettings()
+    }
+
+    /** 확대(줌인) 비율 변경 — 이 작품에 저장 */
+    fun setZoomPercent(percent: Int) {
+        val clamped = percent.coerceIn(ReaderSettings.MIN_ZOOM_PERCENT, ReaderSettings.MAX_ZOOM_PERCENT)
+        if (currentZoomPercent == clamped) return
+        currentZoomPercent = clamped
+        updateReadingState()
+        saveSeriesSettings()
     }
 
     /** 이 작품의 보기 설정을 지우고 앱 기본값으로 되돌린다 (보던 쪽은 그대로) */
@@ -731,21 +750,23 @@ class ReaderViewModel @Inject constructor(
         currentReadingDirection = settings.readingDirection
         currentLayout = settings.pageLayout
         currentScaleType = settings.scaleType
-        currentStretchToFit = settings.stretchToFit
         currentContinuousPadding = settings.continuousPadding
         currentContinuousPageSpacing = settings.continuousPageSpacing
         currentImageEnhancement = settings.imageEnhancement
+        currentZoomPercent = settings.zoomPercent
+        currentPageTransition = settings.pageTransition
     }
 
     private fun currentSettings() = ReaderSettings(
         readerType = currentReaderType,
         pageLayout = currentLayout,
         scaleType = currentScaleType,
-        stretchToFit = currentStretchToFit,
         readingDirection = currentReadingDirection,
         continuousPadding = currentContinuousPadding,
         continuousPageSpacing = currentContinuousPageSpacing,
         imageEnhancement = currentImageEnhancement,
+        zoomPercent = currentZoomPercent,
+        pageTransition = currentPageTransition,
     )
 
     /** 패널에서 바꾼 값은 이 작품(시리즈)에만 저장한다 — 앱 기본값은 서버 설정 화면에서 */
@@ -861,7 +882,9 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    private fun applySpreadChange(newSpreadIndex: Int) {
+    /** @param step +1 다음 펼침, −1 이전 펼침, 0 점프 — 화면 전환 효과 방향 */
+    private fun applySpreadChange(newSpreadIndex: Int, step: Int) {
+        pageStep = step
         if (newSpreadIndex >= currentSpreads.lastIndex - NEXT_BOOK_LOOKAHEAD) resolveNextBook()
         if (newSpreadIndex <= NEXT_BOOK_LOOKAHEAD) resolvePreviousBook()
         val state = _uiState.value as? ReaderUiState.Reading ?: return
@@ -904,6 +927,7 @@ class ReaderViewModel @Inject constructor(
         val currentPageNumber = currentSpreads.getOrNull(currentSpreadIndex)
             ?.pages?.firstOrNull()?.number ?: 1
 
+        pageStep = 0
         currentSpreads = SpreadMapBuilder.buildSpreadMap(
             pages = currentBookPages,
             layout = currentLayout,
@@ -928,7 +952,6 @@ class ReaderViewModel @Inject constructor(
                 screenHeightPx = screenHeightPx,
                 sidePaddingFraction = currentContinuousPadding,
                 pageSpacingDp = currentContinuousPageSpacing,
-                stretchToFit = currentStretchToFit,
             ),
         )
         if (currentReaderType == ReaderType.CONTINUOUS && anchor != null) {
@@ -976,8 +999,10 @@ class ReaderViewModel @Inject constructor(
             continuousPageSpacing = currentContinuousPageSpacing,
             currentContinuousPage = currentContinuousPage,
             scrollToTileIndex = scrollToTileIndex,
-            stretchToFit = currentStretchToFit,
             imageEnhancement = currentImageEnhancement,
+            zoomPercent = currentZoomPercent,
+            pageTransition = currentPageTransition,
+            pageStep = pageStep,
             seriesCustomized = seriesCustomized,
             showOverlay = existingOverlay,
             showSettingsPanel = existingSettings,

@@ -53,7 +53,6 @@ object ContinuousTilePlanner {
         val screenHeightPx: Int,
         val sidePaddingFraction: Float = 0f, // 0.0f ~ 0.45f
         val pageSpacingDp: Int = 0,           // 0 ~ 64 dp
-        val stretchToFit: Boolean = true,
     )
 
     /**
@@ -86,12 +85,9 @@ object ContinuousTilePlanner {
         }
 
         // 스케일 및 표시 너비 계산
-        val (scale, displayWidth) = if (params.stretchToFit || width > targetWidthPx) {
-            val s = targetWidthPx.toFloat() / width.toFloat()
-            s to targetWidthPx
-        } else {
-            1.0f to width
-        }
+        // 작은 쪽도 늘 쪽 너비까지 키운다
+        val scale = targetWidthPx.toFloat() / width.toFloat()
+        val displayWidth = targetWidthPx
 
         // 원본 이미지 기준 타일 하나의 최대 높이 (화면 높이 이하가 되도록)
         val maxSrcTileHeight = (params.screenHeightPx / scale).toInt().coerceAtLeast(1)

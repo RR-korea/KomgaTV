@@ -46,7 +46,7 @@ limitations under the License.
 - **Project:** Noto Sans (https://github.com/notofonts/latin-greek-cyrillic)
 - **Copyright:** Copyright 2022 The Noto Project Authors
 - **License:** SIL Open Font License 1.1
-- **Use:** The "KomgaTV" wordmark in the app icon and TV banner is rendered from Noto Sans Bold.
+- **Use:** The "KomgaTV" wordmark in the TV banner is rendered from Noto Sans Bold.
 
 ---
 
@@ -55,7 +55,7 @@ limitations under the License.
 - **Project:** Komga (https://github.com/gotson/komga), `komga-webui/src/assets/logo.svg`
 - **Copyright:** Copyright (c) 2019 Gauthier Roebroeck
 - **License:** MIT
-- **Use:** The TV banner shows the Komga logo next to the "KomgaTV" wordmark, as a Komga client.
+- **Use:** The TV banner and the app icon show the Komga logo (the banner next to the "KomgaTV" wordmark), as a Komga client.
 
 ---
 
