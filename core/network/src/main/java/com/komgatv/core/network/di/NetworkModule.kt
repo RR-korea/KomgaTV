@@ -27,7 +27,7 @@ object NetworkModule {
     fun provideSessionCallFactory(sessionManager: ServerSessionManager): Call.Factory {
         val unauthenticated = OkHttpClient()
         return Call.Factory { request ->
-            (sessionManager.session.value?.okHttpClient ?: unauthenticated).newCall(request)
+            (sessionManager.session.value?.imageClient ?: unauthenticated).newCall(request)
         }
     }
 }

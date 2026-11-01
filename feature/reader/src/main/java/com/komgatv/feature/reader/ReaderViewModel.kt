@@ -951,7 +951,7 @@ class ReaderViewModel @Inject constructor(
             ?: PageSpread(emptyList())
 
         val totalPages = currentBookPages.size.coerceAtLeast(1)
-        val spreadUrls = currentSpread.pages.mapNotNull { imageUrls.page(currentBookId, it.number) }
+        val spreadUrls = currentSpread.pages.mapNotNull { pagedUrl(book, it.number) }
         val preloadSpreads = buildPreloadSpreads(currentBookId, currentSpreadIndex, currentSpreads) +
             nextBookPreload() + previousBookPreload()
 
@@ -1011,8 +1011,16 @@ class ReaderViewModel @Inject constructor(
         val next = nextBook ?: return emptyList()
         if (currentReaderType != ReaderType.PAGED) return emptyList()
         if (currentSpreadIndex < currentSpreads.lastIndex - 1 && !showingEndPage) return emptyList()
-        return listOf(listOfNotNull(imageUrls.page(next.id, 1)), listOfNotNull(imageUrls.page(next.id, 2)))
+        return listOf(listOfNotNull(pagedUrl(next, 1)), listOfNotNull(pagedUrl(next, 2)))
     }
+
+    /** 페이지 넘김 모드의 쪽 주소 — PDF 책은 서버가 그리지 않은 원래 쪽(TV에서 그린다) */
+    private fun pagedUrl(book: Book, pageNumber: Int): String? =
+        if (book.mediaProfile == MediaProfile.PDF) {
+            imageUrls.pdfPage(book.id, pageNumber)
+        } else {
+            imageUrls.page(book.id, pageNumber)
+        }
 
     /** 첫 펼침 근처면 이전 권 마지막 두 쪽도 미리 받는다 */
     private fun previousBookPreload(): List<List<String>> {
@@ -1021,7 +1029,7 @@ class ReaderViewModel @Inject constructor(
         if (currentSpreadIndex > 1 && !showingStartPage) return emptyList()
         return listOf(previous.pageCount, previous.pageCount - 1)
             .filter { it >= 1 }
-            .map { listOfNotNull(imageUrls.page(previous.id, it)) }
+            .map { listOfNotNull(pagedUrl(previous, it)) }
     }
 
     private fun buildPreloadSpreads(
@@ -1041,7 +1049,7 @@ class ReaderViewModel @Inject constructor(
 
         return targetIndices.map { idx ->
             spreads[idx].pages.mapNotNull { page ->
-                imageUrls.page(bookId, page.number)
+                currentBook?.let { pagedUrl(it, page.number) } ?: imageUrls.page(bookId, page.number)
             }
         }
     }

@@ -55,6 +55,7 @@ import androidx.tv.material3.Text
 import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
+import coil3.request.Disposable
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Precision
@@ -186,15 +187,36 @@ private fun ReaderContent(
         scrollState.scrollTo(0)
     }
 
-    // 이웃 펼침(±2) 프리로드 — 실제 표시와 같은 요청(크기·정밀도)이라야 메모리 캐시에 맞는다
-    LaunchedEffect(state.preloadSpreads, state.scaleType, state.imageEnhancement, screenWidthPx, screenHeightPx) {
+    // 이웃 펼침 미리 받기 — 실제 표시와 같은 요청(크기·정밀도)이라야 메모리 캐시에 맞는다.
+    // 더는 가까이 있지 않은 쪽은 취소한다: 빨리 넘기거나 10쪽씩 건너뛰어도 받을 쪽이 쌓이지 않게
+    // (PDF는 서버가 쪽마다 2~3초씩 그려서, 쌓이면 지금 쪽이 그 뒤에서 한참 기다린다)
+    val preloads = remember { mutableMapOf<String, Disposable>() }
+    LaunchedEffect(
+        state.preloadSpreads, state.spreadPageUrls, state.scaleType, state.imageEnhancement, screenWidthPx, screenHeightPx,
+    ) {
         val imageLoader = SingletonImageLoader.get(context)
-        state.preloadSpreads.forEach { urls ->
-            urls.forEach { url ->
-                imageLoader.enqueue(
-                    pageRequest(context, url, state.scaleType, slotWidth(screenWidthPx, urls.size), screenHeightPx, state.imageEnhancement)
-                )
-            }
+        val variant = "${state.scaleType}|${state.imageEnhancement}|${screenWidthPx}x$screenHeightPx"
+        val wanted = state.preloadSpreads.flatMap { urls -> urls.map { url -> "$url|${urls.size}|$variant" to (url to urls.size) } }
+            .toMap()
+        // 지금 보이는 쪽은 화면이 같은 주소를 받는 중일 수 있어 끊지 않는다 (같은 요청은 한 번만 받는다)
+        val current = state.spreadPageUrls.map { "$it|${state.spreadPageUrls.size}|$variant" }.toSet()
+        preloads.entries.removeAll { (key, disposable) ->
+            val drop = disposable.isDisposed || (key !in wanted && key !in current)
+            if (drop) disposable.dispose()
+            drop
+        }
+        wanted.forEach { (key, page) ->
+            if (key in preloads) return@forEach
+            val (url, slots) = page
+            preloads[key] = imageLoader.enqueue(
+                pageRequest(context, url, state.scaleType, slotWidth(screenWidthPx, slots), screenHeightPx, state.imageEnhancement)
+            )
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            preloads.values.forEach { it.dispose() }
+            preloads.clear()
         }
     }
 
