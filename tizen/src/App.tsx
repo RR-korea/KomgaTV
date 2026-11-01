@@ -1,6 +1,6 @@
 // 앱 틀: 화면 스택을 그리고(아래 화면은 숨긴 채 유지), 키 분배기를 단다.
 import { useEffect } from 'preact/hooks';
-import { activate, move } from './platform/focus';
+import { move } from './platform/focus';
 import { installKeyDispatcher } from './platform/input';
 import { exitApp } from './platform/keys';
 import type { AppKey } from './platform/keys';
@@ -11,8 +11,9 @@ import { ReaderScreen } from './screens/ReaderScreen';
 import { SearchScreen } from './screens/SearchScreen';
 import { SeriesScreen } from './screens/SeriesScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { ToastView } from './ui/overlays';
 
-/** 화면이 키를 안 받았을 때: 방향키 = 포커스 이동, OK = 누르기, Back = 뒤로(맨 처음 화면이면 앱 종료) */
+/** 화면이 키를 안 받았을 때: 방향키 = 포커스 이동, Back = 뒤로(맨 처음 화면이면 앱 종료). OK는 input.ts가 키를 뗄 때 누른다 */
 function fallback(key: AppKey): boolean {
   switch (key) {
     case 'left':
@@ -21,8 +22,6 @@ function fallback(key: AppKey): boolean {
     case 'down':
       move(key);
       return true;
-    case 'enter':
-      return activate();
     case 'back':
       if (!pop()) exitApp();
       return true;
@@ -61,6 +60,7 @@ export function App() {
           </div>
         );
       })}
+      <ToastView />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 // EPUB 리더 규칙 (Android T12와 같음). 순수 함수 — 테스트한다.
-import type { KomgaReadProgress, R2Progression, WebPubManifest } from '../api/types';
+import type { KomgaReadProgress, R2Progression, WebPubLink, WebPubManifest } from '../api/types';
 
 export interface Chapter {
   /** manifest의 전체 URL */
@@ -114,4 +114,44 @@ export class EpubPositionSaver {
     this.pending = null;
     return next ? this.save(next).catch(() => undefined) : Promise.resolve();
   }
+}
+
+/** 목차 한 줄 (Android T13: 들여쓰기 단계와 함께 한 줄로 편다) */
+export interface TocEntry {
+  title: string;
+  depth: number;
+  /** 0부터인 장 번호 */
+  chapter: number;
+}
+
+/**
+ * 목차 → 줄 목록. 목차가 없거나 한 줄뿐이면("Start"만 있는 책) 장마다 한 줄 ("n장" — chapterLabel).
+ * 장 목록에 없는 목차 항목은 버린다.
+ */
+export function tocEntries(
+  manifest: WebPubManifest,
+  chapters: Chapter[],
+  chapterLabel: (n: number) => string,
+): TocEntry[] {
+  const indexOf = new Map(chapters.map((chapter, i) => [resourcePath(chapter.href), i] as [string, number]));
+  const entries: TocEntry[] = [];
+  const walk = (links: WebPubLink[], depth: number) => {
+    for (const link of links) {
+      const chapter = indexOf.get(resourcePath(link.href.split('#')[0]));
+      if (chapter !== undefined) entries.push({ title: link.title || chapterLabel(chapter + 1), depth, chapter });
+      if (link.children?.length) walk(link.children, depth + 1);
+    }
+  };
+  walk(manifest.toc ?? [], 0);
+  if (entries.length > 1) return entries;
+  return chapters.map((_chapter, i) => ({ title: chapterLabel(i + 1), depth: 0, chapter: i }));
+}
+
+/** 지금 장의 목차 줄 — 목차에 없는 장이면 앞 장의 줄 */
+export function currentTocIndex(entries: TocEntry[], chapter: number): number {
+  let found = 0;
+  entries.forEach((entry, i) => {
+    if (entry.chapter <= chapter) found = i;
+  });
+  return found;
 }

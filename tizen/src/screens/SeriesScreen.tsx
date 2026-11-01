@@ -10,6 +10,8 @@ import { awaitWrites, type LoadError, requireSession, session as sessionStore, t
 import { useStore } from '../state/store';
 import { ErrorView, LoadingView, PosterCard, useCachedImage } from '../ui/components';
 import { useEntryFocus } from '../ui/entryFocus';
+import { ActionMenu, type MenuAction, showToast } from '../ui/overlays';
+import { focusKeyOrFirst } from '../platform/focus';
 
 const PAGE_SIZE = 100;
 
@@ -82,6 +84,8 @@ export function SeriesScreen({ entry, active }: { entry: RouteEntry; active: boo
   const [data, setData] = useState<SeriesData | null>(null);
   const [error, setError] = useState<LoadError | null>(null);
   const [version, setVersion] = useState(0);
+  /** OK 길게 누른 책 → 책 메뉴 (Android T13) */
+  const [menuBook, setMenuBook] = useState<KomgaBook | null>(null);
 
   const load = () => {
     setData(null);
@@ -97,9 +101,8 @@ export function SeriesScreen({ entry, active }: { entry: RouteEntry; active: boo
 
   useEffect(load, []);
 
-  // 리더에서 돌아오면 진행도만 다시 읽는다 (화면은 그대로)
-  useEffect(() => {
-    if (entry.returns === 0) return;
+  // 진행도만 다시 읽는다 (화면은 그대로)
+  const refreshBooks = () =>
     awaitWrites()
       .then(() => loadAllBooks(route.seriesId))
       .then(
@@ -109,7 +112,49 @@ export function SeriesScreen({ entry, active }: { entry: RouteEntry; active: boo
         },
         () => undefined,
       );
+
+  // 리더에서 돌아오면
+  useEffect(() => {
+    if (entry.returns > 0) void refreshBooks();
   }, [entry.returns]);
+
+  const bookAction = (run: () => Promise<void>, done: string) => {
+    run().then(
+      () => {
+        showToast(done);
+        void refreshBooks();
+      },
+      () => showToast(t.bookActionFailed),
+    );
+  };
+
+  const bookMenu = (book: KomgaBook): MenuAction[] => {
+    const { client } = requireSession();
+    return [
+      {
+        key: 'menu-read',
+        label: t.bookActionMarkRead,
+        run: () => bookAction(() => client.markRead(book.id, book.media.pagesCount), t.bookActionDoneRead),
+      },
+      {
+        key: 'menu-unread',
+        label: t.bookActionMarkUnread,
+        run: () => bookAction(() => client.markUnread(book.id), t.bookActionDoneUnread),
+      },
+      {
+        key: 'menu-analyze',
+        label: t.bookActionAnalyze,
+        run: () => bookAction(() => client.analyzeBook(book.id), t.bookActionDoneAnalyze),
+      },
+    ];
+  };
+
+  // 메뉴를 닫으면 그 책 카드로 포커스를 돌려준다
+  const closeMenu = () => {
+    const key = menuBook ? `book-${menuBook.id}` : undefined;
+    setMenuBook(null);
+    setTimeout(() => root.current && key && focusKeyOrFirst(root.current, key), 0);
+  };
 
   const defaultKey = data?.books.length ? `book-${data.books[0].id}` : undefined;
   useEntryFocus(root, entry, active, data ? version : error ? -1 : null, error ? 'retry' : defaultKey);
@@ -135,11 +180,13 @@ export function SeriesScreen({ entry, active }: { entry: RouteEntry; active: boo
                 subtitle={bookSubtitle(book)}
                 progress={bookProgress(book)}
                 onClick={() => push({ name: 'reader', bookId: book.id })}
+                onLongPress={() => setMenuBook(book)}
               />
             ))}
           </div>
         </>
       )}
+      {menuBook && <ActionMenu title={bookDisplayTitle(menuBook)} actions={bookMenu(menuBook)} onClose={closeMenu} />}
     </div>
   );
 }

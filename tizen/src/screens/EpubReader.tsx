@@ -8,6 +8,9 @@ import type { KomgaBook } from '../api/types';
 import {
   type Chapter,
   chaptersOf,
+  currentTocIndex,
+  type TocEntry,
+  tocEntries,
   EPUB_SCROLL_RATIO,
   EpubPositionSaver,
   type EpubPosition,
@@ -20,6 +23,7 @@ import {
 import { prepareChapter } from '../epub/chapter';
 import { fmt, t } from '../i18n';
 import { useKeys } from '../platform/input';
+import { current, focusKeyOrFirst, move } from '../platform/focus';
 import type { AppKey } from '../platform/keys';
 import { pop } from '../platform/router';
 import { readerPrefs, saveReaderPrefs } from '../state/readerPrefs';
@@ -37,6 +41,10 @@ export function EpubReader({ book, active }: { book: KomgaBook; active: boolean 
   const [html, setHtml] = useState<string | null>(null);
   const [error, setError] = useState<LoadError | null>(null);
   const [overlay, setOverlay] = useState(false);
+  /** 목차 (Android T13): 정보가 열린 상태에서 OK */
+  const [toc, setToc] = useState<TocEntry[]>([]);
+  const [tocOpen, setTocOpen] = useState(false);
+  const tocPanel = useRef<HTMLDivElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const content = useRef<HTMLDivElement>(null);
   const pendingScroll = useRef<ScrollTarget>(0);
@@ -82,6 +90,7 @@ export function EpubReader({ book, active }: { book: KomgaBook; active: boolean 
         const list = chaptersOf(manifest);
         chaptersRef.current = list;
         setChapters(list);
+        setToc(tocEntries(manifest, list, (n) => fmt(t.epubChapterShort, n)));
         saver.current = new EpubPositionSaver((pos) =>
           trackWrite(requireSession().client.putProgression(book.id, toProgression(chaptersRef.current, pos, new Date()))),
         );
@@ -161,6 +170,11 @@ export function EpubReader({ book, active }: { book: KomgaBook; active: boolean 
     pop();
   };
 
+  // 목차가 열리면 지금 장의 줄에 포커스
+  useEffect(() => {
+    if (tocOpen && tocPanel.current) focusKeyOrFirst(tocPanel.current, `toc-${currentTocIndex(toc, position.chapter)}`);
+  }, [tocOpen]);
+
   const onKey = (key: AppKey): boolean => {
     if (error || !totalChapters) {
       if (key === 'back') {
@@ -168,6 +182,28 @@ export function EpubReader({ book, active }: { book: KomgaBook; active: boolean 
         return true;
       }
       return false; // 오류 화면의 다시 시도 버튼은 기본 처리로
+    }
+    if (tocOpen) {
+      switch (key) {
+        case 'up':
+        case 'down':
+          move(key);
+          break;
+        case 'enter': {
+          const index = Number(current()?.dataset.key?.replace('toc-', ''));
+          const entry = toc[index];
+          setTocOpen(false);
+          setOverlay(false);
+          if (entry) goChapter(entry.chapter, 0);
+          break;
+        }
+        case 'back':
+          setTocOpen(false); // 정보로
+          break;
+        default:
+          break;
+      }
+      return true;
     }
     switch (key) {
       case 'up':
@@ -185,7 +221,8 @@ export function EpubReader({ book, active }: { book: KomgaBook; active: boolean 
         goChapter(position.chapter + 1, 0);
         break;
       case 'enter':
-        setOverlay((value) => !value);
+        if (overlay) setTocOpen(true);
+        else setOverlay(true);
         break;
       case 'back':
         if (overlay) setOverlay(false);
@@ -224,7 +261,25 @@ export function EpubReader({ book, active }: { book: KomgaBook; active: boolean 
           />
         )}
       </div>
-      {overlay && (
+      {tocOpen && (
+        <div class="reader-panel-backdrop">
+          <div ref={tocPanel} class="reader-panel toc-panel" data-focus-trap data-scroll="y" data-scroll-margin="120">
+            <h2 class="reader-panel-title">{t.epubTocTitle}</h2>
+            {toc.map((entry, i) => (
+              <div
+                key={`${entry.chapter}-${i}`}
+                class={`focusable toc-entry${entry.chapter === position.chapter ? ' current' : ''}`}
+                style={{ paddingLeft: `${24 + entry.depth * 32}px` }}
+                tabIndex={-1}
+                data-key={`toc-${i}`}
+              >
+                {entry.title}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {overlay && !tocOpen && (
         <div class="reader-overlay">
           <div class="reader-overlay-bar">
             <div class="reader-overlay-row">

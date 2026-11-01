@@ -12,6 +12,8 @@ import { awaitWrites, type LoadError, requireSession, toLoadError } from '../sta
 import { BookCard, SeriesCard } from '../ui/cards';
 import { Button, ErrorView, LoadingView, Row, TextCard } from '../ui/components';
 import { useEntryFocus } from '../ui/entryFocus';
+import { ActionMenu, type MenuAction, showToast } from '../ui/overlays';
+import { focusKeyOrFirst } from '../platform/focus';
 
 const ROW_SIZE = 20;
 
@@ -65,6 +67,36 @@ export function HomeScreen({ entry, active }: { entry: RouteEntry; active: boole
   const [data, setData] = useState<HomeData | null>(null);
   const [error, setError] = useState<LoadError | null>(null);
   const [version, setVersion] = useState(0);
+  /** OK 길게 누른 라이브러리 → 라이브러리 메뉴 (Android: 스캔·휴지통 비우기, 관리자) */
+  const [menuLibrary, setMenuLibrary] = useState<KomgaLibrary | null>(null);
+
+  const libraryAction = (run: () => Promise<void>, done: string) =>
+    run().then(
+      () => showToast(done),
+      () => showToast(t.libraryActionFailed),
+    );
+
+  const libraryMenu = (library: KomgaLibrary): MenuAction[] => {
+    const { client } = requireSession();
+    return [
+      {
+        key: 'menu-scan',
+        label: t.libraryActionScan,
+        run: () => void libraryAction(() => client.scanLibrary(library.id), t.libraryActionDoneScan),
+      },
+      {
+        key: 'menu-trash',
+        label: t.libraryActionEmptyTrash,
+        run: () => void libraryAction(() => client.emptyTrash(library.id), t.libraryActionDoneTrash),
+      },
+    ];
+  };
+
+  const closeMenu = () => {
+    const key = menuLibrary ? `library-${menuLibrary.id}` : undefined;
+    setMenuLibrary(null);
+    setTimeout(() => root.current && key && focusKeyOrFirst(root.current, key), 0);
+  };
 
   const load = (silent: boolean) => {
     if (!silent) {
@@ -148,10 +180,19 @@ export function HomeScreen({ entry, active }: { entry: RouteEntry; active: boole
                 focusKey={`library-${library.id}`}
                 title={library.name}
                 onClick={() => push({ name: 'library', libraryId: library.id, title: library.name })}
+                onLongPress={() => setMenuLibrary(library)}
               />
             ))}
           </Row>
         </>
+      )}
+      {menuLibrary && (
+        <ActionMenu
+          title={menuLibrary.name}
+          hint={t.libraryActionHint}
+          actions={libraryMenu(menuLibrary)}
+          onClose={closeMenu}
+        />
       )}
     </div>
   );

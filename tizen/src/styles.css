@@ -686,3 +686,86 @@ body {
 .epub .reader-overlay-bar {
   background: rgba(8, 8, 8, 0.96);
 }
+
+/* ---------- 알림·메뉴 (Android T13) ---------- */
+
+.toast {
+  position: absolute;
+  left: 50%;
+  bottom: 72px;
+  transform: translateX(-50%);
+  max-width: 1400px;
+  padding: 20px 40px;
+  border-radius: 40px;
+  background: rgba(30, 34, 44, 0.96);
+  border: 2px solid #3a4252;
+  font-size: 26px;
+  z-index: 50;
+}
+
+.menu-backdrop {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 40;
+}
+
+.menu-panel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 760px;
+  padding: 48px;
+  border-radius: 16px;
+  background: #1e2230;
+}
+
+.menu-title {
+  margin: 0 0 28px;
+  font-size: 32px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.menu-panel .menu-item {
+  display: block;
+  margin: 0 0 16px;
+  text-align: left;
+}
+
+.menu-hint {
+  margin-top: 12px;
+  font-size: 22px;
+  color: #9aa1b2;
+  line-height: 1.5;
+}
+
+/* EPUB 목차 패널 (Android T13) */
+.toc-panel {
+  overflow: hidden;
+}
+
+.toc-entry {
+  padding: 14px 24px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  border: 3px solid transparent;
+  font-size: 26px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toc-entry.current {
+  color: #ffb547;
+}
+
+.toc-entry:focus {
+  border-color: #ffffff;
+  background: #2f2f2f;
+}

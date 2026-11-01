@@ -3,6 +3,8 @@ import { bookDisplayTitle } from '../src/api/display';
 import type { KomgaBook, R2Progression } from '../src/api/types';
 import {
   chaptersOf,
+  currentTocIndex,
+  tocEntries,
   EpubPositionSaver,
   progressionOf,
   resourcePath,
@@ -102,5 +104,38 @@ describe('파일 해시 제목', () => {
       metadata: { title: 'a67879a1d4464860c3eedc980bd12118', number: '1' },
     } as KomgaBook;
     expect(bookDisplayTitle(book)).toBe('걸그룹인데 악마와 계약했습니다');
+  });
+});
+
+describe('EPUB 목차 (Android T13)', () => {
+  const label = (n: number) => `${n}장`;
+  const toc = (entries: { title: string; i: number; children?: { title: string; i: number }[] }[]) => ({
+    readingOrder: manifest.readingOrder,
+    toc: entries.map((e) => ({
+      title: e.title,
+      href: `${base}index_split_00${e.i}.html#x`,
+      children: e.children?.map((c) => ({ title: c.title, href: `${base}index_split_00${c.i}.html` })),
+    })),
+  });
+
+  it('하위 항목을 들여쓰기 단계와 함께 한 줄로 편다', () => {
+    const entries = tocEntries(toc([{ title: '1부', i: 0, children: [{ title: '2장', i: 1 }] }, { title: '3장', i: 2 }]), chapters, label);
+    expect(entries).toEqual([
+      { title: '1부', depth: 0, chapter: 0 },
+      { title: '2장', depth: 1, chapter: 1 },
+      { title: '3장', depth: 0, chapter: 2 },
+    ]);
+  });
+
+  it('목차가 없거나 한 줄뿐이면 장마다 한 줄', () => {
+    const one = tocEntries(toc([{ title: 'Start', i: 0 }]), chapters, label);
+    expect(one.map((e) => e.title)).toEqual(['1장', '2장', '3장']);
+    expect(tocEntries({ readingOrder: manifest.readingOrder }, chapters, label)).toHaveLength(3);
+  });
+
+  it('지금 장의 줄 — 목차에 없는 장이면 앞 장의 줄', () => {
+    const entries = tocEntries(toc([{ title: 'A', i: 0 }, { title: 'C', i: 2 }]), chapters, label);
+    expect(currentTocIndex(entries, 1)).toBe(0);
+    expect(currentTocIndex(entries, 2)).toBe(1);
   });
 });

@@ -7,7 +7,7 @@ import type { KomgaBook } from './types';
  */
 export function bookDisplayTitle(book: KomgaBook): string {
   const title = (book.metadata.title || book.name).trim();
-  if (/^[0-9a-f]{24,}$/i.test(title) && book.seriesTitle) return book.seriesTitle;
+  if (/^[0-9a-f]{16,}$/i.test(title) && book.seriesTitle) return book.seriesTitle;
   return /^\d+(\.\d+)?$/.test(title) && book.seriesTitle ? `${book.seriesTitle} ${title}` : title;
 }
 

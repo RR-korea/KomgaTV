@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ImageCache } from '../image/ImageCache';
 import { FOCUSABLE_CLASS, focusElement, move } from '../platform/focus';
 import { isTizen } from '../platform/keys';
+import { useLongPress } from '../platform/input';
 import { fmt, t } from '../i18n';
 import type { LoadError } from '../state/session';
 import { session as sessionStore } from '../state/session';
@@ -197,11 +198,14 @@ interface PosterCardProps {
   /** 0~1, null이면 진행 막대 없음 */
   progress?: number | null;
   onClick: () => void;
+  /** OK 길게 누르기 (메뉴) */
+  onLongPress?: () => void;
   index?: number;
 }
 
-export function PosterCard({ focusKey, imagePath, title, subtitle, progress, onClick, index }: PosterCardProps) {
+export function PosterCard({ focusKey, imagePath, title, subtitle, progress, onClick, onLongPress, index }: PosterCardProps) {
   const ref = useRef<HTMLDivElement>(null);
+  useLongPress(ref, onLongPress);
   const visible = useInView(ref);
   const current = useStore(sessionStore);
   const image = useCachedImage(current?.thumbnails, imagePath, visible);
@@ -233,9 +237,21 @@ export function PosterCard({ focusKey, imagePath, title, subtitle, progress, onC
 }
 
 /** 그림 없는 카드 (라이브러리 — Komga에 라이브러리 표지가 없다, E2E-1). 이름을 카드 안에 넣는다. */
-export function TextCard({ focusKey, title, onClick }: { focusKey: string; title: string; onClick: () => void }) {
+export function TextCard({
+  focusKey,
+  title,
+  onClick,
+  onLongPress,
+}: {
+  focusKey: string;
+  title: string;
+  onClick: () => void;
+  onLongPress?: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useLongPress(ref, onLongPress);
   return (
-    <div class={`${FOCUSABLE_CLASS} text-card`} tabIndex={-1} data-key={focusKey} onClick={onClick}>
+    <div ref={ref} class={`${FOCUSABLE_CLASS} text-card`} tabIndex={-1} data-key={focusKey} onClick={onClick}>
       <div class="text-card-title">{title}</div>
     </div>
   );

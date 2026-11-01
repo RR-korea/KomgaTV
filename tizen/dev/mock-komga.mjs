@@ -181,6 +181,24 @@ async function api(req, res, path, url) {
     }
     return paged(res, list, url);
   }
+  // 책·라이브러리 메뉴 (Android T13)
+  if ((m = path.match(/^api\/v1\/books\/([^/]+)\/read-progress$/)) && req.method === 'DELETE') {
+    const book = books.find((b) => b.id === m[1]);
+    if (book) book.readProgress = null;
+    console.log(`DELETE read-progress ${m[1]}`);
+    res.writeHead(204);
+    return res.end();
+  }
+  if ((m = path.match(/^api\/v1\/books\/([^/]+)\/analyze$/)) && req.method === 'POST') {
+    console.log(`POST analyze ${m[1]}`);
+    res.writeHead(202);
+    return res.end();
+  }
+  if ((m = path.match(/^api\/v1\/libraries\/([^/]+)\/(scan|empty-trash)$/)) && req.method === 'POST') {
+    console.log(`POST ${m[2]} ${m[1]}`);
+    res.writeHead(202);
+    return res.end();
+  }
   if ((m = path.match(/^api\/v1\/books\/([^/]+)\/manifest$/)) && m[1] === EPUB_ID) {
     const base = `http://localhost:${port}${BASE}/api/v1/books/${EPUB_ID}/resource/`;
     res.writeHead(200, { 'Content-Type': 'application/webpub+json' });

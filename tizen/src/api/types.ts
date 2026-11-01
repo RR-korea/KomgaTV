@@ -91,6 +91,8 @@ export interface WebPubLink {
   href: string;
   type?: string;
   title?: string;
+  /** 목차의 하위 항목 */
+  children?: WebPubLink[];
 }
 
 export interface WebPubManifest {

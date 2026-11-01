@@ -136,6 +136,38 @@ export class KomgaClient {
     });
   }
 
+  // ---------- 책·라이브러리 메뉴 (Android T13) ----------
+  async markRead(bookId: string, pagesCount: number): Promise<void> {
+    await this.markReadProgress(bookId, Math.max(1, pagesCount), true);
+  }
+
+  /** 읽지 않음: 읽기 진행(EPUB 읽은 자리 포함)을 지운다 */
+  async markUnread(bookId: string): Promise<void> {
+    await this.request(`api/v1/books/${encodeURIComponent(bookId)}/read-progress`, { method: 'DELETE' });
+  }
+
+  async analyzeBook(bookId: string): Promise<void> {
+    await this.request(`api/v1/books/${encodeURIComponent(bookId)}/analyze`, { method: 'POST' });
+  }
+
+  async scanLibrary(libraryId: string): Promise<void> {
+    await this.request(`api/v1/libraries/${encodeURIComponent(libraryId)}/scan?deep=false`, { method: 'POST' });
+  }
+
+  async emptyTrash(libraryId: string): Promise<void> {
+    await this.request(`api/v1/libraries/${encodeURIComponent(libraryId)}/empty-trash`, { method: 'POST' });
+  }
+
+  /** 같은 시리즈의 다음 권. 없으면 null (Android 다음 권으로 이어 읽기) */
+  async getNextBook(bookId: string): Promise<KomgaBook | null> {
+    try {
+      return await this.json<KomgaBook>(`api/v1/books/${encodeURIComponent(bookId)}/next`);
+    } catch (error) {
+      if (error instanceof HttpError && error.status === 404) return null;
+      throw error;
+    }
+  }
+
   // ---------- EPUB ----------
   getWebPubManifest(bookId: string): Promise<WebPubManifest> {
     return this.json(`api/v1/books/${encodeURIComponent(bookId)}/manifest`, {

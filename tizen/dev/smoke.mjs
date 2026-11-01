@@ -14,7 +14,7 @@ const patches = [];
 server.stdout.on('data', (chunk) => {
   const text = String(chunk);
   for (const line of text.split('\n')) {
-    if (line.startsWith('PATCH') || line.startsWith('PUT progression')) patches.push(line.trim());
+    if (/^(PATCH|PUT progression|DELETE|POST)/.test(line)) patches.push(line.trim());
   }
 });
 await new Promise((resolve) => server.stdout.once('data', resolve));
@@ -38,6 +38,12 @@ const key = async (name, times = 1) => {
     await page.keyboard.press(name);
     await page.waitForTimeout(120);
   }
+};
+const longPress = async () => {
+  await page.keyboard.down('Enter');
+  await page.waitForTimeout(900);
+  await page.keyboard.up('Enter');
+  await page.waitForTimeout(300);
 };
 const shot = async (name) => {
   await page.waitForTimeout(400);
@@ -280,12 +286,40 @@ try {
   await page.waitForTimeout(800);
   await expectFocus('시리즈 상세 → 첫 책', (k) => k?.startsWith('book-'));
   await shot('series');
+  // 책 메뉴 (OK 길게, Android T13): 읽음으로 표시 → 알림·진행 새로고침
+  const firstBook = await focused();
+  await longPress();
+  await expectFocus('책 OK 길게 → 메뉴 첫 항목', 'menu-read');
+  await shot('book-menu');
+  await key('Enter');
+  await page.waitForTimeout(800);
+  results.push(`${patches.some((p) => /PATCH read-progress \S+ page=24 completed=true/.test(p)) ? 'PASS' : 'FAIL'} 책 메뉴 → 읽음으로 표시 (완독 저장)`);
+  await expectText('읽음 알림', '.toast', /읽음으로 표시했습니다/);
+  await expectText('진행 새로고침 → 완독', `[data-key="${firstBook}"] .card-subtitle`, /완독/);
+  await expectFocus('메뉴가 닫히면 그 책', firstBook);
+  await longPress();
+  await key('ArrowDown');
+  await key('Enter');
+  await page.waitForTimeout(800);
+  results.push(`${patches.some((p) => p.startsWith('DELETE read-progress')) ? 'PASS' : 'FAIL'} 책 메뉴 → 읽지 않음 (진행 삭제)`);
+  await longPress();
+  await key('Escape');
+  await expectFocus('메뉴 Back → 닫기, 그 책', firstBook);
   await key('Escape');
   await page.waitForTimeout(300);
   await expectFocus('시리즈에서 돌아오면 연 시리즈', opened);
   await key('Escape');
   await page.waitForTimeout(500);
   await expectFocus('라이브러리에서 돌아오면 라이브러리 카드', 'library-L1');
+  // 라이브러리 메뉴 (OK 길게, Android T13): 스캔
+  await longPress();
+  await expectFocus('라이브러리 OK 길게 → 메뉴 첫 항목', 'menu-scan');
+  await shot('library-menu');
+  await key('Enter');
+  await page.waitForTimeout(600);
+  results.push(`${patches.some((p) => p === 'POST scan L1') ? 'PASS' : 'FAIL'} 라이브러리 스캔 요청`);
+  await expectText('스캔 알림', '.toast', /스캔을 요청했습니다/);
+  await expectFocus('메뉴가 닫히면 라이브러리 카드', 'library-L1');
 
   // 7. 표지 없는 시리즈(S4) → 자리표시 글자
   await key('Enter');
@@ -367,7 +401,18 @@ try {
   await key('ArrowUp');
   await expectText('정보에서 위 → 글자 크기 110%', '.reader-help', /110%/);
   await shot('epub-overlay');
+  // 목차 (Android T13): 정보에서 OK → 목차, 지금 장 줄에 포커스. 목차가 한 줄뿐인 책이라 장마다 한 줄
   await key('Enter');
+  await expectFocus('정보에서 OK → 목차의 지금 장 줄', 'toc-1');
+  await expectText('목차 줄: 장마다 한 줄', '.toc-panel', /1장.*2장.*3장/s);
+  await shot('epub-toc');
+  await key('ArrowDown');
+  await key('Enter');
+  await page.waitForTimeout(800);
+  results.push(`${(await epub()).heading === '셋째 장' ? 'PASS' : 'FAIL'} 목차에서 3장 → 셋째 장`);
+  await key('ArrowLeft');
+  await page.waitForTimeout(800);
+  results.push(`${(await epub()).heading === '둘째 장' ? 'PASS' : 'FAIL'} 왼쪽 → 이전 장`);
   await key('ArrowRight');
   await page.waitForTimeout(800);
   results.push(`${(await epub()).heading === '셋째 장' ? 'PASS' : 'FAIL'} 오른쪽 → 다음 장`);
