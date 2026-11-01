@@ -3,7 +3,7 @@
 // TIZEN_STUDIO 환경 변수 = Tizen Studio 설치 폴더 (기본 C:\tizen-studio).
 // 에뮬레이터는 Tizen 작성자 인증서 프로필로, 실기 TV는 삼성 인증서(기기 DUID 포함) 프로필로 서명해야 한다.
 import { execFileSync } from 'node:child_process';
-import { existsSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 const profile = process.argv[2];
@@ -35,4 +35,8 @@ if (!wgt) {
   console.error('no .wgt produced');
   process.exit(1);
 }
-console.log(join(dist, wgt));
+// 파일 이름에 버전과 빌드 번호 (Android APK와 같게: KomgaTV-v0.2.2-b4.wgt)
+const { version, build } = JSON.parse(readFileSync('package.json', 'utf8'));
+const named = `KomgaTV-v${version}-b${build}.wgt`;
+renameSync(join(dist, wgt), join(dist, named));
+console.log(join(dist, named));
