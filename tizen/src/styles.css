@@ -922,3 +922,35 @@ body {
 .panel-buttons .button + .button {
   margin-left: 0;
 }
+
+/* ---------- 앱 정보 ---------- */
+
+.about-box {
+  padding: 24px 28px;
+  border-radius: 12px;
+  background: #1d212b;
+  border: 3px solid transparent;
+}
+
+.about-box:focus {
+  border-color: #ffffff;
+}
+
+.about-line {
+  font-size: 24px;
+  line-height: 1.6;
+  color: #c3c8d4;
+  margin-bottom: 8px;
+  word-break: keep-all;
+}
+
+.about-line.strong {
+  font-size: 28px;
+  color: #e6e8ee;
+}
+
+.about-line.small {
+  font-size: 20px;
+  color: #9aa1b2;
+  word-break: break-all;
+}

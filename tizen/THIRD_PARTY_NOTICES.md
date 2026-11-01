@@ -23,3 +23,13 @@ distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, e
 ## Preact — MIT
 
 Copyright (c) 2015-present Jason Miller — bundled into `app.js`.
+
+## Noto Sans — SIL Open Font License 1.1
+
+The "KomgaTV" wordmark in `static/icon.png` is drawn with Noto Sans Bold (same artwork as the Android app's launcher icon).
+Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic). Licensed under the SIL Open Font License, Version 1.1.
+
+## Thanks
+
+KomgaTV is made with deep respect for [Komga](https://github.com/gotson/komga) and [Komelia](https://github.com/Snd-R/Komelia).
+It is not affiliated with either project.

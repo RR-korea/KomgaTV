@@ -249,8 +249,17 @@ export function SettingsScreen({ entry, active }: { entry: RouteEntry; active: b
           English
         </Button>
       </div>
-      <div class="about">{fmt(t.settingsVersion, APP_VERSION)}</div>
-      <div class="about small">{navigator.userAgent}</div>
+      {/* 앱 정보 (Android와 같은 내용). 글뿐이지만 리모컨으로 내려와 볼 수 있게 상자가 포커스를 받는다 */}
+      <h2 class="section-title">{t.aboutTitle}</h2>
+      <div class="focusable about-box" tabIndex={-1} data-key="about">
+        <div class="about-line strong">{fmt(t.aboutAppVersion, APP_VERSION)}</div>
+        <div class="about-line">{fmt(t.aboutDeveloper, 'David Hojin Kim', 'sinabro@gmail.com')}</div>
+        <div class="about-line">github.com/RR-korea/KomgaTV</div>
+        <div class="about-line">{t.aboutTribute}</div>
+        <div class="about-line">Komga — github.com/gotson/komga · Komelia — github.com/Snd-R/Komelia</div>
+        <div class="about-line small">{t.aboutLicenses}</div>
+        <div class="about-line small">{navigator.userAgent}</div>
+      </div>
     </div>
   );
 }
