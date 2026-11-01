@@ -18,6 +18,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -38,6 +39,7 @@ import timber.log.Timber
 internal fun ContinuousPages(
     tiles: List<PageTile>,
     listState: LazyListState,
+    filterQuality: FilterQuality,
     scrollToTileIndex: Int?,
     loadTile: suspend (PageTile) -> ImageBitmap,
     onScrolled: () -> Unit,
@@ -65,15 +67,15 @@ internal fun ContinuousPages(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         items(tiles, key = { it.key }) { tile ->
-            TileItem(tile, loadTile)
+            TileItem(tile, loadTile, filterQuality)
         }
     }
 }
 
 @Composable
-private fun TileItem(tile: PageTile, loadTile: suspend (PageTile) -> ImageBitmap) {
+private fun TileItem(tile: PageTile, loadTile: suspend (PageTile) -> ImageBitmap, filterQuality: FilterQuality) {
     val density = LocalDensity.current
-    val bitmap by produceState<ImageBitmap?>(null, tile) {
+    val bitmap by produceState<ImageBitmap?>(null, tile, loadTile) {
         value = if (tile.isPlaceholder) {
             null
         } else {
@@ -94,7 +96,13 @@ private fun TileItem(tile: PageTile, loadTile: suspend (PageTile) -> ImageBitmap
             modifier = with(density) { Modifier.size(tile.displayWidth.toDp(), tile.displayHeight.toDp()) },
         ) {
             bitmap?.let {
-                Image(it, contentDescription = null, contentScale = ContentScale.FillBounds, modifier = Modifier.fillMaxSize())
+                Image(
+                    it,
+                    contentDescription = null,
+                    contentScale = ContentScale.FillBounds,
+                    filterQuality = filterQuality,
+                    modifier = Modifier.fillMaxSize(),
+                )
             }
         }
         if (tile.bottomSpacingDp > 0) {

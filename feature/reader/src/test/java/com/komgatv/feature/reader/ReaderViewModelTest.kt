@@ -12,6 +12,7 @@ import com.komgatv.core.datastore.ReaderPreferences
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.BookMetadata
 import com.komgatv.core.model.BookPage
+import com.komgatv.core.model.ImageEnhancement
 import com.komgatv.core.model.LoadError
 import com.komgatv.core.model.PageLayout
 import com.komgatv.core.model.ReadProgress
@@ -30,6 +31,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -185,7 +187,7 @@ class ReaderViewModelTest {
         assertEquals(ReadingDirection.RIGHT_TO_LEFT, state.readingDirection)
 
         // 기본값으로도 저장됨
-        assertEquals(ReadingDirection.RIGHT_TO_LEFT, readerPreferences.readerSettings.first().readingDirection)
+        assertEquals(ReadingDirection.RIGHT_TO_LEFT, readerPreferences.series.value.values.single().readingDirection)
     }
 
     @Test
@@ -382,7 +384,7 @@ class ReaderViewModelTest {
         assertEquals(PageLayout.DOUBLE_PAGES, state.pageLayout)
         // 여전히 5페이지가 포함된 펼침이어야 함
         assertTrue(state.currentSpread.containsPage(5))
-        assertEquals(PageLayout.DOUBLE_PAGES, readerPreferences.readerSettings.first().pageLayout)
+        assertEquals(PageLayout.DOUBLE_PAGES, readerPreferences.series.value.values.single().pageLayout)
     }
 
     @Test
@@ -426,8 +428,8 @@ class ReaderViewModelTest {
         val state = viewModel.uiState.value as ReaderUiState.Reading
         assertEquals(ScaleType.FIT_WIDTH, state.scaleType)
         assertFalse(state.stretchToFit)
-        assertEquals(ScaleType.FIT_WIDTH, readerPreferences.readerSettings.first().scaleType)
-        assertFalse(readerPreferences.readerSettings.first().stretchToFit)
+        assertEquals(ScaleType.FIT_WIDTH, readerPreferences.series.value.values.single().scaleType)
+        assertFalse(readerPreferences.series.value.values.single().stretchToFit)
     }
 
     @Test
@@ -511,7 +513,7 @@ class ReaderViewModelTest {
 
         assertEquals(ReaderType.CONTINUOUS, reading.readerType)
         assertEquals("4_0", reading.continuousTiles[reading.scrollToTileIndex!!].key)
-        assertEquals(ReaderType.CONTINUOUS, readerPreferences.readerSettings.first().readerType)
+        assertEquals(ReaderType.CONTINUOUS, readerPreferences.series.value.values.single().readerType)
     }
 
     @Test
@@ -632,6 +634,52 @@ class ReaderViewModelTest {
     }
 
     @Test
+    fun `작품 설정 - 패널에서 바꾸면 이 작품에만 저장되고 앱 기본값은 그대로`() = runTest(testDispatcher) {
+        openBook()
+        advanceUntilIdle()
+        assertFalse(reading.seriesCustomized)
+
+        viewModel.applySettings(reading.settings.copy(pageLayout = PageLayout.DOUBLE_PAGES, imageEnhancement = ImageEnhancement.SHARPEN))
+        advanceUntilIdle()
+
+        assertTrue(reading.seriesCustomized)
+        assertEquals(PageLayout.DOUBLE_PAGES, readerPreferences.series.value["s1"]!!.pageLayout)
+        assertEquals(ImageEnhancement.SHARPEN, readerPreferences.series.value["s1"]!!.imageEnhancement)
+        assertEquals(PageLayout.SINGLE_PAGE, readerPreferences.readerSettings.first().pageLayout)
+    }
+
+    @Test
+    fun `작품 설정 - 저장된 작품 설정이 앱 기본값과 시리즈 방향보다 먼저다`() = runTest(testDispatcher) {
+        readerPreferences.saveReaderSettings(ReaderSettings(pageLayout = PageLayout.SINGLE_PAGE))
+        readerPreferences.series.value = mapOf(
+            "s1" to ReaderSettings(pageLayout = PageLayout.DOUBLE_PAGES, readingDirection = ReadingDirection.LEFT_TO_RIGHT),
+        )
+        // 시리즈 메타데이터는 RTL이지만 사용자가 이 작품에 LTR을 골라 두었다
+        openBook(direction = ReadingDirection.RIGHT_TO_LEFT)
+        advanceUntilIdle()
+
+        assertEquals(PageLayout.DOUBLE_PAGES, reading.pageLayout)
+        assertEquals(ReadingDirection.LEFT_TO_RIGHT, reading.readingDirection)
+        assertTrue(reading.seriesCustomized)
+    }
+
+    @Test
+    fun `작품 설정 - 기본값으로 되돌리면 작품 설정을 지우고 앱 기본값을 쓴다`() = runTest(testDispatcher) {
+        readerPreferences.saveReaderSettings(ReaderSettings(scaleType = ScaleType.FIT_WIDTH))
+        readerPreferences.series.value = mapOf("s1" to ReaderSettings(scaleType = ScaleType.ORIGINAL))
+        openBook()
+        advanceUntilIdle()
+        assertEquals(ScaleType.ORIGINAL, reading.scaleType)
+
+        viewModel.resetSeriesSettings()
+        advanceUntilIdle()
+
+        assertEquals(ScaleType.FIT_WIDTH, reading.scaleType)
+        assertFalse(reading.seriesCustomized)
+        assertTrue(readerPreferences.series.value.isEmpty())
+    }
+
+    @Test
     fun `EPUB 책은 EPUB 리더로 넘긴다`() = runTest(testDispatcher) {
         seriesRepository.seriesMap["s1"] = createTestSeries(id = "s1")
         bookRepository.books["e1"] = createTestBook(id = "e1", seriesId = "s1", pageCount = 0)
@@ -655,7 +703,7 @@ class ReaderViewModelTest {
 
         assertEquals(800, reading.continuousTiles.first().displayWidth)
         assertEquals(16, reading.continuousTiles.first().bottomSpacingDp)
-        val saved = readerPreferences.readerSettings.first()
+        val saved = readerPreferences.series.value.values.single()
         assertEquals(0.1f, saved.continuousPadding)
         assertEquals(16, saved.continuousPageSpacing)
     }
@@ -772,45 +820,40 @@ class ReaderViewModelTest {
         private val _settings = MutableStateFlow(initialSettings)
         override val readerSettings: Flow<ReaderSettings> = _settings.asStateFlow()
 
+        /** 작품별 설정 (시리즈 ID → 설정) */
+        val series = MutableStateFlow<Map<String, ReaderSettings>>(emptyMap())
 
-        override suspend fun savePageLayout(layout: PageLayout) {
-            _settings.value = _settings.value.copy(pageLayout = layout)
-        }
-
-        override suspend fun saveScaleType(scaleType: ScaleType) {
-            _settings.value = _settings.value.copy(scaleType = scaleType)
-        }
-
-        override suspend fun saveStretchToFit(stretch: Boolean) {
-            _settings.value = _settings.value.copy(stretchToFit = stretch)
-        }
-
-        override suspend fun saveReadingDirection(direction: ReadingDirection) {
-            _settings.value = _settings.value.copy(readingDirection = direction)
-        }
-
-        override suspend fun saveReaderType(readerType: ReaderType) {
-            _settings.value = _settings.value.copy(readerType = readerType)
-        }
-
-        override suspend fun saveContinuousPadding(padding: Float) {
-            _settings.value = _settings.value.copy(continuousPadding = padding)
-        }
-
-        override suspend fun saveContinuousPageSpacing(spacing: Int) {
-            _settings.value = _settings.value.copy(continuousPageSpacing = spacing)
+        override suspend fun saveReaderSettings(settings: ReaderSettings) {
+            _settings.value = settings
         }
 
         override suspend fun saveEpubTextZoom(zoom: Int) {
             _settings.value = _settings.value.copy(epubTextZoom = zoom)
         }
+
+        override fun seriesSettings(seriesId: String): Flow<ReaderSettings?> = series.map { it[seriesId] }
+
+        override suspend fun saveSeriesSettings(seriesId: String, settings: ReaderSettings) {
+            series.value = series.value + (seriesId to settings)
+        }
+
+        override suspend fun clearSeriesSettings(seriesId: String) {
+            series.value = series.value - seriesId
+        }
+
+        // 테스트 준비용: 앱 기본값 한 항목만 바꾸기
+        suspend fun saveReadingDirection(direction: ReadingDirection) =
+            saveReaderSettings(_settings.value.copy(readingDirection = direction))
+
+        suspend fun savePageLayout(layout: PageLayout) = saveReaderSettings(_settings.value.copy(pageLayout = layout))
+
+        suspend fun saveReaderType(type: ReaderType) = saveReaderSettings(_settings.value.copy(readerType = type))
     }
 
-    /** 이미지 디코딩은 JVM 테스트에서 못 하므로 크기 조회만 흉내 낸다 */
     private class FakeTileSource : TileSource {
         val sizes = mutableMapOf<Int, Pair<Int, Int>>()
 
-        override suspend fun tile(bookId: String, tile: PageTile): ImageBitmap = throw NotImplementedError()
+        override suspend fun tile(bookId: String, tile: PageTile, sharpen: Float?): ImageBitmap = throw NotImplementedError()
 
         override suspend fun bounds(bookId: String, pageNumber: Int): Pair<Int, Int>? = sizes[pageNumber]
 

@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import com.komgatv.core.data.cache.PageFileCache
+import com.komgatv.feature.reader.enhance.ImageEnhancer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -37,13 +38,15 @@ class TileDecoder @Inject constructor(
         override fun sizeOf(key: String, value: ImageBitmap): Int = value.asAndroidBitmap().byteCount
     }
 
-    override suspend fun tile(bookId: String, tile: PageTile): ImageBitmap {
-        val key = "$bookId/${tile.key}/${tile.displayWidth}"
+    override suspend fun tile(bookId: String, tile: PageTile, sharpen: Float?): ImageBitmap {
+        val key = "$bookId/${tile.key}/${tile.displayWidth}/${sharpen ?: 0f}"
         bitmaps.get(key)?.let { return it }
         val file = pageFileCache.getPageFile(bookId, tile.pageNumber)
         val bitmap = withContext(Dispatchers.Default) {
             // 영역 디코더를 쓰는 동안 닫히면 안 되므로 디코딩과 정리는 같은 잠금 안에서 한다
-            synchronized(lock) { decode(file, tile) }
+            val decoded = synchronized(lock) { decode(file, tile) }
+            // 선명하게는 잠금 밖에서 (다른 타일 디코딩을 막지 않게)
+            sharpen?.let { amount -> ImageEnhancer.sharpen(decoded, amount).also { decoded.recycle() } } ?: decoded
         }.asImageBitmap()
         bitmaps.put(key, bitmap)
         return bitmap

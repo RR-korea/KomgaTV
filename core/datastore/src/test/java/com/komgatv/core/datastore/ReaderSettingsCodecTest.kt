@@ -1,0 +1,39 @@
+package com.komgatv.core.datastore
+
+import com.komgatv.core.model.ImageEnhancement
+import com.komgatv.core.model.PageLayout
+import com.komgatv.core.model.ReaderSettings
+import com.komgatv.core.model.ReaderType
+import com.komgatv.core.model.ReadingDirection
+import com.komgatv.core.model.ScaleType
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+
+class ReaderSettingsCodecTest {
+
+    @Test
+    fun `모든 값을 그대로 되돌린다`() {
+        val s = ReaderSettings(
+            readerType = ReaderType.CONTINUOUS,
+            pageLayout = PageLayout.DOUBLE_PAGES,
+            scaleType = ScaleType.FIT_WIDTH,
+            stretchToFit = false,
+            readingDirection = ReadingDirection.RIGHT_TO_LEFT,
+            continuousPadding = 0.15f,
+            continuousPageSpacing = 24,
+            imageEnhancement = ImageEnhancement.SHARPEN,
+        )
+        assertEquals(s, ReaderSettingsCodec.decode(ReaderSettingsCodec.encode(s)))
+    }
+
+    @Test
+    fun `없으면 null, 모르는 키와 잘못된 값은 기본값`() {
+        assertNull(ReaderSettingsCodec.decode(null))
+        assertNull(ReaderSettingsCodec.decode(""))
+        val s = ReaderSettingsCodec.decode("pageLayout=DOUBLE_PAGES;scaleType=NOPE;future=1;stretchToFit=maybe")!!
+        assertEquals(PageLayout.DOUBLE_PAGES, s.pageLayout)
+        assertEquals(ScaleType.SCREEN, s.scaleType)
+        assertEquals(true, s.stretchToFit)
+    }
+}

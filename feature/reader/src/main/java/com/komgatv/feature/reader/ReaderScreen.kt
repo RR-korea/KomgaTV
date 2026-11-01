@@ -55,12 +55,16 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Precision
+import com.komgatv.core.model.ImageEnhancement
 import com.komgatv.core.model.ReaderType
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.ScaleType
 import com.komgatv.core.ui.components.ProgressBar
 import com.komgatv.core.ui.components.loadErrorText
 import com.komgatv.feature.reader.continuous.ContinuousPages
+import com.komgatv.feature.reader.enhance.ImageEnhancer
+import com.komgatv.feature.reader.enhance.SharpenTransformation
+import coil3.request.transformations
 import com.komgatv.feature.reader.epub.EpubReaderScreen
 import kotlinx.coroutines.launch
 import coil3.size.Size as CoilSize
@@ -178,12 +182,12 @@ private fun ReaderContent(
     }
 
     // 이웃 펼침(±2) 프리로드 — 실제 표시와 같은 요청(크기·정밀도)이라야 메모리 캐시에 맞는다
-    LaunchedEffect(state.preloadSpreads, state.scaleType, screenWidthPx, screenHeightPx) {
+    LaunchedEffect(state.preloadSpreads, state.scaleType, state.imageEnhancement, screenWidthPx, screenHeightPx) {
         val imageLoader = SingletonImageLoader.get(context)
         state.preloadSpreads.forEach { urls ->
             urls.forEach { url ->
                 imageLoader.enqueue(
-                    pageRequest(context, url, state.scaleType, slotWidth(screenWidthPx, urls.size), screenHeightPx)
+                    pageRequest(context, url, state.scaleType, slotWidth(screenWidthPx, urls.size), screenHeightPx, state.imageEnhancement)
                 )
             }
         }
@@ -260,8 +264,10 @@ private fun ReaderContent(
             ContinuousPages(
                 tiles = state.continuousTiles,
                 listState = listState,
+                filterQuality = ImageEnhancer.filterQuality(state.imageEnhancement),
                 scrollToTileIndex = state.scrollToTileIndex,
-                loadTile = viewModel::loadTile,
+                // 화질 설정이 바뀌면 보이는 타일도 다시 불러오게 함수 자체를 바꾼다
+                loadTile = remember(state.imageEnhancement) { { tile -> viewModel.loadTile(tile) } },
                 onScrolled = viewModel::onTileScrolled,
                 onVisibleTilesChanged = viewModel::onContinuousVisibleTilesChanged,
             )
@@ -304,22 +310,12 @@ private fun ReaderContent(
             exit = fadeOut(),
         ) {
             ReaderSettingsPanel(
-                readerType = state.readerType,
-                continuousPadding = state.continuousPadding,
-                continuousPageSpacing = state.continuousPageSpacing,
-                onReaderTypeChange = viewModel::setReaderType,
-                onContinuousPaddingChange = viewModel::setContinuousPadding,
-                onContinuousPageSpacingChange = viewModel::setContinuousPageSpacing,
-                pageLayout = state.pageLayout,
+                settings = state.settings,
                 layoutOffset = state.layoutOffset,
-                readingDirection = state.readingDirection,
-                scaleType = state.scaleType,
-                stretchToFit = state.stretchToFit,
-                onPageLayoutChange = viewModel::setPageLayout,
+                seriesCustomized = state.seriesCustomized,
+                onChange = viewModel::applySettings,
                 onLayoutOffsetChange = viewModel::setLayoutOffset,
-                onReadingDirectionChange = viewModel::setReadingDirection,
-                onScaleTypeChange = viewModel::setScaleType,
-                onStretchToFitChange = viewModel::setStretchToFit,
+                onReset = viewModel::resetSeriesSettings,
             )
         }
     }
@@ -359,8 +355,8 @@ private fun SpreadPages(
                 index == 0 -> Alignment.CenterEnd
                 else -> Alignment.CenterStart
             }
-            val request = remember(url, state.scaleType, slotWidthPx, screenHeightPx) {
-                pageRequest(context, url, state.scaleType, slotWidthPx, screenHeightPx)
+            val request = remember(url, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement) {
+                pageRequest(context, url, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement)
             }
             AsyncImage(
                 model = request,
@@ -371,6 +367,7 @@ private fun SpreadPages(
                 ),
                 contentScale = contentScale,
                 alignment = alignment,
+                filterQuality = ImageEnhancer.filterQuality(state.imageEnhancement),
                 modifier = Modifier
                     .weight(1f)
                     .then(if (scrollable) Modifier else Modifier.fillMaxHeight())
@@ -456,6 +453,7 @@ private fun pageRequest(
     scaleType: ScaleType,
     slotWidthPx: Int,
     screenHeightPx: Int,
+    enhancement: ImageEnhancement,
 ): ImageRequest {
     val size = when (scaleType) {
         ScaleType.SCREEN -> CoilSize(slotWidthPx, screenHeightPx)
@@ -469,6 +467,7 @@ private fun pageRequest(
         .size(size)
         .precision(Precision.INEXACT)
         .crossfade(false)
+        .apply { ImageEnhancer.sharpenAmount(enhancement)?.let { transformations(SharpenTransformation(it)) } }
         .build()
 }
 
