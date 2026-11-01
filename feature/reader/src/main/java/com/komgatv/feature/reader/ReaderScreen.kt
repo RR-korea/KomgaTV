@@ -302,9 +302,9 @@ private fun ReaderContent(
         }
 
         if (!continuous && state.endPage != null) {
-            EndPageView(state.endPage, Modifier.fillMaxSize())
+            EndPageView(state.endPage, BoundaryLayout.of(toNext = true, state.readingDirection, continuous = false), Modifier.fillMaxSize())
         } else if (!continuous && state.startPage != null) {
-            StartPageView(state.startPage, Modifier.fillMaxSize())
+            StartPageView(state.startPage, BoundaryLayout.of(toNext = false, state.readingDirection, continuous = false), Modifier.fillMaxSize())
         } else if (continuous) {
             ContinuousPages(
                 tiles = state.continuousTiles,
@@ -486,6 +486,8 @@ private fun ReaderOverlay(state: ReaderUiState.Reading) {
 
             ProgressBar(
                 progress = state.shownPage.toFloat() / state.totalPages,
+                // 오른쪽에서 왼쪽으로 읽으면 진행도 오른쪽에서 왼쪽으로 찬다 (Komga 웹 리더와 같음)
+                fromEnd = state.readerType == ReaderType.PAGED && state.readingDirection == ReadingDirection.RIGHT_TO_LEFT,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(4.dp),
