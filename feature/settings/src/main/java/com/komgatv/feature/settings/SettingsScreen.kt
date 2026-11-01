@@ -285,6 +285,11 @@ fun SettingsScreen(
             }
         }
 
+        Spacer(modifier = Modifier.height(36.dp))
+
+        // ========== 앱 정보 ==========
+        AboutSection()
+
         Spacer(modifier = Modifier.height(32.dp))
     }
 }

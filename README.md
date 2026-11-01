@@ -178,3 +178,13 @@ MIT License — [LICENSE](LICENSE) 참조
 - [Komelia](https://github.com/Snd-R/Komelia) — Komga 크로스플랫폼 클라이언트 (아키텍처 참조)
 - [KMReader](https://github.com/kmworks/kmreader) — Apple TV용 Komga 리더 (TV UX 참조)
 - [Jetpack Compose for TV](https://developer.android.com/training/tv/playback/compose) — Google 공식 TV UI 프레임워크
+
+---
+
+## 만든 사람
+
+**David Hojin Kim** · sinabro@gmail.com · https://github.com/RR-korea/KomgaTV
+
+[Komga](https://github.com/gotson/komga)와 [Komelia](https://github.com/Snd-R/Komelia) 프로젝트에 대한 존경을 담아 만들었습니다.
+KomgaTV는 두 프로젝트와 공식 관계가 없는 독립 프로젝트입니다. 사용한 오픈소스는 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)를 보세요.
+
