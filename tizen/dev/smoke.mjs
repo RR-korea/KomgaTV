@@ -467,7 +467,7 @@ try {
   await key('Escape'); // 정보 닫기
   await key('ArrowLeft');
   await page.waitForTimeout(600);
-  await expectText('첫 펼침에서 뒤로 → 책 첫 화면', '.end-view', /이전 권.*03.*지금 권.*04/s);
+  await expectText('첫 펼침에서 뒤로 → 책 첫 화면 (왼쪽 지금 권 › 오른쪽 이전 권)', '.end-view', /지금 권.*04.*이전 권.*03/s);
   await shot('start-page');
   await key('ArrowLeft');
   await page.waitForTimeout(1200);

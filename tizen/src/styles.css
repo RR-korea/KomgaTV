@@ -983,3 +983,12 @@ body {
     transform: rotate(360deg);
   }
 }
+
+/* 책 끝·첫 화면: 지금 권은 흐리게 (Android BookSlot dimmed) */
+.end-column.dimmed {
+  opacity: 0.55;
+}
+
+.end-arrow {
+  color: #80b9ff;
+}

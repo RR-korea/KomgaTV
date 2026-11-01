@@ -131,65 +131,64 @@ function ReaderPage({
 /** 다음 권 상태: undefined = 아직 안 찾음, 'loading' = 찾는 중, null = 마지막 권 */
 type NextBook = KomgaBook | null | 'loading' | undefined;
 
-/** 책 끝 화면 (다 읽은 책 ↔ 다음 권) */
-function EndView({ book, next }: { book: KomgaBook; next: NextBook }) {
+/** 책 한 권 자리 (표지 + 제목). 지금 권은 흐리게 — Android BookSlot */
+function BookSlot({ label, book, dimmed }: { label: string; book: KomgaBook; dimmed: boolean }) {
   const currentSession = useStore(sessionStore);
-  const cover = useCachedImage(
-    currentSession?.thumbnails,
-    next && next !== 'loading' ? ImagePaths.bookThumbnail(next.id) : null,
+  const cover = useCachedImage(currentSession?.thumbnails, ImagePaths.bookThumbnail(book.id));
+  return (
+    <div class={`end-column${dimmed ? ' dimmed' : ''}`}>
+      <div class="end-label">{label}</div>
+      <div class="end-cover">{cover.url && <img class="card-image" src={cover.url} alt="" />}</div>
+      <div class="end-title">{bookDisplayTitle(book)}</div>
+    </div>
   );
+}
+
+/** 갈 곳(다음·이전 권) 자리: 찾는 중 / 없음 / 책 */
+function TargetSlot({
+  label,
+  target,
+  finding,
+  none,
+}: {
+  label: string;
+  target: NextBook;
+  finding: string;
+  none: string;
+}) {
+  if (target && target !== 'loading') return <BookSlot label={label} book={target} dimmed={false} />;
+  return (
+    <div class="end-column">
+      <div class="end-label">{label}</div>
+      <div class="end-title muted">{target === null ? none : finding}</div>
+    </div>
+  );
+}
+
+/** 책 끝 화면: 왼쪽 다 읽은 책 › 오른쪽 다음 권 */
+function EndView({ book, next }: { book: KomgaBook; next: NextBook }) {
   return (
     <div class="end-view">
-      <div class="end-column">
-        <div class="end-label">{t.endPageFinished}</div>
-        <div class="end-title">{bookDisplayTitle(book)}</div>
-      </div>
-      <div class="end-arrow">→</div>
-      <div class="end-column">
-        <div class="end-label">{t.endPageNext}</div>
-        {next === 'loading' || next === undefined ? (
-          <div class="end-title muted">{t.endPageFindingNext}</div>
-        ) : next === null ? (
-          <div class="end-title muted">{t.endPageLastBook}</div>
-        ) : (
-          <>
-            <div class="end-cover">{cover.url && <img class="card-image" src={cover.url} alt="" />}</div>
-            <div class="end-title">{bookDisplayTitle(next)}</div>
-          </>
-        )}
-      </div>
+      <BookSlot label={t.endPageFinished} book={book} dimmed />
+      <div class="end-arrow">›</div>
+      <TargetSlot label={t.endPageNext} target={next} finding={t.endPageFindingNext} none={t.endPageLastBook} />
       <div class="end-hint">{next && next !== 'loading' ? t.endPageHintNext : t.endPageHintLast}</div>
     </div>
   );
 }
 
-/** 책 첫 화면 (이전 권 ‹ 지금 권) */
+/** 책 첫 화면: 책 끝 화면과 같은 모양으로 왼쪽 지금 권 › 오른쪽 이전 권 (Android 0.2.3) */
 function StartView({ book, previous }: { book: KomgaBook; previous: NextBook }) {
-  const currentSession = useStore(sessionStore);
-  const cover = useCachedImage(
-    currentSession?.thumbnails,
-    previous && previous !== 'loading' ? ImagePaths.bookThumbnail(previous.id) : null,
-  );
   return (
     <div class="end-view">
-      <div class="end-column">
-        <div class="end-label">{t.startPagePrevious}</div>
-        {previous === 'loading' || previous === undefined ? (
-          <div class="end-title muted">{t.startPageFindingPrevious}</div>
-        ) : previous === null ? (
-          <div class="end-title muted">{t.startPageFirstBook}</div>
-        ) : (
-          <>
-            <div class="end-cover">{cover.url && <img class="card-image" src={cover.url} alt="" />}</div>
-            <div class="end-title">{bookDisplayTitle(previous)}</div>
-          </>
-        )}
-      </div>
-      <div class="end-arrow">‹</div>
-      <div class="end-column">
-        <div class="end-label">{t.startPageCurrent}</div>
-        <div class="end-title">{bookDisplayTitle(book)}</div>
-      </div>
+      <BookSlot label={t.startPageCurrent} book={book} dimmed />
+      <div class="end-arrow">›</div>
+      <TargetSlot
+        label={t.startPagePrevious}
+        target={previous}
+        finding={t.startPageFindingPrevious}
+        none={t.startPageFirstBook}
+      />
       <div class="end-hint">{previous && previous !== 'loading' ? t.startPageHintPrevious : t.startPageHintFirst}</div>
     </div>
   );
