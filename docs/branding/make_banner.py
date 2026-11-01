@@ -1,4 +1,4 @@
-"""TV 배너·앱 아이콘 만들기 — Google Play 배너처럼 밝은 바탕에 왼쪽 Komga 로고, 오른쪽 세로로 조금 긴 'KomgaTV'.
+"""TV 배너·앱 아이콘 만들기 — Google Play 배너처럼 밝은 바탕에 왼쪽 Komga 로고, 오른쪽 'KomgaTV' (글자 비율 그대로).
 
 입력: Komga 로고(MIT, github.com/gotson/komga komga-webui/src/assets/logo.svg)를 1024px PNG로 그린 것,
       Noto Sans Bold(OFL).
@@ -17,7 +17,9 @@ W, H = 1280, 720
 BG_TOP, BG_BOTTOM = (255, 255, 255), (241, 243, 244)
 INK = (60, 64, 67)  # 'Komga' — Google 글자 회색
 BLUE = (0, 94, 211)  # 'TV' — Komga 로고의 파랑
-STRETCH_Y = 1.6  # 글자를 위아래로 늘려 길쭉하게
+STRETCH_Y = 1.0  # 글자 비율 그대로 (세로로 늘리면 보기 싫다 — 사용자 의견)
+FONT_SIZE = 400
+TRACKING = -12  # 자간 (글자 크기 400 기준, 음수면 좁힌다 — 사용자 의견)
 
 DENSITIES = {"mdpi": 1.0, "hdpi": 1.5, "xhdpi": 2.0, "xxhdpi": 3.0, "xxxhdpi": 4.0}
 
@@ -35,19 +37,21 @@ def gradient() -> Image.Image:
 
 
 def wordmark(font_path: str, height: int) -> Image.Image:
-    """'Komga'(회색) + 'TV'(파랑)을 그린 뒤 세로로 늘린다"""
-    font = ImageFont.truetype(font_path, 400)
-    parts = [("Komga", INK), ("TV", BLUE)]
-    widths = [font.getbbox(text)[2] - font.getbbox(text)[0] for text, _ in parts]
-    top = min(font.getbbox(text)[1] for text, _ in parts)
-    bottom = max(font.getbbox(text)[3] for text, _ in parts)
-    gap = 14
-    canvas = Image.new("RGBA", (sum(widths) + gap, bottom - top), (0, 0, 0, 0))
+    """'Komga'(회색) + 'TV'(파랑)을 그린다 (STRETCH_Y가 1이 아니면 세로로 늘린다)"""
+    font = ImageFont.truetype(font_path, FONT_SIZE)
+    # 한 글자씩 그리며 자간을 [TRACKING]만큼 좁힌다
+    letters = [(ch, INK) for ch in "Komga"] + [(ch, BLUE) for ch in "TV"]
+    top = min(font.getbbox(ch)[1] for ch, _ in letters)
+    bottom = max(font.getbbox(ch)[3] for ch, _ in letters)
+    left = font.getbbox(letters[0][0])[0]
+    advances = [font.getlength(ch) + TRACKING for ch, _ in letters]
+    width = round(sum(advances[:-1]) + font.getbbox(letters[-1][0])[2] - left)
+    canvas = Image.new("RGBA", (width, bottom - top), (0, 0, 0, 0))
     draw = ImageDraw.Draw(canvas)
-    x = 0
-    for (text, color), w in zip(parts, widths):
-        draw.text((x - font.getbbox(text)[0], -top), text, font=font, fill=color)
-        x += w + gap
+    x = -left
+    for (ch, color), advance in zip(letters, advances):
+        draw.text((x, -top), ch, font=font, fill=color)
+        x += advance
     stretched = canvas.resize((canvas.width, round(canvas.height * STRETCH_Y)), Image.LANCZOS)
     scale = height / stretched.height
     return stretched.resize((round(stretched.width * scale), height), Image.LANCZOS)
