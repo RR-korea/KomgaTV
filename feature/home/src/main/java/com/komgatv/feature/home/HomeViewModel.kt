@@ -146,8 +146,9 @@ class HomeViewModel @Inject constructor(
     }
 
     /**
-     * 이 책의 시리즈를 "읽는 중"과 "다음 권"에서 뺀다 (서버의 읽기 진행은 그대로).
-     * 그 시리즈를 다시 읽으면 다시 보인다.
+     * 이 책의 시리즈를 "읽는 중"과 "다음 권"에서 뺀다.
+     * 읽던 책이면 서버의 읽기 진행도 지운다(다른 기기의 "읽는 중"에서도 빠진다).
+     * "다음 권"은 서버에서 지울 것이 없어 이 TV에서만 숨긴다 — 그 시리즈를 다시 읽으면 다시 보인다.
      */
     fun hideFromReading(book: Book) {
         viewModelScope.launch {
@@ -159,6 +160,17 @@ class HomeViewModel @Inject constructor(
                     continueReading = state.continueReading.filter { it.seriesId != book.seriesId },
                     onDeck = state.onDeck.filter { it.seriesId != book.seriesId },
                 )
+            }
+            val progress = book.readProgress
+            if (progress != null && !progress.completed) {
+                try {
+                    bookRepository.markUnread(book.id)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // 서버에서 못 지워도 이 TV에서는 빠진 채로 둔다
+                    Timber.w(e, "읽기 진행 지우기 실패: ${book.id}")
+                }
             }
         }
     }
