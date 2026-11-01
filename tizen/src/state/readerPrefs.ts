@@ -8,12 +8,13 @@ export type ScaleType = 'SCREEN' | 'FIT_WIDTH' | 'FIT_HEIGHT' | 'ORIGINAL';
 export type Direction = 'LEFT_TO_RIGHT' | 'RIGHT_TO_LEFT';
 /** 화질 개선 (Android T14): 끄기 / 부드럽게 확대 / 선명하게 / 더 선명하게 */
 export type ImageEnhancement = 'OFF' | 'SMOOTH' | 'SHARPEN' | 'SHARPEN_STRONG';
+/** 페이지 넘김 화면 전환 효과 (Android 0.2.9): 끄기 / 읽는 방향으로 밀기(0.18초) / 겹쳐 바꾸기(0.15초) */
+export type PageTransition = 'OFF' | 'SLIDE' | 'FADE';
 
 export interface ReaderSettings {
   readerType: ReaderType;
   pageLayout: PageLayout;
   scaleType: ScaleType;
-  stretchToFit: boolean;
   readingDirection: Direction;
   /** 세로 스크롤 좌우 여백 (화면 너비 비율, 0~0.45) */
   continuousPadding: number;
@@ -23,23 +24,24 @@ export interface ReaderSettings {
   epubTextZoom: number;
   imageEnhancement: ImageEnhancement;
   /**
-   * 페이지 넘김에서 크기 맞춤 결과를 더 확대하는 비율 % (100~300, 1% 단위, Android 0.2.5).
+   * 페이지 넘김에서 크기 맞춤 결과를 더 확대하는 비율 % (100~120, 1% 단위, Android 0.2.8 — 120%면 충분하다는 사용자 의견).
    * 스캔 여백을 잘라 크게 볼 때 — 작품별로만 바꾼다 (앱 기본값은 늘 100).
    */
   zoomPercent: number;
+  pageTransition: PageTransition;
 }
 
 export const defaultReaderSettings: ReaderSettings = {
   readerType: 'PAGED',
   pageLayout: 'SINGLE_PAGE',
   scaleType: 'SCREEN',
-  stretchToFit: true,
   readingDirection: 'LEFT_TO_RIGHT',
   continuousPadding: 0,
   continuousPageSpacing: 0,
   epubTextZoom: 100,
   imageEnhancement: 'OFF',
   zoomPercent: 100,
+  pageTransition: 'SLIDE',
 };
 
 export const READER_TYPES: ReaderType[] = ['PAGED', 'CONTINUOUS'];
@@ -47,6 +49,9 @@ export const PAGE_LAYOUTS: PageLayout[] = ['SINGLE_PAGE', 'DOUBLE_PAGES', 'DOUBL
 export const SCALE_TYPES: ScaleType[] = ['SCREEN', 'FIT_WIDTH', 'FIT_HEIGHT', 'ORIGINAL'];
 export const DIRECTIONS: Direction[] = ['LEFT_TO_RIGHT', 'RIGHT_TO_LEFT'];
 export const ENHANCEMENTS: ImageEnhancement[] = ['OFF', 'SMOOTH', 'SHARPEN', 'SHARPEN_STRONG'];
+export const TRANSITIONS: PageTransition[] = ['OFF', 'SLIDE', 'FADE'];
+export const MIN_ZOOM_PERCENT = 100;
+export const MAX_ZOOM_PERCENT = 120;
 /** 패널에서 고르는 값 (Android T6과 같음) */
 export const PADDING_STEPS = [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45];
 export const SPACING_STEPS = [0, 8, 16, 24, 32, 40, 48, 56, 64];
@@ -66,7 +71,6 @@ export function parseReaderSettings(raw: unknown): ReaderSettings {
     readerType: oneOf(READER_TYPES, p.readerType, d.readerType),
     pageLayout: oneOf(PAGE_LAYOUTS, p.pageLayout, d.pageLayout),
     scaleType: oneOf(SCALE_TYPES, p.scaleType, d.scaleType),
-    stretchToFit: typeof p.stretchToFit === 'boolean' ? p.stretchToFit : d.stretchToFit,
     readingDirection: oneOf(DIRECTIONS, p.readingDirection, d.readingDirection),
     continuousPadding: oneOf(PADDING_STEPS, p.continuousPadding, d.continuousPadding),
     continuousPageSpacing: oneOf(SPACING_STEPS, p.continuousPageSpacing, d.continuousPageSpacing),
@@ -75,10 +79,12 @@ export function parseReaderSettings(raw: unknown): ReaderSettings {
         ? p.epubTextZoom
         : d.epubTextZoom,
     imageEnhancement: oneOf(ENHANCEMENTS, p.imageEnhancement, d.imageEnhancement),
+    // 범위 밖이면 끝값 (Android ReaderSettingsCodec과 같음 — 예전에 300%까지 저장된 값은 120%로)
     zoomPercent:
-      typeof p.zoomPercent === 'number' && Number.isInteger(p.zoomPercent) && p.zoomPercent >= 100 && p.zoomPercent <= 300
-        ? p.zoomPercent
+      typeof p.zoomPercent === 'number' && Number.isFinite(p.zoomPercent)
+        ? Math.min(MAX_ZOOM_PERCENT, Math.max(MIN_ZOOM_PERCENT, Math.round(p.zoomPercent)))
         : d.zoomPercent,
+    pageTransition: oneOf(TRANSITIONS, p.pageTransition, d.pageTransition),
   };
 }
 

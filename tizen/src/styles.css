@@ -997,3 +997,91 @@ body {
 .progress.rtl {
   direction: rtl;
 }
+
+/* 페이지 넘김 화면 전환 (Android 0.2.9): 펼침 한 장을 통째로 옮기거나(밀기 0.18초) 겹친다(페이드 0.15초) — 변환·투명도만 */
+.reader-paged,
+.reader-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+}
+
+.reader-layer.slide-in-right {
+  animation: ktv-slide-in-right 180ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.reader-layer.slide-in-left {
+  animation: ktv-slide-in-left 180ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.reader-layer.slide-out-right {
+  animation: ktv-slide-out-right 180ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.reader-layer.slide-out-left {
+  animation: ktv-slide-out-left 180ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.reader-layer.fade-in {
+  animation: ktv-fade-in 150ms linear both;
+}
+
+.reader-layer.fade-out {
+  animation: ktv-fade-out 150ms linear both;
+}
+
+@keyframes ktv-slide-in-right {
+  from {
+    transform: translateX(1920px);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes ktv-slide-in-left {
+  from {
+    transform: translateX(-1920px);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes ktv-slide-out-right {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(1920px);
+  }
+}
+
+@keyframes ktv-slide-out-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-1920px);
+  }
+}
+
+@keyframes ktv-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ktv-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}

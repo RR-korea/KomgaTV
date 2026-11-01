@@ -140,36 +140,73 @@ try {
   await shot('reader-double-9-10');
   await key('Enter');
   await expectText('두 쪽 보기 → 9,10쪽 펼침', '.reader-overlay-row:nth-child(2)', /9, 10 \/ 24/);
-  // 작품별 확대 (Android 0.2.5): 크기 맞춤 아래 확대 줄, ▶ 25번 → 125%, 펼침째 커지고 ▼로 아래 끝까지 본다
+  // 작품별 확대 (Android 0.2.5, 0.2.8부터 100~120%) + 화면 전환 (0.2.9): 크기 맞춤 → 화면 전환 → 확대
   await key('Enter');
   await key('ArrowDown', 5);
-  await expectFocus('패널: 크기 맞춤 아래 확대', 'opt-zoom');
+  await expectFocus('패널: 크기 맞춤 아래 화면 전환', 'opt-transition');
+  await expectText('화면 전환 기본값 밀기', '[data-key="opt-transition"] .view-row-value', /밀기/);
+  results.push(`${(await page.evaluate(() => !document.body.textContent.includes('작은 이미지 키우기'))) ? 'PASS' : 'FAIL'} 작은 이미지 키우기 줄 없음`);
+  await key('ArrowDown');
+  await expectFocus('패널: 화면 전환 아래 확대', 'opt-zoom');
   await key('ArrowLeft');
   await expectText('확대: 100%에서 ◀는 그대로', '[data-key="opt-zoom"] .view-row-value', /^‹100%›$/);
   await key('ArrowRight', 25);
-  await expectText('확대: ▶ 25번 → 125%', '[data-key="opt-zoom"] .view-row-value', /125%/);
+  await expectText('확대: ▶ 25번 → 120%에서 멈춤', '[data-key="opt-zoom"] .view-row-value', /^‹120%›$/);
   await key('Escape');
   await key('Escape');
   await page.waitForTimeout(300);
   const zoomed = await page.evaluate(() =>
     Array.from(document.querySelectorAll('.reader-page')).map((el) => Math.round(el.getBoundingClientRect().height)),
   );
-  results.push(`${zoomed.length === 2 && zoomed.every((h) => h === 1350) ? 'PASS' : 'FAIL'} 확대 125%: 두 쪽이 함께 1350: ${zoomed.join(',')}`);
+  results.push(`${zoomed.length === 2 && zoomed.every((h) => h === 1296) ? 'PASS' : 'FAIL'} 확대 120%: 두 쪽이 함께 1296: ${zoomed.join(',')}`);
   const spreadTop = () =>
     page.evaluate(() => Math.round(document.querySelector('.reader-spread').getBoundingClientRect().top));
-  results.push(`${(await spreadTop()) === -135 ? 'PASS' : 'FAIL'} 확대: 가운데 기준 (위 -135)`);
+  results.push(`${(await spreadTop()) === -108 ? 'PASS' : 'FAIL'} 확대: 가운데 기준 (위 -108)`);
   await key('ArrowDown', 3);
-  results.push(`${(await spreadTop()) === -270 ? 'PASS' : 'FAIL'} 확대: ▼로 아래 끝까지 (위 -270, 더 안 내려감)`);
-  await shot('reader-zoom-125-bottom');
+  results.push(`${(await spreadTop()) === -216 ? 'PASS' : 'FAIL'} 확대: ▼로 아래 끝까지 (위 -216, 더 안 내려감)`);
+  await shot('reader-zoom-120-bottom');
+  const layers = () =>
+    page.evaluate(() => Array.from(document.querySelectorAll('.reader-layer')).map((el) => el.className.replace('reader-layer', '').trim() || '-'));
   await key('ArrowRight');
-  await page.waitForTimeout(200);
-  results.push(`${(await spreadTop()) === -135 ? 'PASS' : 'FAIL'} 확대: 펼침이 바뀌면 다시 가운데`);
+  const sliding = await layers();
+  results.push(`${sliding.includes('slide-out-left') && sliding.includes('slide-in-right') ? 'PASS' : 'FAIL'} 밀기: 다음 펼침이 오른쪽에서 (${sliding.join(',')})`);
+  await page.waitForTimeout(400);
+  const settled = await layers();
+  results.push(`${settled.length === 1 && settled[0] === '-' ? 'PASS' : 'FAIL'} 밀기 끝나면 한 장만: ${settled.join(',')}`);
+  results.push(`${(await spreadTop()) === -108 ? 'PASS' : 'FAIL'} 확대: 펼침이 바뀌면 다시 가운데`);
   await key('ArrowLeft');
+  const backward = await layers();
+  // 바로 앞 넘김에서 0.4초 지났으니 연타 아님 → 이전 펼침은 왼쪽에서
+  results.push(`${backward.includes('slide-in-left') && backward.includes('slide-out-right') ? 'PASS' : 'FAIL'} 밀기: 이전 펼침은 왼쪽에서 (${backward.join(',')})`);
+  await key('ArrowRight');
+  const rapid = await layers();
+  results.push(`${rapid.length === 1 ? 'PASS' : 'FAIL'} 0.3초 안에 연달아 넘기면 효과 없이 바로: ${rapid.join(',')}`);
+  await page.waitForTimeout(400);
+  await key('ArrowLeft');
+  await page.waitForTimeout(400);
+  // 페이드로 바꿔 본다
   await key('Enter');
   await key('Enter');
   await key('ArrowDown', 5);
+  await key('ArrowRight');
+  await expectText('화면 전환 → 페이드', '[data-key="opt-transition"] .view-row-value', /페이드/);
+  await key('ArrowDown');
   await key('ArrowLeft', 25);
   await expectText('확대 되돌림 100%', '[data-key="opt-zoom"] .view-row-value', /100%/);
+  await key('Escape');
+  await key('Escape');
+  await page.waitForTimeout(400);
+  await key('ArrowRight');
+  const fading = await layers();
+  results.push(`${fading.includes('fade-in') && fading.includes('fade-out') ? 'PASS' : 'FAIL'} 페이드: 겹쳐 바꾸기 (${fading.join(',')})`);
+  await page.waitForTimeout(400);
+  await key('ArrowLeft');
+  await page.waitForTimeout(400);
+  await key('Enter');
+  await key('Enter');
+  await key('ArrowDown', 5);
+  await key('ArrowLeft'); // 페이드 → 밀기로 되돌림
+  await expectText('화면 전환 되돌림 밀기', '[data-key="opt-transition"] .view-row-value', /밀기/);
   await key('Escape');
   await key('Escape');
   await key('Escape'); // 나가기 → 즉시 저장

@@ -31,15 +31,14 @@ export function layoutContinuous(
   screen: Size,
   padding: number,
   spacingDp: number,
-  stretchToFit: boolean,
 ): ContinuousLayout {
   const columnWidth = Math.round(screen.width * (1 - 2 * padding));
   const spacing = spacingDp * DP;
   const pages: PagePlacement[] = [];
   let top = 0;
   sizes.forEach((size, i) => {
-    // 작은 이미지 키우기가 꺼져 있으면 원본 너비보다 넓히지 않는다
-    const width = stretchToFit ? columnWidth : Math.min(columnWidth, size.width);
+    // 작은 쪽도 늘 기둥 너비까지 키운다
+    const width = columnWidth;
     const height = Math.max(1, Math.round((width * size.height) / Math.max(1, size.width)));
     if (i > 0) top += spacing;
     pages.push({ top, left: Math.round((screen.width - width) / 2), width, height });

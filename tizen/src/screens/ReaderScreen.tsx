@@ -30,7 +30,16 @@ import {
   visiblePages,
 } from '../reader/continuous';
 import { type BoundaryLayout, boundaryLayout } from '../reader/boundary';
-import { FALLBACK_SIZE, layoutSpread, PAN_STEPS, type Size, spreadPosition, zoomLayout } from '../reader/layout';
+import {
+  FALLBACK_SIZE,
+  layoutSpread,
+  PAN_STEPS,
+  type Size,
+  type SpreadLayout,
+  spreadPosition,
+  zoomLayout,
+} from '../reader/layout';
+import { chooseTransition, RAPID_FLIP_MS, slideFrom, transitionMs } from '../reader/transition';
 import { ProgressSaver } from '../reader/progress';
 import { buildSpreads, highestPage, type PageInfo, spreadContains, spreadIndexOf } from '../reader/spreads';
 import {
@@ -81,6 +90,17 @@ async function loadBook(bookId: string): Promise<BookData> {
     ? pages.map((page) => ({ number: page.number, width: page.width, height: page.height }))
     : Array.from({ length: Math.max(1, book.media.pagesCount) }, (_unused, i) => ({ number: i + 1, width: null, height: null }));
   return { book, pages: pageInfos, seriesDirection: series.metadata.readingDirection };
+}
+
+/** 진행 중인 화면 전환 (Android 0.2.9) */
+interface SpreadTransition {
+  id: number;
+  kind: 'SLIDE' | 'FADE' | 'OFF';
+  /** 밀기: 새 펼침이 들어오는 쪽 (1 오른쪽, −1 왼쪽) */
+  from: 1 | -1;
+  toIndex: number;
+  bookId: string;
+  outgoing: { pages: PageInfo[]; layout: SpreadLayout; position: { left: number; top: number } };
 }
 
 function ReaderPage({
@@ -254,6 +274,10 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
   const [previousBook, setPreviousBook] = useState<NextBook>(undefined);
   const saver = useRef<ProgressSaver | null>(null);
   const moved = useRef(false);
+  /** 마지막으로 펼침을 넘긴 때 (빠른 연타면 효과 없이) */
+  const lastFlip = useRef(0);
+  /** 지금 진행 중인 화면 전환: 나가는 펼침 그대로와 들어오는 펼침 번호 */
+  const [transition, setTransition] = useState<SpreadTransition | null>(null);
   const exiting = useRef(false);
   const root = useRef<HTMLDivElement>(null);
 
@@ -309,7 +333,7 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
   const spreads = useMemo(() => buildSpreads(pages, settings.pageLayout, offset), [data, settings.pageLayout, offset]);
   const index = spreadIndexOf(spreads, anchorPage);
   const spread = spreads[index] ?? [];
-  const pagedLayout = layoutSpread(spread.map(sizeOf), settings.scaleType, settings.stretchToFit, SCREEN);
+  const pagedLayout = layoutSpread(spread.map(sizeOf), settings.scaleType, SCREEN);
   // 확대(Android 0.2.5): 크기 맞춤 결과를 펼침째 키운다
   const zoomedLayout = zoomLayout(pagedLayout, settings.zoomPercent);
   /** 확대 전에도 화면 높이 안이면 가운데 기준 + ▲▼ 위아래 보기, 넘치면 위에서부터 스크롤 */
@@ -323,10 +347,9 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
       SCREEN,
       settings.continuousPadding,
       settings.continuousPageSpacing,
-      settings.stretchToFit,
     );
     return withCards(layout, START_CARD_HEIGHT, END_CARD_HEIGHT);
-  }, [data, naturalSizes, settings.continuousPadding, settings.continuousPageSpacing, settings.stretchToFit]);
+  }, [data, naturalSizes, settings.continuousPadding, settings.continuousPageSpacing]);
   const continuousScroll = scrollOf(continuous, anchor, SCREEN.height);
   const visible = visiblePages(continuous, continuousScroll, SCREEN.height);
   const continuousAtBottom = continuousScroll >= continuous.total - SCREEN.height - 1;
@@ -555,8 +578,44 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
       else setAtStart(false); // 다음 쪽 키 = 첫 쪽으로
       return;
     }
-    goToSpread(index + forward);
+    flip(forward > 0 ? 1 : -1);
   };
+
+  /** 한 칸 앞·뒤 펼침으로 — 화면 전환 효과는 여기서만 (Android AnimatedSpread) */
+  const flip = (step: 1 | -1) => {
+    const target = index + step;
+    const now = Date.now();
+    const rapid = now - lastFlip.current < RAPID_FLIP_MS;
+    lastFlip.current = now;
+    const incoming = spreads[target];
+    const cache = sessionStore.get()?.pages;
+    const ready = !!incoming && !!cache && incoming.every((page) => cache.has(keyOf(page.number)));
+    const kind = chooseTransition(settings.pageTransition, step, rapid, ready);
+    if (kind === 'OFF' || !data) {
+      setTransition(null);
+    } else {
+      setTransition({
+        id: now,
+        kind,
+        from: slideFrom(step, direction === 'RIGHT_TO_LEFT'),
+        toIndex: target,
+        bookId,
+        outgoing: {
+          pages: spread,
+          layout: zoomedLayout,
+          position: spreadPosition(pagedLayout, zoomedLayout, SCREEN, panStep, scrollY),
+        },
+      });
+    }
+    goToSpread(target);
+  };
+
+  // 효과가 끝나면 나가는 펼침을 뗀다
+  useEffect(() => {
+    if (!transition) return undefined;
+    const timer = setTimeout(() => setTransition(null), transitionMs(transition.kind) + 40);
+    return () => clearTimeout(timer);
+  }, [transition]);
 
   const exit = () => {
     if (exiting.current) return;
@@ -762,21 +821,44 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
     content = <StartView book={data.book} previous={previousBook} layout={boundaryLayout(false, rtlReading, false)} />;
   } else {
     const rtl = direction === 'RIGHT_TO_LEFT';
-    const shownPages = rtl ? spread.slice().reverse() : spread;
-    const shownSizes = rtl ? zoomedLayout.pages.slice().reverse() : zoomedLayout.pages;
-    const { left, top } = spreadPosition(pagedLayout, zoomedLayout, SCREEN, panStep, scrollY);
+    const renderSpread = (shown: PageInfo[], layout: SpreadLayout, position: { left: number; top: number }) => {
+      const shownPages = rtl ? shown.slice().reverse() : shown;
+      const shownSizes = rtl ? layout.pages.slice().reverse() : layout.pages;
+      return (
+        <div class="reader-spread" style={{ transform: `translate(${px(position.left)}, ${px(position.top)})` }}>
+          {shownPages.map((page, i) => (
+            <ReaderPage
+              key={`${bookId}-${page.number}`}
+              bookId={bookId}
+              pdf={isPdf}
+              page={page}
+              style={{ width: px(shownSizes[i]?.width ?? 0), height: px(shownSizes[i]?.height ?? 0) }}
+              onNaturalSize={onNaturalSize}
+            />
+          ))}
+        </div>
+      );
+    };
+    // 화면 전환 중이면 나가는 펼침도 함께 그린다. 펼침마다 key가 같아 효과가 끝나도 다시 만들지 않는다
+    const shownTransition = transition && transition.toIndex === index && transition.bookId === bookId ? transition : null;
+    const layerKey = (shown: PageInfo[]) => `spread-${bookId}-${shown[0]?.number ?? 0}`;
+    const animation = (entering: boolean): string => {
+      if (!shownTransition) return '';
+      if (shownTransition.kind === 'FADE') return entering ? ' fade-in' : ' fade-out';
+      const side = entering ? shownTransition.from : -shownTransition.from;
+      return `${entering ? ' slide-in-' : ' slide-out-'}${side > 0 ? 'right' : 'left'}`;
+    };
+    // 한 요소로 감싼다 — Fragment면 리더 종류를 바꿀 때 뒤의 패널까지 다시 만들어져 포커스를 잃는다
     content = (
-      <div class="reader-spread" style={{ transform: `translate(${px(left)}, ${px(top)})` }}>
-        {shownPages.map((page, i) => (
-          <ReaderPage
-            key={`${bookId}-${page.number}`}
-            bookId={bookId}
-            pdf={isPdf}
-            page={page}
-            style={{ width: px(shownSizes[i].width), height: px(shownSizes[i].height) }}
-            onNaturalSize={onNaturalSize}
-          />
-        ))}
+      <div class="reader-paged">
+        {shownTransition && (
+          <div key={layerKey(shownTransition.outgoing.pages)} class={`reader-layer${animation(false)}`}>
+            {renderSpread(shownTransition.outgoing.pages, shownTransition.outgoing.layout, shownTransition.outgoing.position)}
+          </div>
+        )}
+        <div key={layerKey(spread)} class={`reader-layer${animation(true)}`}>
+          {renderSpread(spread, zoomedLayout, spreadPosition(pagedLayout, zoomedLayout, SCREEN, panStep, scrollY))}
+        </div>
       </div>
     );
   }

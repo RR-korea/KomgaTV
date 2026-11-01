@@ -84,6 +84,11 @@ export class ImageCache {
     this.queue.length = 0;
   }
 
+  /** 이미 받아 둬서 바로 그릴 수 있는지 (화면 전환 효과를 쓸지 정할 때) */
+  has(key: string): boolean {
+    return this.entries.has(key);
+  }
+
   get size(): number {
     return this.entries.size;
   }

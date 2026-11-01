@@ -2,16 +2,18 @@
 // 항목은 한 줄(왼쪽 이름, 오른쪽 ‹ 값 ›) — 1080p 한 화면에 스크롤 없이 들어간다. 좌/우 = 값 바꾸기, OK = 다음 값.
 import { fmt, t } from '../i18n';
 import { FOCUSABLE_CLASS } from '../platform/focus';
-import { MAX_ZOOM_PERCENT, MIN_ZOOM_PERCENT } from '../reader/layout';
 import {
   DIRECTIONS,
   ENHANCEMENTS,
+  MAX_ZOOM_PERCENT,
+  MIN_ZOOM_PERCENT,
   PADDING_STEPS,
   PAGE_LAYOUTS,
   READER_TYPES,
   type ReaderSettings,
   SCALE_TYPES,
   SPACING_STEPS,
+  TRANSITIONS,
 } from '../state/readerPrefs';
 
 const ZOOM_STEPS: number[] = [];
@@ -25,9 +27,9 @@ export type ViewKey =
   | 'opt-scale'
   | 'opt-padding'
   | 'opt-spacing'
-  | 'opt-stretch'
   | 'opt-enhance'
-  | 'opt-zoom';
+  | 'opt-zoom'
+  | 'opt-transition';
 
 export interface ViewOption {
   key: ViewKey;
@@ -106,12 +108,12 @@ export function viewOptions(
     value: s.continuousPageSpacing,
     enabled: true,
   };
-  const stretch: ViewOption = {
-    key: 'opt-stretch',
-    label: t.readerStretch,
-    values: [false, true],
-    labels: onOff,
-    value: s.stretchToFit,
+  const transition: ViewOption = {
+    key: 'opt-transition',
+    label: t.viewTransition,
+    values: TRANSITIONS,
+    labels: [t.viewTransitionOff, t.viewTransitionSlide, t.viewTransitionFade],
+    value: s.pageTransition,
     enabled: true,
   };
   const enhance: ViewOption = {
@@ -134,11 +136,11 @@ export function viewOptions(
   };
   switch (mode) {
     case 'reader-paged':
-      return [type, layout, offsetRow, direction, scale, zoom, stretch, enhance];
+      return [type, layout, offsetRow, direction, scale, transition, zoom, enhance];
     case 'reader-continuous':
-      return [type, padding, spacing, stretch, enhance];
+      return [type, padding, spacing, enhance];
     default:
-      return [type, layout, direction, scale, padding, spacing, stretch, enhance];
+      return [type, layout, direction, scale, transition, padding, spacing, enhance];
   }
 }
 
@@ -157,8 +159,8 @@ export function applyViewOption(s: ReaderSettings, key: ViewKey, value: unknown)
       return { ...s, continuousPadding: value as number };
     case 'opt-spacing':
       return { ...s, continuousPageSpacing: value as number };
-    case 'opt-stretch':
-      return { ...s, stretchToFit: value as boolean };
+    case 'opt-transition':
+      return { ...s, pageTransition: value as ReaderSettings['pageTransition'] };
     case 'opt-enhance':
       return { ...s, imageEnhancement: value as ReaderSettings['imageEnhancement'] };
     case 'opt-zoom':

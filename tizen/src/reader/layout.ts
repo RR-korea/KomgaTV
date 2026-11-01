@@ -1,5 +1,8 @@
-// 펼침 크기 계산 (Komelia ScaleType·stretchToFit 규칙). 한 펼침의 쪽들은 같은 높이로 나란히 놓는다.
-import type { ScaleType } from '../state/readerPrefs';
+// 펼침 크기 계산 (Komelia ScaleType 규칙). 한 펼침의 쪽들은 같은 높이로 나란히 놓는다.
+// 작은 이미지도 늘 맞춰 키운다 (Android 0.2.9에서 "작은 이미지 키우기" 설정 제거).
+import { MAX_ZOOM_PERCENT, MIN_ZOOM_PERCENT, type ScaleType } from '../state/readerPrefs';
+
+export { MAX_ZOOM_PERCENT, MIN_ZOOM_PERCENT };
 
 export interface Size {
   width: number;
@@ -16,7 +19,7 @@ export interface SpreadLayout {
 /** 크기를 모르는 쪽은 흔한 만화 비율로 둔다 (불러오면 실제 크기로 다시 잰다) */
 export const FALLBACK_SIZE: Size = { width: 1000, height: 1500 };
 
-export function layoutSpread(sizes: Size[], scale: ScaleType, stretchToFit: boolean, screen: Size): SpreadLayout {
+export function layoutSpread(sizes: Size[], scale: ScaleType, screen: Size): SpreadLayout {
   if (!sizes.length) return { pages: [], width: 0, height: 0 };
   const ratios = sizes.map((size) => (size.height > 0 ? size.width / size.height : 1));
   const totalRatio = ratios.reduce((sum, ratio) => sum + ratio, 0) || 1;
@@ -37,17 +40,13 @@ export function layoutSpread(sizes: Size[], scale: ScaleType, stretchToFit: bool
       height = naturalHeight;
       break;
   }
-  // 작은 이미지 키우기가 꺼져 있으면 원본보다 크게 그리지 않는다
-  if (!stretchToFit) height = Math.min(height, naturalHeight);
   height = Math.round(height);
 
   const pages = ratios.map((ratio) => ({ width: Math.round(ratio * height), height }));
   return { pages, width: pages.reduce((sum, page) => sum + page.width, 0), height };
 }
 
-// ---------- 확대(줌인), Android 0.2.5 "작품별 확대" ----------
-export const MIN_ZOOM_PERCENT = 100;
-export const MAX_ZOOM_PERCENT = 300;
+// ---------- 확대(줌인), Android 0.2.5 "작품별 확대" (0.2.8부터 100~120%) ----------
 /** 화면 고정 모드에서 ▲▼ 한 번에 움직이는 양 — 넘치는 높이의 절반을 이만큼 나눈다 */
 export const PAN_STEPS = 2;
 

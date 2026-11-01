@@ -24,25 +24,25 @@ const small = { width: 400, height: 600 };
 
 describe('layoutContinuous', () => {
   it('쪽 너비 = 화면 너비 × (1 − 2 × 여백), 높이는 비율대로, 가운데 정렬', () => {
-    const layout = layoutContinuous([webtoon], screen, 0.25, 0, true);
+    const layout = layoutContinuous([webtoon], screen, 0.25, 0);
     expect(layout.pages[0]).toEqual({ top: 0, left: 480, width: 960, height: 14400 });
     expect(layout.total).toBe(14400);
   });
 
   it('쪽 사이 간격 (dp → px)', () => {
-    const layout = layoutContinuous([small, small], screen, 0, 8, true);
+    const layout = layoutContinuous([small, small], screen, 0, 8);
     expect(layout.pages[1].top).toBe(layout.pages[0].height + 8 * DP);
   });
 
-  it('작은 이미지 키우기 꺼짐: 원본 너비보다 넓히지 않는다', () => {
-    const layout = layoutContinuous([small], screen, 0, 0, false);
-    expect(layout.pages[0].width).toBe(400);
-    expect(layout.pages[0].height).toBe(600);
+  it('작은 이미지도 늘 기둥 너비까지 키운다 (Android 0.2.9)', () => {
+    const layout = layoutContinuous([small], screen, 0, 0);
+    expect(layout.pages[0].width).toBe(1920);
+    expect(layout.pages[0].height).toBe(2880);
   });
 });
 
 describe('스크롤·기준 쪽', () => {
-  const layout = layoutContinuous([small, webtoon, small], screen, 0, 0, true);
+  const layout = layoutContinuous([small, webtoon, small], screen, 0, 0);
   // small → 1920×2880, webtoon → 1920×28800
 
   it('기준 쪽 ↔ 화면 위치 왕복', () => {
@@ -73,8 +73,8 @@ describe('스크롤·기준 쪽', () => {
 
   it('위쪽 쪽 높이가 바뀌어도 기준 쪽 위치는 그대로', () => {
     const anchor = { index: 2, offset: 100 };
-    const before = layoutContinuous([small, small, small], screen, 0, 0, true);
-    const after = layoutContinuous([small, webtoon, small], screen, 0, 0, true);
+    const before = layoutContinuous([small, small, small], screen, 0, 0);
+    const after = layoutContinuous([small, webtoon, small], screen, 0, 0);
     expect(scrollOf(after, anchor, 1080) - after.pages[2].top).toBe(scrollOf(before, anchor, 1080) - before.pages[2].top);
   });
 });
@@ -136,7 +136,7 @@ describe('작품별 보기 설정 (Android T14)', () => {
 
 describe('책 첫·끝 카드 (이전 권·다음 권)', () => {
   it('첫 쪽 위 카드 자리: 위로 올라가면 음수 거리, 다시 그 위치로', () => {
-    const base = layoutContinuous([{ width: 800, height: 1200 }, { width: 800, height: 1200 }], { width: 1920, height: 1080 }, 0, 0, true);
+    const base = layoutContinuous([{ width: 800, height: 1200 }, { width: 800, height: 1200 }], { width: 1920, height: 1080 }, 0, 0);
     const layout = withCards(base, 720, 720);
     expect(layout.pages[0].top).toBe(720);
     expect(layout.total).toBe(base.total + 1440);
