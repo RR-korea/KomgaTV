@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -53,7 +52,6 @@ internal fun AboutSection() {
     Column(
         modifier = Modifier
             .padding(top = 8.dp)
-            .widthIn(max = 720.dp)
             .fillMaxWidth()
             .background(colors.surfaceVariant, shape)
             .border(if (focused) 2.dp else 1.dp, if (focused) colors.primary else colors.border, shape)
