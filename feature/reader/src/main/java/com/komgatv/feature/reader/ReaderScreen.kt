@@ -83,6 +83,7 @@ import com.komgatv.core.ui.components.ProgressBar
 import com.komgatv.core.ui.components.loadErrorText
 import com.komgatv.feature.reader.continuous.ContinuousPages
 import com.komgatv.feature.reader.enhance.ImageEnhancer
+import com.komgatv.feature.reader.enhance.LanczosTransformation
 import com.komgatv.feature.reader.enhance.SharpenTransformation
 import coil3.request.transformations
 import com.komgatv.feature.reader.epub.EpubReaderScreen
@@ -339,6 +340,7 @@ private fun ReaderContent(
                 tiles = state.continuousTiles,
                 listState = listState,
                 filterQuality = ImageEnhancer.filterQuality(state.imageEnhancement),
+                colorFilter = ImageEnhancer.contrastFilter(state.contrastPercent),
                 scrollToTileIndex = state.scrollToTileIndex,
                 // 화질 설정이 바뀌면 보이는 타일도 다시 불러오게 함수 자체를 바꾼다
                 loadTile = remember(state.imageEnhancement) { { tile -> viewModel.loadTile(tile) } },
@@ -506,8 +508,11 @@ private fun SpreadPages(
                 index == 0 -> Alignment.CenterEnd
                 else -> Alignment.CenterStart
             }
-            val request = remember(url, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement) {
-                pageRequest(context, url, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement)
+            // PDF 원본 쪽(/raw)을 서버가 못 주면(파일을 옮겼거나 분석 중 등) 서버가 그린 일반 쪽으로 다시 받는다
+            var useRendered by remember(url) { mutableStateOf(false) }
+            val pageUrl = if (useRendered) url.removeSuffix("/raw") else url
+            val request = remember(pageUrl, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement) {
+                pageRequest(context, pageUrl, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement)
             }
             // 받는 중이면 스피너, 실패하면 문구 — 빨리 넘길 때 검은 화면이 멈춘 것처럼 보이지 않게
             var loadState by remember(request) { mutableStateOf<AsyncImagePainter.State>(AsyncImagePainter.State.Empty) }
@@ -528,7 +533,11 @@ private fun SpreadPages(
                     contentScale = contentScale,
                     alignment = alignment,
                     filterQuality = ImageEnhancer.filterQuality(state.imageEnhancement),
-                    onState = { loadState = it },
+                    colorFilter = ImageEnhancer.contrastFilter(state.contrastPercent),
+                    onState = {
+                        loadState = it
+                        if (it is AsyncImagePainter.State.Error && !useRendered && url.endsWith("/raw")) useRendered = true
+                    },
                     modifier = pageModifier,
                 )
                 when (loadState) {
@@ -633,7 +642,13 @@ private fun pageRequest(
         .size(size)
         .precision(Precision.INEXACT)
         .crossfade(false)
-        .apply { ImageEnhancer.sharpenAmount(enhancement)?.let { transformations(SharpenTransformation(it)) } }
+        .transformations(
+            listOfNotNull(
+                // 화면 크기로 Lanczos 리샘플링한 뒤 선명하게
+                ImageEnhancer.lanczos(enhancement)?.let { LanczosTransformation(scaleType, it) },
+                ImageEnhancer.sharpenAmount(enhancement)?.let { SharpenTransformation(it) },
+            ),
+        )
         .build()
 }
 

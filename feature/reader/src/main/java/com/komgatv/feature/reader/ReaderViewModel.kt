@@ -91,6 +91,8 @@ sealed interface ReaderUiState {
         val imageEnhancement: ImageEnhancement = ImageEnhancement.OFF,
         /** 크기 맞춤 결과를 더 확대하는 비율 % (페이지 넘김) */
         val zoomPercent: Int = ReaderSettings.MIN_ZOOM_PERCENT,
+        /** 대비 % (100 = 그대로) */
+        val contrastPercent: Int = 100,
         /** 페이지 넘김 화면 전환 효과 */
         val pageTransition: PageTransition = PageTransition.SLIDE,
         /**
@@ -118,6 +120,7 @@ sealed interface ReaderUiState {
                 continuousPageSpacing = continuousPageSpacing,
                 imageEnhancement = imageEnhancement,
                 zoomPercent = zoomPercent,
+                contrastPercent = contrastPercent,
                 pageTransition = pageTransition,
             )
     }
@@ -212,6 +215,7 @@ class ReaderViewModel @Inject constructor(
     private var currentContinuousPageSpacing: Int = 0
     private var currentImageEnhancement: ImageEnhancement = ImageEnhancement.OFF
     private var currentZoomPercent: Int = ReaderSettings.MIN_ZOOM_PERCENT
+    private var currentContrastPercent: Int = 100
     private var currentPageTransition: PageTransition = PageTransition.SLIDE
     private var pageStep = 0
     private var currentSeriesId: String = ""
@@ -694,6 +698,7 @@ class ReaderViewModel @Inject constructor(
         if (new.continuousPageSpacing != currentContinuousPageSpacing) setContinuousPageSpacing(new.continuousPageSpacing)
         if (new.imageEnhancement != currentImageEnhancement) setImageEnhancement(new.imageEnhancement)
         if (new.zoomPercent != currentZoomPercent) setZoomPercent(new.zoomPercent)
+        if (new.contrastPercent != currentContrastPercent) setContrastPercent(new.contrastPercent)
         if (new.pageTransition != currentPageTransition) setPageTransition(new.pageTransition)
     }
 
@@ -701,6 +706,15 @@ class ReaderViewModel @Inject constructor(
     fun setPageTransition(transition: PageTransition) {
         if (currentPageTransition == transition) return
         currentPageTransition = transition
+        updateReadingState()
+        saveSeriesSettings()
+    }
+
+    /** 대비 변경 — 이 작품에 저장 */
+    fun setContrastPercent(percent: Int) {
+        val clamped = percent.coerceIn(ReaderSettings.MIN_CONTRAST_PERCENT, ReaderSettings.MAX_CONTRAST_PERCENT)
+        if (currentContrastPercent == clamped) return
+        currentContrastPercent = clamped
         updateReadingState()
         saveSeriesSettings()
     }
@@ -754,6 +768,7 @@ class ReaderViewModel @Inject constructor(
         currentContinuousPageSpacing = settings.continuousPageSpacing
         currentImageEnhancement = settings.imageEnhancement
         currentZoomPercent = settings.zoomPercent
+        currentContrastPercent = settings.contrastPercent
         currentPageTransition = settings.pageTransition
     }
 
@@ -766,6 +781,7 @@ class ReaderViewModel @Inject constructor(
         continuousPageSpacing = currentContinuousPageSpacing,
         imageEnhancement = currentImageEnhancement,
         zoomPercent = currentZoomPercent,
+        contrastPercent = currentContrastPercent,
         pageTransition = currentPageTransition,
     )
 
@@ -800,7 +816,9 @@ class ReaderViewModel @Inject constructor(
 
     /** Continuous: 타일 이미지 (화면이 보이는 타일마다 요청) */
     suspend fun loadTile(tile: PageTile): ImageBitmap =
-        tileSource.tile(currentBookId, tile, ImageEnhancer.sharpenAmount(currentImageEnhancement))
+        tileSource.tile(
+            currentBookId, tile, ImageEnhancer.sharpenAmount(currentImageEnhancement), ImageEnhancer.lanczos(currentImageEnhancement),
+        )
 
     /**
      * Continuous: 화면에 보이는 타일이 바뀜 (PageTile.key 목록, 위에서부터).
@@ -1001,6 +1019,7 @@ class ReaderViewModel @Inject constructor(
             scrollToTileIndex = scrollToTileIndex,
             imageEnhancement = currentImageEnhancement,
             zoomPercent = currentZoomPercent,
+            contrastPercent = currentContrastPercent,
             pageTransition = currentPageTransition,
             pageStep = pageStep,
             seriesCustomized = seriesCustomized,

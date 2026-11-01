@@ -19,6 +19,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -55,6 +56,7 @@ internal fun ContinuousPages(
     tiles: List<PageTile>,
     listState: LazyListState,
     filterQuality: FilterQuality,
+    colorFilter: ColorFilter?,
     scrollToTileIndex: Int?,
     loadTile: suspend (PageTile) -> ImageBitmap,
     onScrolled: () -> Unit,
@@ -97,7 +99,7 @@ internal fun ContinuousPages(
             StartPageView(info, BoundaryLayout.of(toNext = false, ReadingDirection.LEFT_TO_RIGHT, continuous = true), Modifier.fillMaxWidth().height(boundaryCardHeight()))
         }
         items(tiles, key = { it.key }) { tile ->
-            TileItem(tile, loadTile, filterQuality)
+            TileItem(tile, loadTile, filterQuality, colorFilter)
         }
         // 책 끝 카드 — KMReader처럼 마지막 쪽 다음에 다음 권을 보인다 (아래 한 번 더 = 다음 권)
         item(key = END_KEY) {
@@ -122,7 +124,12 @@ private sealed interface TileLoad {
 }
 
 @Composable
-private fun TileItem(tile: PageTile, loadTile: suspend (PageTile) -> ImageBitmap, filterQuality: FilterQuality) {
+private fun TileItem(
+    tile: PageTile,
+    loadTile: suspend (PageTile) -> ImageBitmap,
+    filterQuality: FilterQuality,
+    colorFilter: ColorFilter?,
+) {
     val density = LocalDensity.current
     // 크기를 모르는 쪽(자리 표시)은 크기를 알아내 다시 계획될 때까지 불러오는 중으로 둔다
     val load by produceState<TileLoad>(TileLoad.Loading, tile, loadTile) {
@@ -149,6 +156,7 @@ private fun TileItem(tile: PageTile, loadTile: suspend (PageTile) -> ImageBitmap
                     contentDescription = null,
                     contentScale = ContentScale.FillBounds,
                     filterQuality = filterQuality,
+                    colorFilter = colorFilter,
                     modifier = Modifier.fillMaxSize(),
                 )
                 // 쪽의 첫 조각에만 — 긴 쪽이 여러 조각이면 스피너가 줄줄이 보이지 않게

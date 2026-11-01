@@ -22,6 +22,7 @@ internal object ReaderSettingsCodec {
         "continuousPageSpacing" to s.continuousPageSpacing.toString(),
         "imageEnhancement" to s.imageEnhancement.name,
         "zoomPercent" to s.zoomPercent.toString(),
+        "contrastPercent" to s.contrastPercent.toString(),
         "pageTransition" to s.pageTransition.name,
     ).joinToString(";") { (k, v) -> "$k=$v" }
 
@@ -43,6 +44,8 @@ internal object ReaderSettingsCodec {
             zoomPercent = map["zoomPercent"]?.toIntOrNull()
                 ?.coerceIn(ReaderSettings.MIN_ZOOM_PERCENT, ReaderSettings.MAX_ZOOM_PERCENT) ?: d.zoomPercent,
             pageTransition = enumOrNull<PageTransition>(map["pageTransition"]) ?: d.pageTransition,
+            contrastPercent = map["contrastPercent"]?.toIntOrNull()
+                ?.coerceIn(ReaderSettings.MIN_CONTRAST_PERCENT, ReaderSettings.MAX_CONTRAST_PERCENT) ?: d.contrastPercent,
         )
     }
 
