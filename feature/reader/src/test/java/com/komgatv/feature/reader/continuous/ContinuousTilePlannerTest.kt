@@ -14,7 +14,6 @@ class ContinuousTilePlannerTest {
         screenHeightPx = 1080,
         sidePaddingFraction = 0f,
         pageSpacingDp = 0,
-        stretchToFit = true,
     )
 
     @Test
@@ -105,15 +104,13 @@ class ContinuousTilePlannerTest {
     }
 
     @Test
-    fun plan_stretch_to_fit_false_preserves_original_width_when_smaller() {
-        // 작은 이미지 키우기 꺼짐: 원본 너비 800 < 화면 1920
-        val params = defaultParams.copy(stretchToFit = false)
+    fun plan_small_page_is_always_stretched_to_width() {
+        // 원본 너비 800 < 화면 1920 — 늘 화면 너비로 키운다 (높이 1440 > 화면 1080이라 조각 2개)
         val page = BookPage(number = 5, width = 800, height = 600)
-        val tiles = ContinuousTilePlanner.planPageTiles(page, params)
+        val tiles = ContinuousTilePlanner.planPageTiles(page, defaultParams)
 
-        assertEquals(1, tiles.size)
-        val tile = tiles.first()
-        assertEquals(800, tile.displayWidth) // 확대하지 않고 원본 너비 유지
-        assertEquals(600, tile.displayHeight)
+        assertTrue(tiles.all { it.displayWidth == 1920 })
+        // 조각마다 반올림해 1px쯤 어긋날 수 있다
+        assertEquals(1440f, tiles.sumOf { it.displayHeight }.toFloat(), 2f)
     }
 }

@@ -31,6 +31,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.komgatv.core.model.ImageEnhancement
 import com.komgatv.core.model.PageLayout
+import com.komgatv.core.model.PageTransition
 import com.komgatv.core.model.ReaderSettings
 import com.komgatv.core.model.ReaderType
 import com.komgatv.core.model.ReadingDirection
@@ -61,7 +62,7 @@ fun ViewSettingsForm(
     onLayoutOffsetChange: (Boolean) -> Unit = {},
     showZoom: Boolean = false,
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(5.dp)) {
         OptionRow(
             title = stringResource(R.string.view_reader_type),
             options = listOf(
@@ -113,6 +114,16 @@ fun ViewSettingsForm(
                     current = settings.scaleType,
                     onChange = { onChange(settings.copy(scaleType = it)) },
                 )
+                OptionRow(
+                    title = stringResource(R.string.view_transition),
+                    options = listOf(
+                        PageTransition.OFF to stringResource(R.string.view_transition_off),
+                        PageTransition.SLIDE to stringResource(R.string.view_transition_slide),
+                        PageTransition.FADE to stringResource(R.string.view_transition_fade),
+                    ),
+                    current = settings.pageTransition,
+                    onChange = { onChange(settings.copy(pageTransition = it)) },
+                )
                 if (showZoom) {
                     // 크기 맞춤 결과를 1%씩 더 확대 — 길게 누르면 키 반복으로 빨리 바뀐다
                     SettingRow(
@@ -141,11 +152,6 @@ fun ViewSettingsForm(
                 )
             }
         }
-        OnOffRow(
-            title = stringResource(R.string.view_stretch),
-            value = settings.stretchToFit,
-            onChange = { onChange(settings.copy(stretchToFit = it)) },
-        )
         OptionRow(
             title = stringResource(R.string.view_enhancement),
             options = listOf(
@@ -225,7 +231,7 @@ private fun SettingRow(
                     else -> false
                 }
             }
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {

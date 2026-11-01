@@ -22,7 +22,6 @@
     <string name="view_scale_original">원본 크기</string>
     <string name="view_side_padding">좌우 여백</string>
     <string name="view_page_spacing">쪽 간격</string>
-    <string name="view_stretch">작은 이미지 키우기</string>
     <string name="view_enhancement">화질 개선</string>
     <string name="view_enhancement_off">끄기</string>
     <string name="view_enhancement_smooth">부드럽게 확대</string>
@@ -33,4 +32,8 @@
     <string name="view_on">켜짐</string>
     <string name="view_off">꺼짐</string>
     <string name="view_zoom">확대</string>
+    <string name="view_transition">화면 전환</string>
+    <string name="view_transition_off">끄기</string>
+    <string name="view_transition_slide">밀기</string>
+    <string name="view_transition_fade">페이드</string>
 </resources>
