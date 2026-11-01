@@ -135,5 +135,7 @@ T5 코드(`ReaderViewModel`, `ReaderScreen`, `ReaderSettingsPanel`, `docs/report
 
 ## T13. EPUB 목차, 책 메뉴 — ✅ 완료 (docs/reports/T13.md)
 
+## T14. 보기 기본값·작품별 설정·화질 개선 — ✅ 완료 (docs/reports/T14.md)
+
 ## 이후 (리드가 지시)
 Tizen 이식(KomgaTV-tizen, 별도 세션).

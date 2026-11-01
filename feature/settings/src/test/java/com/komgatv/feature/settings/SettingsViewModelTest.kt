@@ -2,7 +2,11 @@ package com.komgatv.feature.settings
 
 import android.content.Context
 import com.komgatv.core.datastore.AuthConfig
+import com.komgatv.core.datastore.ReaderPreferences
 import com.komgatv.core.datastore.SavedServer
+import com.komgatv.core.model.ImageEnhancement
+import com.komgatv.core.model.ReaderSettings
+import com.komgatv.core.model.ScaleType
 import com.komgatv.core.datastore.ServerConfig
 import com.komgatv.core.datastore.ServerPreferences
 import com.komgatv.core.network.ServerSessionManager
@@ -126,6 +130,7 @@ class SettingsViewModelTest {
     private lateinit var sessionManager: ServerSessionManager
     private lateinit var fakeContext: Context
     private lateinit var viewModel: SettingsViewModel
+    private val readerPreferences = FakeReaderPreferences()
 
     @Before
     fun setUp() {
@@ -140,6 +145,7 @@ class SettingsViewModelTest {
         viewModel = SettingsViewModel(
             serverPreferences = fakePreferences,
             sessionManager = sessionManager,
+            readerPreferences = readerPreferences,
             context = fakeContext,
         )
     }
@@ -148,6 +154,15 @@ class SettingsViewModelTest {
     fun tearDown() {
         mockWebServer.shutdown()
         Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `보기 기본값을 바꾸면 앱 전체 설정으로 저장된다`() = runTest {
+        viewModel.updateViewDefaults(ReaderSettings(scaleType = ScaleType.FIT_WIDTH, imageEnhancement = ImageEnhancement.SMOOTH))
+        advanceUntilIdle()
+
+        assertEquals(ScaleType.FIT_WIDTH, viewModel.viewDefaults.value.scaleType)
+        assertEquals(ImageEnhancement.SMOOTH, readerPreferences.settings.value.imageEnhancement)
     }
 
     @Test
@@ -275,4 +290,16 @@ class SettingsViewModelTest {
         assertFalse(state.saveSuccess)
         assertFalse(state.isSaving)
     }
+}
+
+private class FakeReaderPreferences : ReaderPreferences {
+    val settings = MutableStateFlow(ReaderSettings())
+    override val readerSettings: Flow<ReaderSettings> = settings
+    override suspend fun saveReaderSettings(settings: ReaderSettings) {
+        this.settings.value = settings
+    }
+    override suspend fun saveEpubTextZoom(zoom: Int) = Unit
+    override fun seriesSettings(seriesId: String): Flow<ReaderSettings?> = MutableStateFlow(null)
+    override suspend fun saveSeriesSettings(seriesId: String, settings: ReaderSettings) = Unit
+    override suspend fun clearSeriesSettings(seriesId: String) = Unit
 }

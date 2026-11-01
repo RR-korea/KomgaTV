@@ -31,4 +31,6 @@
     <string name="settings_server_switch">Switch</string>
     <string name="settings_server_remove">Remove</string>
     <string name="settings_server_add">Add another server</string>
+    <string name="settings_section_view_defaults">View defaults</string>
+    <string name="settings_view_defaults_hint">Used for every series unless you change a series in the reader (View settings there apply to that series only).</string>
 </resources>

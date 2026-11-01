@@ -13,7 +13,9 @@ import com.komgatv.core.model.BookPage
 import com.komgatv.core.model.LoadError
 import com.komgatv.core.model.MediaProfile
 import com.komgatv.core.model.displayName
+import com.komgatv.core.model.ImageEnhancement
 import com.komgatv.core.model.PageLayout
+import com.komgatv.core.model.ReaderSettings
 import com.komgatv.core.model.ReaderType
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.ScaleType
@@ -22,6 +24,7 @@ import com.komgatv.feature.reader.continuous.ContinuousTilePlanner
 import com.komgatv.feature.reader.continuous.PageTile
 import com.komgatv.feature.reader.continuous.ReaderTypeResolver
 import com.komgatv.feature.reader.continuous.TileSource
+import com.komgatv.feature.reader.enhance.ImageEnhancer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -86,9 +89,25 @@ sealed interface ReaderUiState {
         val currentContinuousPage: Int,
         val scrollToTileIndex: Int? = null,
         val stretchToFit: Boolean,
+        val imageEnhancement: ImageEnhancement = ImageEnhancement.OFF,
+        /** 이 작품에 따로 저장된 보기 설정이 있다 (없으면 앱 기본값을 따른다) */
+        val seriesCustomized: Boolean = false,
         val showOverlay: Boolean = false,
         val showSettingsPanel: Boolean = false,
-    ) : ReaderUiState
+    ) : ReaderUiState {
+        /** 보기 설정 패널이 보여 주는 값 */
+        val settings: ReaderSettings
+            get() = ReaderSettings(
+                readerType = readerType,
+                pageLayout = pageLayout,
+                scaleType = scaleType,
+                stretchToFit = stretchToFit,
+                readingDirection = readingDirection,
+                continuousPadding = continuousPadding,
+                continuousPageSpacing = continuousPageSpacing,
+                imageEnhancement = imageEnhancement,
+            )
+    }
 
     /** 책을 불러오지 못함 — 화면이 오류 종류를 문구로 바꾼다 */
     data class Error(val error: LoadError) : ReaderUiState
@@ -150,6 +169,9 @@ class ReaderViewModel @Inject constructor(
     private var layoutOffset: Boolean = false
     private var currentContinuousPadding: Float = 0f
     private var currentContinuousPageSpacing: Int = 0
+    private var currentImageEnhancement: ImageEnhancement = ImageEnhancement.OFF
+    private var currentSeriesId: String = ""
+    private var seriesCustomized = false
 
     private var saveProgressJob: Job? = null
     private var hasProgressChanged = false
@@ -185,7 +207,6 @@ class ReaderViewModel @Inject constructor(
             _uiState.value = ReaderUiState.Loading
 
             try {
-                val savedSettings = readerPreferences.readerSettings.first()
                 val book = bookRepository.getBookById(bookId)
                 if (book.mediaProfile == MediaProfile.EPUB) {
                     _uiState.value = ReaderUiState.Epub
@@ -194,24 +215,12 @@ class ReaderViewModel @Inject constructor(
                 currentBook = book
 
                 val series = seriesRepository.getSeriesById(book.seriesId)
+                currentSeriesId = book.seriesId
 
-                // 1. 리더 종류 우선순위
-                currentReaderType = ReaderTypeResolver.resolveReaderType(
-                    seriesReadingDirection = series.metadata.readingDirection,
-                    savedReaderType = savedSettings.readerType,
-                )
-
-                // 2. Paged 읽기 방향
-                currentReadingDirection = series.metadata.readingDirection
-                    ?.takeIf { it == ReadingDirection.LEFT_TO_RIGHT || it == ReadingDirection.RIGHT_TO_LEFT }
-                    ?: savedSettings.readingDirection
-
-                // 3. 설정값 적용
-                currentLayout = savedSettings.pageLayout
-                currentScaleType = savedSettings.scaleType
-                currentStretchToFit = savedSettings.stretchToFit
-                currentContinuousPadding = savedSettings.continuousPadding
-                currentContinuousPageSpacing = savedSettings.continuousPageSpacing
+                // 1~3. 보기 설정: 이 작품에 저장된 설정이 있으면 그것, 없으면 앱 기본값 + 시리즈 메타데이터
+                val seriesSettings = readerPreferences.seriesSettings(book.seriesId).first()
+                seriesCustomized = seriesSettings != null
+                applyToFields(seriesSettings ?: defaultsFor(series.metadata.readingDirection))
                 layoutOffset = false // 세션 동안만 적용
 
                 // 4. 페이지 크기 목록 로드
@@ -389,6 +398,11 @@ class ReaderViewModel @Inject constructor(
     /** 리더 종류(ReaderType) 변경 */
     fun setReaderType(type: ReaderType) {
         if (currentReaderType == type) return
+        setReaderTypeWithoutSaving(type)
+        saveSeriesSettings()
+    }
+
+    private fun setReaderTypeWithoutSaving(type: ReaderType) {
         currentReaderType = type
         // 보던 쪽을 다른 모드에서도 이어서 본다
         if (type == ReaderType.CONTINUOUS) {
@@ -401,9 +415,6 @@ class ReaderViewModel @Inject constructor(
             currentSpreadIndex = currentSpreads.indexOfFirst { it.containsPage(page) }.coerceAtLeast(0)
         }
         updateReadingState()
-        viewModelScope.launch {
-            readerPreferences.saveReaderType(type)
-        }
     }
 
     /** 쪽 배치(PageLayout) 변경 */
@@ -411,9 +422,7 @@ class ReaderViewModel @Inject constructor(
         if (currentLayout == layout) return
         currentLayout = layout
         rebuildSpreadsAndRetainPage()
-        viewModelScope.launch {
-            readerPreferences.savePageLayout(layout)
-        }
+        saveSeriesSettings()
     }
 
     /** 쪽 맞춤 밀기(offset) 토글 */
@@ -428,9 +437,7 @@ class ReaderViewModel @Inject constructor(
         if (currentScaleType == scaleType) return
         currentScaleType = scaleType
         updateReadingState()
-        viewModelScope.launch {
-            readerPreferences.saveScaleType(scaleType)
-        }
+        saveSeriesSettings()
     }
 
     /** 작은 이미지 키우기(stretchToFit) 변경 */
@@ -441,18 +448,98 @@ class ReaderViewModel @Inject constructor(
             rebuildContinuousTiles()
         }
         updateReadingState()
-        viewModelScope.launch {
-            readerPreferences.saveStretchToFit(stretch)
-        }
+        saveSeriesSettings()
     }
 
     /** 읽기 방향(ReadingDirection) 변경 */
     fun setReadingDirection(direction: ReadingDirection) {
         currentReadingDirection = direction
         updateReadingState()
+        saveSeriesSettings()
+    }
+
+    /** 화질 개선 변경 */
+    fun setImageEnhancement(enhancement: ImageEnhancement) {
+        if (currentImageEnhancement == enhancement) return
+        currentImageEnhancement = enhancement
+        updateReadingState()
+        saveSeriesSettings()
+    }
+
+    /** 보기 설정 패널에서 바꾼 값 — 바뀐 항목만 반영하고 이 작품에 저장한다 */
+    fun applySettings(new: ReaderSettings) {
+        if (new.readerType != currentReaderType) setReaderType(new.readerType)
+        if (new.pageLayout != currentLayout) setPageLayout(new.pageLayout)
+        if (new.readingDirection != currentReadingDirection) setReadingDirection(new.readingDirection)
+        if (new.scaleType != currentScaleType) setScaleType(new.scaleType)
+        if (new.stretchToFit != currentStretchToFit) setStretchToFit(new.stretchToFit)
+        if (new.continuousPadding != currentContinuousPadding) setContinuousPadding(new.continuousPadding)
+        if (new.continuousPageSpacing != currentContinuousPageSpacing) setContinuousPageSpacing(new.continuousPageSpacing)
+        if (new.imageEnhancement != currentImageEnhancement) setImageEnhancement(new.imageEnhancement)
+    }
+
+    /** 이 작품의 보기 설정을 지우고 앱 기본값으로 되돌린다 (보던 쪽은 그대로) */
+    fun resetSeriesSettings() {
+        val seriesId = currentSeriesId.ifEmpty { return }
         viewModelScope.launch {
-            readerPreferences.saveReadingDirection(direction)
+            readerPreferences.clearSeriesSettings(seriesId)
+            seriesCustomized = false
+            val metadataDirection = runCatching { seriesRepository.getSeriesById(seriesId).metadata.readingDirection }
+                .getOrNull()
+            val defaults = defaultsFor(metadataDirection)
+            val keepType = currentReaderType
+            applyToFields(defaults.copy(readerType = keepType))
+            // 펼침·타일을 새 설정으로 다시 만들되 보던 쪽은 그대로
+            rebuildSpreadsAndRetainPage()
+            rebuildContinuousTiles()
+            // 리더 종류가 바뀌면 보던 쪽에서 이어 보게
+            if (defaults.readerType != keepType) setReaderTypeWithoutSaving(defaults.readerType)
+            updateReadingState()
         }
+    }
+
+    /** 앱 기본값 + 시리즈 메타데이터 규칙 (Komelia와 같음) */
+    private suspend fun defaultsFor(metadataDirection: ReadingDirection?): ReaderSettings {
+        val global = readerPreferences.readerSettings.first()
+        return global.copy(
+            readerType = ReaderTypeResolver.resolveReaderType(metadataDirection, global.readerType),
+            readingDirection = metadataDirection
+                ?.takeIf { it == ReadingDirection.LEFT_TO_RIGHT || it == ReadingDirection.RIGHT_TO_LEFT }
+                ?: global.readingDirection,
+        )
+    }
+
+    private fun applyToFields(settings: ReaderSettings) {
+        currentReaderType = settings.readerType
+        currentReadingDirection = settings.readingDirection
+        currentLayout = settings.pageLayout
+        currentScaleType = settings.scaleType
+        currentStretchToFit = settings.stretchToFit
+        currentContinuousPadding = settings.continuousPadding
+        currentContinuousPageSpacing = settings.continuousPageSpacing
+        currentImageEnhancement = settings.imageEnhancement
+    }
+
+    private fun currentSettings() = ReaderSettings(
+        readerType = currentReaderType,
+        pageLayout = currentLayout,
+        scaleType = currentScaleType,
+        stretchToFit = currentStretchToFit,
+        readingDirection = currentReadingDirection,
+        continuousPadding = currentContinuousPadding,
+        continuousPageSpacing = currentContinuousPageSpacing,
+        imageEnhancement = currentImageEnhancement,
+    )
+
+    /** 패널에서 바꾼 값은 이 작품(시리즈)에만 저장한다 — 앱 기본값은 서버 설정 화면에서 */
+    private fun saveSeriesSettings() {
+        val seriesId = currentSeriesId.ifEmpty { return }
+        val snapshot = currentSettings()
+        if (!seriesCustomized) {
+            seriesCustomized = true
+            updateReadingState()
+        }
+        viewModelScope.launch { readerPreferences.saveSeriesSettings(seriesId, snapshot) }
     }
 
     /** 세로 스크롤 좌우 여백(continuousPadding) 변경 */
@@ -461,9 +548,7 @@ class ReaderViewModel @Inject constructor(
         currentContinuousPadding = padding
         rebuildContinuousTiles()
         updateReadingState()
-        viewModelScope.launch {
-            readerPreferences.saveContinuousPadding(padding)
-        }
+        saveSeriesSettings()
     }
 
     /** 세로 스크롤 쪽 사이 간격(continuousPageSpacing) 변경 */
@@ -472,13 +557,12 @@ class ReaderViewModel @Inject constructor(
         currentContinuousPageSpacing = spacing
         rebuildContinuousTiles()
         updateReadingState()
-        viewModelScope.launch {
-            readerPreferences.saveContinuousPageSpacing(spacing)
-        }
+        saveSeriesSettings()
     }
 
     /** Continuous: 타일 이미지 (화면이 보이는 타일마다 요청) */
-    suspend fun loadTile(tile: PageTile): ImageBitmap = tileSource.tile(currentBookId, tile)
+    suspend fun loadTile(tile: PageTile): ImageBitmap =
+        tileSource.tile(currentBookId, tile, ImageEnhancer.sharpenAmount(currentImageEnhancement))
 
     /**
      * Continuous: 화면에 보이는 타일이 바뀜 (PageTile.key 목록, 위에서부터).
@@ -671,6 +755,8 @@ class ReaderViewModel @Inject constructor(
             currentContinuousPage = currentContinuousPage,
             scrollToTileIndex = scrollToTileIndex,
             stretchToFit = currentStretchToFit,
+            imageEnhancement = currentImageEnhancement,
+            seriesCustomized = seriesCustomized,
             showOverlay = existingOverlay,
             showSettingsPanel = existingSettings,
         )

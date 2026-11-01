@@ -16,12 +16,8 @@ import com.komgatv.core.model.EpubManifest
 import com.komgatv.core.model.EpubTocEntry
 import com.komgatv.core.model.EpubPosition
 import com.komgatv.core.model.MediaProfile
-import com.komgatv.core.model.PageLayout
 import com.komgatv.core.model.ReadProgress
 import com.komgatv.core.model.ReaderSettings
-import com.komgatv.core.model.ReaderType
-import com.komgatv.core.model.ReadingDirection
-import com.komgatv.core.model.ScaleType
 import com.komgatv.core.model.displayName
 import com.komgatv.core.network.ServerSessionManager
 import kotlinx.coroutines.Dispatchers
@@ -230,16 +226,15 @@ class EpubViewModelTest {
     private class FakeReaderPreferences : ReaderPreferences {
         val settings = MutableStateFlow(ReaderSettings())
         override val readerSettings: Flow<ReaderSettings> = settings
-        override suspend fun saveReaderType(readerType: ReaderType) = Unit
-        override suspend fun savePageLayout(layout: PageLayout) = Unit
-        override suspend fun saveScaleType(scaleType: ScaleType) = Unit
-        override suspend fun saveStretchToFit(stretch: Boolean) = Unit
-        override suspend fun saveReadingDirection(direction: ReadingDirection) = Unit
-        override suspend fun saveContinuousPadding(padding: Float) = Unit
-        override suspend fun saveContinuousPageSpacing(spacing: Int) = Unit
+        override suspend fun saveReaderSettings(settings: ReaderSettings) {
+            this.settings.value = settings
+        }
         override suspend fun saveEpubTextZoom(zoom: Int) {
             settings.value = settings.value.copy(epubTextZoom = zoom)
         }
+        override fun seriesSettings(seriesId: String): Flow<ReaderSettings?> = MutableStateFlow(null)
+        override suspend fun saveSeriesSettings(seriesId: String, settings: ReaderSettings) = Unit
+        override suspend fun clearSeriesSettings(seriesId: String) = Unit
     }
 
     /** 연결 없는 서버 설정 (리소스 로더를 만들기만 하고 쓰지 않는다) */

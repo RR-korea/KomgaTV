@@ -1,5 +1,6 @@
 package com.komgatv.feature.settings
 
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -41,6 +42,7 @@ import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import com.komgatv.core.datastore.SavedServer
 import com.komgatv.core.ui.components.TvTextField
+import com.komgatv.core.ui.settings.ViewSettingsForm
 
 /**
  * Komga 서버 연결 설정 화면
@@ -61,6 +63,7 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val savedServers by viewModel.savedServers.collectAsState()
+    val viewDefaults by viewModel.viewDefaults.collectAsState()
 
     // 다른 서버로 바꾸면 홈부터 다시 연다 (옛 서버 내용이 남지 않게)
     LaunchedEffect(uiState.serverSwitched) {
@@ -232,6 +235,26 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
             ConnectionStatusBanner(result = uiState.connectionResult)
         }
+
+        Spacer(modifier = Modifier.height(36.dp))
+
+        // ========== 보기 기본값 (앱 전체) ==========
+        Text(
+            text = stringResource(R.string.settings_section_view_defaults),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = stringResource(R.string.settings_view_defaults_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        ViewSettingsForm(
+            settings = viewDefaults,
+            onChange = viewModel::updateViewDefaults,
+            modifier = Modifier.widthIn(max = 720.dp),
+        )
 
         Spacer(modifier = Modifier.height(36.dp))
 

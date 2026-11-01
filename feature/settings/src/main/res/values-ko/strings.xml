@@ -31,4 +31,6 @@
     <string name="settings_server_switch">바꾸기</string>
     <string name="settings_server_remove">삭제</string>
     <string name="settings_server_add">다른 서버 추가</string>
+    <string name="settings_section_view_defaults">보기 기본값</string>
+    <string name="settings_view_defaults_hint">모든 작품에 쓰입니다. 리더의 보기 설정에서 바꾼 작품은 그 작품의 설정을 따릅니다.</string>
 </resources>

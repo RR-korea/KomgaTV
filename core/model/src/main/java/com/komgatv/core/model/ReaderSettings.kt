@@ -49,7 +49,26 @@ enum class ScaleType {
 }
 
 /**
- * 리더 전역 보기 설정 모델
+ * 화질 개선 — 화면에 맞춰 키우거나 줄일 때의 처리
+ *
+ * TV는 만화 페이지를 보통 크게 키워 보므로 확대 품질과 선명도가 중요하다.
+ */
+enum class ImageEnhancement {
+    /** 끄기 — 기본 필터 */
+    OFF,
+
+    /** 부드럽게 확대 — 고품질 필터(바이큐빅·밉맵), 계단 현상이 줄어든다 */
+    SMOOTH,
+
+    /** 선명하게 — 고품질 필터 + 언샤프 마스크(약하게), 흐린 스캔본이 또렷해진다 */
+    SHARPEN,
+
+    /** 더 선명하게 — 고품질 필터 + 언샤프 마스크(강하게) */
+    SHARPEN_STRONG,
+}
+
+/**
+ * 리더 보기 설정 모델 (앱 전체 기본값, 또는 한 작품의 설정)
  *
  * @property readerType 리더 종류 (기본값: PAGED)
  * @property pageLayout 페이지 표시 방식 (기본값: SINGLE_PAGE)
@@ -67,6 +86,7 @@ data class ReaderSettings(
     val readingDirection: ReadingDirection = ReadingDirection.LEFT_TO_RIGHT,
     val continuousPadding: Float = 0f,
     val continuousPageSpacing: Int = 0,
+    val imageEnhancement: ImageEnhancement = ImageEnhancement.OFF,
     /** EPUB 글자 크기 (WebView textZoom, %) */
     val epubTextZoom: Int = 100,
 )
