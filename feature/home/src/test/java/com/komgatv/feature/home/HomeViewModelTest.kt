@@ -55,6 +55,21 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun `라이브러리 스캔과 휴지통 비우기를 서버에 보내고 결과를 알린다`() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.scanLibrary("lib-1")
+        advanceUntilIdle()
+        assertEquals(LibraryActionResult.ScanRequested, viewModel.libraryMessage.value)
+
+        viewModel.emptyTrash("lib-1")
+        advanceUntilIdle()
+        assertEquals(LibraryActionResult.TrashEmptied, viewModel.libraryMessage.value)
+        assertEquals(listOf("scan:lib-1", "trash:lib-1"), fakeLibraryRepository.actions)
+    }
+
+    @Test
     fun `다음 권과 최근 추가된 시리즈 줄을 함께 읽는다`() = runTest {
         val book = Book(
             id = "next-1", seriesId = "s1", seriesTitle = "원피스", name = "원피스 2권", number = 2,
@@ -184,6 +199,16 @@ class HomeViewModelTest {
             if (shouldFail) throw RuntimeException("라이브러리 조회 실패")
             return librariesToReturn.firstOrNull { it.id == libraryId }
                 ?: Library(libraryId, "가짜 라이브러리")
+        }
+
+        val actions = mutableListOf<String>()
+
+        override suspend fun scan(libraryId: String) {
+            actions += "scan:$libraryId"
+        }
+
+        override suspend fun emptyTrash(libraryId: String) {
+            actions += "trash:$libraryId"
         }
     }
 

@@ -16,4 +16,10 @@
         <item quantity="one">%1$d book</item>
         <item quantity="other">%1$d books</item>
     </plurals>
+    <string name="library_action_scan">Scan library (admin)</string>
+    <string name="library_action_empty_trash">Empty trash (admin)</string>
+    <string name="library_action_hint">After deleting files on the server: scan, wait for it to finish, then empty trash.</string>
+    <string name="library_action_done_scan">Scan requested — the server works on it now</string>
+    <string name="library_action_done_trash">Trash emptied</string>
+    <string name="library_action_failed">Could not do that (admin only, or server error)</string>
 </resources>
