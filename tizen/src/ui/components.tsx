@@ -268,9 +268,9 @@ export function Row({ section, title, children }: { section: string; title: stri
   );
 }
 
-export function ProgressBar({ value }: { value: number }) {
+export function ProgressBar({ value, rtl = false }: { value: number; rtl?: boolean }) {
   return (
-    <div class="progress">
+    <div class={`progress${rtl ? ' rtl' : ''}`}>
       <div class="progress-fill" style={{ width: `${Math.max(0, Math.min(1, value)) * 100}%` }} />
     </div>
   );

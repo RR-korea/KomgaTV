@@ -450,7 +450,7 @@ try {
   await page.waitForTimeout(400);
   await key('ArrowRight');
   await page.waitForTimeout(800);
-  await expectText('마지막 쪽 다음 → 책 끝 화면, 다음 권', '.end-view', /다 읽음.*다음 권.*시리즈 001 04|다 읽음.*킹덤.*04/s);
+  await expectText('마지막 쪽 다음 → 책 끝 화면 (다 읽은 책 › 다음 권, ▶ 안내)', '.end-view', /다 읽음.*03.*›.*다음 권.*04.*▶ \/ OK/s);
   await shot('end-page');
   results.push(`${patches.some((p) => /PATCH read-progress S1B3 page=24 completed=true/.test(p)) ? 'PASS' : 'FAIL'} 마지막 펼침 → 완독 저장`);
   await key('ArrowLeft');
@@ -467,7 +467,8 @@ try {
   await key('Escape'); // 정보 닫기
   await key('ArrowLeft');
   await page.waitForTimeout(600);
-  await expectText('첫 펼침에서 뒤로 → 책 첫 화면 (왼쪽 지금 권 › 오른쪽 이전 권)', '.end-view', /지금 권.*04.*이전 권.*03/s);
+  // 왼쪽→오른쪽 책: 갈 권(이전 권)은 그리로 가는 ◀ 쪽에 (Android 0.2.4 BoundaryLayout)
+  await expectText('첫 펼침에서 뒤로 → 책 첫 화면 (이전 권 ‹ 지금 권, ◀ 안내)', '.end-view', /이전 권.*03.*‹.*지금 권.*04.*◀ \/ OK/s);
   await shot('start-page');
   await key('ArrowLeft');
   await page.waitForTimeout(1200);

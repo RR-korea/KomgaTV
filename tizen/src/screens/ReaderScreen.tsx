@@ -8,6 +8,7 @@
 // 책 처음(Android 이전 권으로 가기): 첫 펼침에서 뒤로 = 책 첫 화면(이전 권 ‹ 지금 권), 한 번 더 = 이전 권 마지막 쪽.
 //   처음 근처에서 이전 권을 찾고 마지막 두 쪽을 미리 받는다. 세로 스크롤은 1쪽 위 책 첫 카드, 맨 위에서 위 = 이전 권 끝.
 // PDF 책은 원본 쪽에서 JPEG를 꺼내 그린다(session.loadPage). 쪽이 0.25초 안에 안 뜨면 "불러오는 중…".
+import type { ComponentChildren } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { bookDisplayTitle } from '../api/display';
 import type { KomgaBook, ReadingDirection } from '../api/types';
@@ -28,6 +29,7 @@ import {
   stepPage,
   visiblePages,
 } from '../reader/continuous';
+import { type BoundaryLayout, boundaryLayout } from '../reader/boundary';
 import { FALLBACK_SIZE, layoutSpread, type Size } from '../reader/layout';
 import { ProgressSaver } from '../reader/progress';
 import { buildSpreads, highestPage, type PageInfo, spreadContains, spreadIndexOf } from '../reader/spreads';
@@ -165,32 +167,60 @@ function TargetSlot({
   );
 }
 
-/** 책 끝 화면: 왼쪽 다 읽은 책 › 오른쪽 다음 권 */
-function EndView({ book, next }: { book: KomgaBook; next: NextBook }) {
+/** 지금 권과 갈 권을 읽기 방향에 맞춰 놓는다 — 갈 권은 그리로 가는 키 쪽에 (Android 0.2.4 BoundaryLayout) */
+function BoundaryPage({
+  layout,
+  current,
+  destination,
+  hint,
+}: {
+  layout: BoundaryLayout;
+  current: ComponentChildren;
+  destination: ComponentChildren;
+  hint: string;
+}) {
   return (
     <div class="end-view">
-      <BookSlot label={t.endPageFinished} book={book} dimmed />
-      <div class="end-arrow">›</div>
-      <TargetSlot label={t.endPageNext} target={next} finding={t.endPageFindingNext} none={t.endPageLastBook} />
-      <div class="end-hint">{next && next !== 'loading' ? t.endPageHintNext : t.endPageHintLast}</div>
+      {layout.destinationOnLeft ? destination : current}
+      <div class="end-arrow">{layout.arrow}</div>
+      {layout.destinationOnLeft ? current : destination}
+      <div class="end-hint">{hint}</div>
     </div>
   );
 }
 
-/** 책 첫 화면: 책 끝 화면과 같은 모양으로 왼쪽 지금 권 › 오른쪽 이전 권 (Android 0.2.3) */
-function StartView({ book, previous }: { book: KomgaBook; previous: NextBook }) {
+/** 책 끝 화면: 다 읽은 책 → 다음 권 */
+function EndView({ book, next, layout }: { book: KomgaBook; next: NextBook; layout: BoundaryLayout }) {
+  const found = !!next && next !== 'loading';
   return (
-    <div class="end-view">
-      <BookSlot label={t.startPageCurrent} book={book} dimmed />
-      <div class="end-arrow">›</div>
-      <TargetSlot
-        label={t.startPagePrevious}
-        target={previous}
-        finding={t.startPageFindingPrevious}
-        none={t.startPageFirstBook}
-      />
-      <div class="end-hint">{previous && previous !== 'loading' ? t.startPageHintPrevious : t.startPageHintFirst}</div>
-    </div>
+    <BoundaryPage
+      layout={layout}
+      current={<BookSlot label={t.endPageFinished} book={book} dimmed />}
+      destination={
+        <TargetSlot label={t.endPageNext} target={next} finding={t.endPageFindingNext} none={t.endPageLastBook} />
+      }
+      hint={found ? fmt(t.endPageHintNext, layout.goKey) : fmt(t.endPageHintLast, layout.backKey)}
+    />
+  );
+}
+
+/** 책 첫 화면: 지금 권 → 이전 권 */
+function StartView({ book, previous, layout }: { book: KomgaBook; previous: NextBook; layout: BoundaryLayout }) {
+  const found = !!previous && previous !== 'loading';
+  return (
+    <BoundaryPage
+      layout={layout}
+      current={<BookSlot label={t.startPageCurrent} book={book} dimmed />}
+      destination={
+        <TargetSlot
+          label={t.startPagePrevious}
+          target={previous}
+          finding={t.startPageFindingPrevious}
+          none={t.startPageFirstBook}
+        />
+      }
+      hint={found ? fmt(t.startPageHintPrevious, layout.goKey) : fmt(t.startPageHintFirst, layout.backKey)}
+    />
   );
 }
 
@@ -671,6 +701,7 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
         : { ...previous, [number]: size },
     );
   const bookTitle = bookDisplayTitle(data.book);
+  const rtlReading = direction === 'RIGHT_TO_LEFT';
 
   let content;
   if (isContinuous) {
@@ -703,20 +734,20 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
         )}
         {from < START_CARD_HEIGHT && (
           <div class="end-card" style={{ top: '0px', height: px(START_CARD_HEIGHT) }}>
-            <StartView book={data.book} previous={previousBook} />
+            <StartView book={data.book} previous={previousBook} layout={boundaryLayout(false, rtlReading, true)} />
           </div>
         )}
         {endTop < to && (
           <div class="end-card" style={{ top: px(endTop), height: px(END_CARD_HEIGHT) }}>
-            <EndView book={data.book} next={nextBook} />
+            <EndView book={data.book} next={nextBook} layout={boundaryLayout(true, rtlReading, true)} />
           </div>
         )}
       </div>
     );
   } else if (atEnd) {
-    content = <EndView book={data.book} next={nextBook} />;
+    content = <EndView book={data.book} next={nextBook} layout={boundaryLayout(true, rtlReading, false)} />;
   } else if (atStart) {
-    content = <StartView book={data.book} previous={previousBook} />;
+    content = <StartView book={data.book} previous={previousBook} layout={boundaryLayout(false, rtlReading, false)} />;
   } else {
     const rtl = direction === 'RIGHT_TO_LEFT';
     const shownPages = rtl ? spread.slice().reverse() : spread;
@@ -760,7 +791,8 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
               </div>
               <div>{`${Math.round((shownHighest / Math.max(1, totalPages)) * 100)}%`}</div>
             </div>
-            <ProgressBar value={shownHighest / Math.max(1, totalPages)} />
+            {/* 오른쪽→왼쪽이면 진행 막대도 오른쪽에서 찬다 (Android 0.2.4) */}
+            <ProgressBar value={shownHighest / Math.max(1, totalPages)} rtl={rtlReading && !isContinuous} />
             <div class="reader-help">{isContinuous ? t.readerHelpContinuous : t.readerHelp}</div>
           </div>
         </div>

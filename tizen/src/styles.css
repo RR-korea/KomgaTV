@@ -992,3 +992,8 @@ body {
 .end-arrow {
   color: #80b9ff;
 }
+
+/* 오른쪽→왼쪽으로 읽으면 진행 막대가 오른쪽에서 찬다 */
+.progress.rtl {
+  direction: rtl;
+}
