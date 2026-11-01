@@ -6,6 +6,11 @@ plugins {
 
 android {
     namespace = "com.komgatv.feature.reader"
+
+    defaultConfig {
+        // 번역은 ML Kit(실제 기기·에뮬레이터)가 있어야 해서 기기 테스트로 확인한다
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
 }
 
 dependencies {
@@ -18,4 +23,8 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
 }

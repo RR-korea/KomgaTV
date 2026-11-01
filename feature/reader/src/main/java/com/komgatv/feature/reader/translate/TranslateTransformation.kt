@@ -1,5 +1,6 @@
 package com.komgatv.feature.reader.translate
 
+import android.content.Context
 import android.graphics.Bitmap
 import coil3.size.Size
 import coil3.transform.Transformation
@@ -12,7 +13,7 @@ import timber.log.Timber
  * 이웃 쪽 미리 받기도 같은 요청이라 미리 번역된다. 실패하면 원래 쪽을 그대로 보인다.
  */
 internal class TranslateTransformation(
-    private val translator: MangaTranslator,
+    private val context: Context,
     private val mode: TranslationMode,
     private val pageKey: String,
 ) : Transformation() {
@@ -20,7 +21,11 @@ internal class TranslateTransformation(
     override val cacheKey: String = "translate-$mode"
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap = try {
-        TranslatePainter.paint(input, translator.translate(input, mode, pageKey))
+        val blocks = MangaTranslator.get(context).translate(input, mode, pageKey) {
+            // 글자는 받아 둔 원본 파일에서 읽는다 (화면 크기 그림보다 훨씬 잘 읽는다)
+            OcrSource.load(context, pageKey)
+        }
+        TranslatePainter.paint(input, blocks)
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {

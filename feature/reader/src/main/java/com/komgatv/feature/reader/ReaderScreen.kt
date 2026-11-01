@@ -80,7 +80,6 @@ import com.komgatv.core.model.ReaderType
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.ScaleType
 import com.komgatv.core.model.TranslationMode
-import com.komgatv.feature.reader.translate.MangaTranslator
 import com.komgatv.feature.reader.translate.TranslateTransformation
 import com.komgatv.core.ui.components.ProgressBar
 import com.komgatv.core.ui.components.loadErrorText
@@ -648,7 +647,7 @@ private fun pageRequest(
                 ImageEnhancer.sharpenAmount(enhancement)?.let { SharpenTransformation(it) },
                 // 번역은 선명하게 한 뒤에 (글자 인식이 조금 낫다)
                 translation.takeIf { it != TranslationMode.OFF }?.let {
-                    TranslateTransformation(MangaTranslator.get(context), it, url)
+                    TranslateTransformation(context.applicationContext, it, url)
                 },
             ),
         )

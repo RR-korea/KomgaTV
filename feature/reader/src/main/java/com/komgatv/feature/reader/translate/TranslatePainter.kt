@@ -34,11 +34,13 @@ internal object TranslatePainter {
 
         for (block in blocks) {
             val original = RectF(block.box.left * w, block.box.top * h, block.box.right * w, block.box.bottom * h)
-            // 인식 상자는 글자에 딱 붙거나 첫·끝 글자를 조금 놓친다 — 줄 높이의 4분의 1쯤 넓게 가린다
-            val pad = max(4f, min(original.width(), original.height()) * 0.25f)
+            // 인식 상자는 글자에 딱 붙어 있다 — 조금 넓히고, 바탕색인 곳으로만 더 넓혀 가린다(말풍선 테두리는 남긴다)
+            val pad = max(3f, min(original.width(), original.height()) * 0.08f)
             original.inset(-pad, -pad)
-            val area = textArea(original, w, h)
+            original.intersect(0f, 0f, w, h)
             val background = sampleBackground(out, original)
+            growIntoBackground(out, original, background, min(original.width(), original.height()) * 0.25f)
+            val area = textArea(out, original, background)
 
             fill.color = background
             val radius = min(area.width(), area.height()) * 0.12f
@@ -54,21 +56,79 @@ internal object TranslatePainter {
     }
 
     /**
-     * 번역문을 쓸 칸. 일본어 세로 말풍선은 가늘고 길어 한국어 가로글이 한 글자씩 꺾인다 — 너비를 조금 넓힌다(쪽 밖으로는 안 나가게).
+     * 번역문을 쓸 칸. 일본어 세로 말풍선은 가늘고 길어 한국어 가로글이 한 글자씩 꺾인다 — 너비를 넓힌다.
+     * 바탕색인 곳(말풍선 안)까지만 넓혀 말풍선 테두리나 그림을 덮지 않는다.
      */
-    private fun textArea(original: RectF, pageW: Float, pageH: Float): RectF {
+    private fun textArea(bitmap: Bitmap, original: RectF, background: Int): RectF {
         val area = RectF(original)
         val wanted = min(original.height() * 0.6f, original.width() * 1.6f)
-        if (wanted > area.width()) {
-            val grow = (wanted - area.width()) / 2f
-            area.left -= grow
-            area.right += grow
+        val step = 2f
+        var growLeft = true
+        var growRight = true
+        while (area.width() < wanted && (growLeft || growRight)) {
+            if (growLeft) growLeft = area.left - step >= 0 && isBackgroundColumn(bitmap, area.left - step, area, background)
+            if (growLeft) area.left -= step
+            if (growRight) growRight = area.right + step < bitmap.width && isBackgroundColumn(bitmap, area.right + step, area, background)
+            if (growRight) area.right += step
         }
-        area.left = area.left.coerceAtLeast(0f)
-        area.top = area.top.coerceAtLeast(0f)
-        area.right = area.right.coerceAtMost(pageW)
-        area.bottom = area.bottom.coerceAtMost(pageH)
         return area
+    }
+
+    /** 네 변을 바탕색인 곳으로만 [limit]까지 넓힌다 */
+    private fun growIntoBackground(bitmap: Bitmap, rect: RectF, background: Int, limit: Float) {
+        val step = 2f
+        var grown = 0f
+        while (grown < limit) {
+            var any = false
+            if (rect.left - step >= 0 && isBackgroundColumn(bitmap, rect.left - step, rect, background)) {
+                rect.left -= step
+                any = true
+            }
+            if (rect.right + step < bitmap.width && isBackgroundColumn(bitmap, rect.right + step, rect, background)) {
+                rect.right += step
+                any = true
+            }
+            if (rect.top - step >= 0 && isBackgroundRow(bitmap, rect.top - step, rect, background)) {
+                rect.top -= step
+                any = true
+            }
+            if (rect.bottom + step < bitmap.height && isBackgroundRow(bitmap, rect.bottom + step, rect, background)) {
+                rect.bottom += step
+                any = true
+            }
+            if (!any) break
+            grown += step
+        }
+    }
+
+    /** 이 가로줄이 거의 바탕색인지 */
+    private fun isBackgroundRow(bitmap: Bitmap, y: Float, area: RectF, background: Int): Boolean {
+        val row = y.toInt().coerceIn(0, bitmap.height - 1)
+        val left = area.left.toInt().coerceIn(0, bitmap.width - 1)
+        val right = area.right.toInt().coerceIn(0, bitmap.width - 1)
+        val target = luminance(background)
+        var total = 0
+        var off = 0
+        for (x in left..right step 2) {
+            total++
+            if (kotlin.math.abs(luminance(bitmap[x, row]) - target) > 40) off++
+        }
+        return total == 0 || off * 50 <= total
+    }
+
+    /** 이 세로줄이 거의 바탕색인지 (글자·테두리·그림이 없다) */
+    private fun isBackgroundColumn(bitmap: Bitmap, x: Float, area: RectF, background: Int): Boolean {
+        val col = x.toInt().coerceIn(0, bitmap.width - 1)
+        val top = area.top.toInt().coerceIn(0, bitmap.height - 1)
+        val bottom = area.bottom.toInt().coerceIn(0, bitmap.height - 1)
+        val target = luminance(background)
+        var total = 0
+        var off = 0
+        for (y in top..bottom step 2) {
+            total++
+            if (kotlin.math.abs(luminance(bitmap[col, y]) - target) > 40) off++
+        }
+        return total == 0 || off * 50 <= total
     }
 
     /** 칸 테두리 픽셀의 중앙값 색 — 말풍선이면 흰색, 그림 위 글자면 주변 색 */

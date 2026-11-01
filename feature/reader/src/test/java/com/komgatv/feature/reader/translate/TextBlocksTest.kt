@@ -66,6 +66,31 @@ class TextBlocksTest {
     }
 
     @Test
+    fun `세로쓰기 옆 열은 떨어져 있어도 한 말풍선으로 합친다`() {
+        // 열 너비 0.03, 간격 0.03 — 같은 말풍선의 두 열
+        val right = OcrBlock(Box(0.33f, 0.55f, 0.36f, 0.64f), listOf(line(0.33f, 0.55f, 0.36f, 0.64f, "じゃあ、")))
+        val left = OcrBlock(Box(0.27f, 0.56f, 0.30f, 0.70f), listOf(line(0.27f, 0.56f, 0.30f, 0.70f, "|緒に帰ろう。")))
+        val otherBubble = OcrBlock(Box(0.75f, 0.55f, 0.78f, 0.70f), listOf(line(0.75f, 0.55f, 0.78f, 0.70f, "助かるよ。")))
+
+        val merged = mergeBlocks(listOf(right, left, otherBubble))
+
+        assertEquals(2, merged.size)
+        assertEquals("じゃあ、一緒に帰ろう。", merged[0].sourceText(TranslationMode.JA_KO))
+    }
+
+    @Test
+    fun `세로쓰기의 막대는 한자 앞이면 一, 아니면 장음`() {
+        assertEquals("一緒", fixJapaneseBars("|緒"))
+        assertEquals("ラーメン", fixJapaneseBars("ラ|メン"))
+    }
+
+    @Test
+    fun `일본어다운 읽기가 점수가 높다`() {
+        assertTrue(japaneseScore("\u5FD8\u308C\u3061\u3083\u3063\u305F\u3002") > japaneseScore("\u5A5A\u308C\u3061\u3083 \u3064\u305FP"))
+        assertTrue(japaneseScore("\u5098\u3001\u3042\u308B?") > japaneseScore("4\u3001\u3042\u308B?."))
+    }
+
+    @Test
     fun `번역 저장은 되돌리면 같고, 판이 다르면 버린다`() {
         val blocks = listOf(
             TranslatedBlock(Box(0.1f, 0.2f, 0.3f, 0.4f), "안녕\t\"친구\"\n둘째 줄 \\ 끝"),

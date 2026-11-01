@@ -38,7 +38,7 @@ internal fun OcrBlock.isVertical(): Boolean =
 internal fun OcrBlock.sourceText(mode: TranslationMode): String {
     val ordered = if (isVertical()) lines.sortedByDescending { it.box.centerX } else lines.sortedBy { it.box.top }
     val parts = ordered.map { it.text.trim() }.filter { it.isNotEmpty() }
-    if (mode == TranslationMode.JA_KO) return parts.joinToString("")
+    if (mode == TranslationMode.JA_KO) return fixJapaneseBars(parts.joinToString(""))
     val joined = StringBuilder()
     for (part in parts) {
         if (joined.isEmpty()) {
@@ -51,6 +51,33 @@ internal fun OcrBlock.sourceText(mode: TranslationMode): String {
         }
     }
     return normalizeEnglish(joined.toString())
+}
+
+/**
+ * 세로쓰기의 一·ー를 인식기가 "|"로 읽는다 — 뒤가 한자면 一(一緒), 아니면 장음 ー.
+ * 일본어 대사에 "|"가 쓰일 일은 없다.
+ */
+internal fun fixJapaneseBars(text: String): String = buildString(text.length) {
+    for ((i, c) in text.withIndex()) {
+        if (c == '|' || c == '\uFF5C') {
+            val next = text.getOrNull(i + 1)
+            append(if (next != null && next in '\u4E00'..'\u9FFF') '\u4E00' else '\u30FC')
+        } else {
+            append(c)
+        }
+    }
+}
+
+/**
+ * 일본어답게 읽혔는지 점수 — 가나·한자·일본어 문장부호는 +1, 로마자·숫자·막대 같은 잡음은 -2.
+ * 같은 말풍선을 두 번 읽었을 때 나은 쪽을 고른다.
+ */
+internal fun japaneseScore(text: String): Int = text.sumOf { c ->
+    when {
+        c in '\u3040'..'\u30FF' || c in '\u4E00'..'\u9FFF' || c in "\u3001\u3002\uFF01\uFF1F\u2026\u300C\u300D" -> 1
+        c.isWhitespace() || c in "!?" -> 0
+        else -> -2
+    }.toInt()
 }
 
 /**
@@ -98,9 +125,35 @@ internal fun worthTranslating(text: String, mode: TranslationMode): Boolean {
     }
 }
 
+/** 줄(열) 굵기 — 세로쓰기는 열 너비, 가로쓰기는 줄 높이의 가운데값 */
+internal fun OcrBlock.lineThickness(): Float {
+    val sizes = lines.map { if (isVertical()) it.box.width else it.box.height }.sorted()
+    return if (sizes.isEmpty()) 0f else sizes[sizes.size / 2]
+}
+
+private fun overlap(a1: Float, a2: Float, b1: Float, b2: Float): Float = (minOf(a2, b2) - maxOf(a1, b1)).coerceAtLeast(0f)
+
 /**
- * 겹치거나 아주 가까운 덩어리를 합친다 — 인식기가 한 말풍선을 여러 덩어리로 나눌 때가 있다.
- * [gap]은 이만큼 떨어져 있어도 붙어 있다고 본다 (쪽 비율).
+ * 한 말풍선의 이웃한 줄인지. 세로쓰기는 옆 열(가로 간격이 열 너비 남짓, 세로로 겹침),
+ * 가로쓰기는 아래 줄(세로 간격이 줄 높이 남짓, 가로로 겹침).
+ */
+private fun sameBubble(a: OcrBlock, b: OcrBlock): Boolean {
+    if (a.isVertical() != b.isVertical()) return false
+    val thickness = maxOf(a.lineThickness(), b.lineThickness())
+    return if (a.isVertical()) {
+        val gap = maxOf(a.box.left, b.box.left) - minOf(a.box.right, b.box.right)
+        val shared = overlap(a.box.top, a.box.bottom, b.box.top, b.box.bottom)
+        gap <= thickness * 1.2f && shared >= minOf(a.box.height, b.box.height) * 0.4f
+    } else {
+        val gap = maxOf(a.box.top, b.box.top) - minOf(a.box.bottom, b.box.bottom)
+        val shared = overlap(a.box.left, a.box.right, b.box.left, b.box.right)
+        gap <= thickness * 0.8f && shared >= minOf(a.box.width, b.box.width) * 0.3f
+    }
+}
+
+/**
+ * 한 말풍선이 여러 덩어리로 나뉜 것을 합친다 — 인식기는 세로쓰기 열을 따로 잡곤 한다.
+ * 겹치거나 [gap]만큼 붙어 있거나, 이웃한 줄([sameBubble])이면 합친다.
  */
 internal fun mergeBlocks(blocks: List<OcrBlock>, gap: Float = 0.006f): List<OcrBlock> {
     val merged = blocks.toMutableList()
@@ -111,7 +164,8 @@ internal fun mergeBlocks(blocks: List<OcrBlock>, gap: Float = 0.006f): List<OcrB
             for (j in i + 1 until merged.size) {
                 val a = merged[i]
                 val b = merged[j]
-                if (a.isVertical() == b.isVertical() && a.box.expand(gap).intersects(b.box.expand(gap))) {
+                val touching = a.isVertical() == b.isVertical() && a.box.expand(gap).intersects(b.box.expand(gap))
+                if (touching || sameBubble(a, b)) {
                     merged[i] = OcrBlock(a.box.union(b.box), a.lines + b.lines)
                     merged.removeAt(j)
                     changed = true

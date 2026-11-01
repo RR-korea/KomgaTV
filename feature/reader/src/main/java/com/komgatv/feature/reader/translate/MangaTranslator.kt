@@ -11,6 +11,7 @@ import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
 import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions
@@ -48,56 +49,88 @@ class MangaTranslator private constructor(context: Context) {
      * 모델을 받지 못하는 등 실패하면 예외 — 원래 쪽을 그대로 보인다.
      *
      * @param pageKey 쪽을 가리키는 값(주소) — 저장 이름에 쓴다
+     * @param ocrSource 글자 인식에 쓸 원본 쪽 그림을 준다 (없으면 [page]를 키워 쓴다). 쪽 비율 좌표라 크기는 달라도 된다
      */
-    suspend fun translate(page: Bitmap, mode: TranslationMode, pageKey: String): List<TranslatedBlock> =
+    suspend fun translate(
+        page: Bitmap,
+        mode: TranslationMode,
+        pageKey: String,
+        ocrSource: () -> Bitmap? = { null },
+    ): List<TranslatedBlock> =
         withContext(Dispatchers.Default) {
             val file = File(cacheDir, sha1("$pageKey|$mode") + ".txt")
             readCache(file)?.let { return@withContext it }
             lock.withLock {
                 readCache(file)?.let { return@withLock it }
-                val blocks = recognizeAndTranslate(page, mode)
+                val blocks = recognizeAndTranslate(ocrSource() ?: page, mode)
                 cacheDir.mkdirs()
                 file.writeText(TranslationCacheCodec.encode(blocks))
                 blocks
             }
         }
 
-    private suspend fun recognizeAndTranslate(page: Bitmap, mode: TranslationMode): List<TranslatedBlock> {
+    private suspend fun recognizeAndTranslate(source: Bitmap, mode: TranslationMode): List<TranslatedBlock> {
         val started = System.currentTimeMillis()
-        val ocrImage = ocrInput(page)
+        val ocrImage = ocrInput(source)
         val text = recognizer.process(InputImage.fromBitmap(ocrImage, 0)).await()
-        val w = ocrImage.width.toFloat()
-        val h = ocrImage.height.toFloat()
-        if (ocrImage !== page) ocrImage.recycle()
-
-        fun Rect.toBox() = Box(left / w, top / h, right / w, bottom / h)
-        val blocks = text.textBlocks.mapNotNull { block ->
-            val box = block.boundingBox?.toBox() ?: return@mapNotNull null
-            val lines = block.lines.mapNotNull { line -> line.boundingBox?.let { OcrLine(it.toBox(), line.text) } }
-            OcrBlock(box, lines).takeIf { lines.isNotEmpty() }
-        }
+        val blocks = toBlocks(text, ocrImage.width.toFloat(), ocrImage.height.toFloat())
 
         val translator = translatorFor(mode)
         val result = mergeBlocks(blocks).mapNotNull { block ->
-            val source = block.sourceText(mode)
+            var source = block.sourceText(mode)
+            if (mode == TranslationMode.JA_KO && block.isVertical()) {
+                // 세로 말풍선은 잘라 키워 한 번 더 읽고 일본어다운 쪽을 고른다 (쪽 전체에서 읽으면 한두 글자씩 틀린다)
+                val again = rereadVertical(ocrImage, block)
+                if (again != null && japaneseScore(again) > japaneseScore(source)) source = again
+            }
             if (!worthTranslating(source, mode)) return@mapNotNull null
             val translated = translator.translate(source).await().trim()
+            Timber.d("번역 덩어리: $source → $translated")
             // 이름·효과음처럼 번역해도 같으면 원문을 그대로 둔다
             if (translated.isEmpty() || translated == source) null else TranslatedBlock(block.box, translated)
         }
+        ocrImage.recycle()
         Timber.d("쪽 번역: 덩어리 ${blocks.size}개 → ${result.size}개, ${System.currentTimeMillis() - started}ms")
         return result
     }
 
-    /** 글자가 작으면 인식이 떨어진다 — 쪽 높이가 1800px 아래면 키워서 읽는다 (최대 2배) */
-    private fun ocrInput(page: Bitmap): Bitmap {
-        val factor = (OCR_MIN_HEIGHT / page.height.toFloat()).coerceAtMost(2f)
-        val source = if (page.config == Bitmap.Config.ARGB_8888) page else page.copy(Bitmap.Config.ARGB_8888, false)
-        if (factor <= 1f) return source
-        val scaled = source.scale((page.width * factor).toInt(), (page.height * factor).toInt())
-        if (source !== page) source.recycle()
-        return scaled
+    private fun toBlocks(text: Text, w: Float, h: Float): List<OcrBlock> {
+        fun Rect.toBox() = Box(left / w, top / h, right / w, bottom / h)
+        return text.textBlocks.mapNotNull { block ->
+            val box = block.boundingBox?.toBox() ?: return@mapNotNull null
+            val lines = block.lines.mapNotNull { line -> line.boundingBox?.let { OcrLine(it.toBox(), line.text) } }
+            OcrBlock(box, lines).takeIf { lines.isNotEmpty() }
+        }
     }
+
+    /** 세로 말풍선 하나를 잘라 열 너비가 약 [REREAD_COLUMN_PX]px가 되게 키워 다시 읽는다 */
+    private suspend fun rereadVertical(image: Bitmap, block: OcrBlock): String? {
+        val w = image.width
+        val h = image.height
+        val column = block.lineThickness() * w
+        if (column <= 0f) return null
+        val pad = (column * 0.6f).toInt()
+        val left = ((block.box.left * w).toInt() - pad).coerceAtLeast(0)
+        val top = ((block.box.top * h).toInt() - pad).coerceAtLeast(0)
+        val right = ((block.box.right * w).toInt() + pad).coerceAtMost(w)
+        val bottom = ((block.box.bottom * h).toInt() + pad).coerceAtMost(h)
+        if (right - left < 4 || bottom - top < 4) return null
+        val factor = (REREAD_COLUMN_PX / column).coerceIn(1f, 3f)
+        val crop = Bitmap.createBitmap(image, left, top, right - left, bottom - top)
+        val scaled = crop.scale(((right - left) * factor).toInt(), ((bottom - top) * factor).toInt())
+        if (scaled !== crop) crop.recycle()
+        return try {
+            val text = recognizer.process(InputImage.fromBitmap(scaled, 0)).await()
+            val lines = toBlocks(text, scaled.width.toFloat(), scaled.height.toFloat()).flatMap { it.lines }
+            if (lines.isEmpty()) null else OcrBlock(Box(0f, 0f, 1f, 1f), lines).sourceText(TranslationMode.JA_KO)
+        } finally {
+            scaled.recycle()
+        }
+    }
+
+    /** 인식용 사본 — ARGB_8888, 높이 약 [OcrSource.TARGET_HEIGHT] (원래 그림은 건드리지 않는다) */
+    private fun ocrInput(source: Bitmap): Bitmap =
+        OcrSource.toTargetHeight(source.copy(Bitmap.Config.ARGB_8888, false))
 
     private suspend fun translatorFor(mode: TranslationMode): Translator {
         val translator = synchronized(translators) {
@@ -120,7 +153,8 @@ class MangaTranslator private constructor(context: Context) {
         if (file.isFile) runCatching { TranslationCacheCodec.decode(file.readText()) }.getOrNull() else null
 
     companion object {
-        private const val OCR_MIN_HEIGHT = 1800f
+        /** 다시 읽을 때 세로 열 너비 (px) — 이 정도면 한자를 잘 읽는다 */
+        private const val REREAD_COLUMN_PX = 64f
 
         @Volatile
         private var instance: MangaTranslator? = null
