@@ -60,6 +60,15 @@ enum class ImageEnhancement {
     /** 부드럽게 확대 — 고품질 필터(바이큐빅·밉맵), 계단 현상이 줄어든다 */
     SMOOTH,
 
+    /** Lanczos2 — 디코딩할 때 화면 크기로 리샘플링(CPU), 빠르고 부드럽다 */
+    LANCZOS2,
+
+    /** Lanczos3 — 디코딩할 때 화면 크기로 리샘플링(CPU). 바이큐빅보다 선이 또렷하다 (저장 이름은 예전 그대로) */
+    LANCZOS,
+
+    /** Lanczos4 — 더 넓은 창으로 리샘플링, 가장 또렷하지만 느리다 */
+    LANCZOS4,
+
     /** 선명하게 — 고품질 필터 + 언샤프 마스크(약하게), 흐린 스캔본이 또렷해진다 */
     SHARPEN,
 
@@ -118,6 +127,8 @@ data class ReaderSettings(
     /** EPUB 글자 크기 (WebView textZoom, %) */
     val epubTextZoom: Int = 100,
     val zoomPercent: Int = MIN_ZOOM_PERCENT,
+    /** 대비 % (작품별, [MIN_CONTRAST_PERCENT]~[MAX_CONTRAST_PERCENT], 5% 단위, 100 = 그대로) — 흐린 스캔본을 진하게 */
+    val contrastPercent: Int = 100,
     /** 페이지 넘김 화면 전환 효과 */
     val pageTransition: PageTransition = PageTransition.SLIDE,
     /** 만화 번역 — 작품별로만 바꾼다 */
@@ -126,5 +137,8 @@ data class ReaderSettings(
     companion object {
         const val MIN_ZOOM_PERCENT = 100
         const val MAX_ZOOM_PERCENT = 120
+        const val MIN_CONTRAST_PERCENT = 50
+        const val MAX_CONTRAST_PERCENT = 150
+        const val CONTRAST_STEP = 5
     }
 }

@@ -40,4 +40,8 @@
     <string name="view_translation_off">끄기</string>
     <string name="view_translation_ja_ko">일본어 → 한국어</string>
     <string name="view_translation_en_ko">영어 → 한국어</string>
+    <string name="view_contrast">대비</string>
+    <string name="view_enhancement_lanczos2">Lanczos2 (빠름)</string>
+    <string name="view_enhancement_lanczos">Lanczos3</string>
+    <string name="view_enhancement_lanczos4">Lanczos4 (고품질)</string>
 </resources>

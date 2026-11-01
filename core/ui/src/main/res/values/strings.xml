@@ -40,4 +40,8 @@
     <string name="view_translation_off">Off</string>
     <string name="view_translation_ja_ko">Japanese → Korean</string>
     <string name="view_translation_en_ko">English → Korean</string>
+    <string name="view_contrast">Contrast</string>
+    <string name="view_enhancement_lanczos2">Lanczos2 (fast)</string>
+    <string name="view_enhancement_lanczos">Lanczos3</string>
+    <string name="view_enhancement_lanczos4">Lanczos4 (best)</string>
 </resources>

@@ -63,7 +63,7 @@ fun ViewSettingsForm(
     onLayoutOffsetChange: (Boolean) -> Unit = {},
     showZoom: Boolean = false,
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         OptionRow(
             title = stringResource(R.string.view_reader_type),
             options = listOf(
@@ -133,6 +133,12 @@ fun ViewSettingsForm(
                         onPrevious = { onChange(settings.copy(zoomPercent = stepZoom(settings.zoomPercent, -1))) },
                         onNext = { onChange(settings.copy(zoomPercent = stepZoom(settings.zoomPercent, 1))) },
                     )
+                    SettingRow(
+                        title = stringResource(R.string.view_contrast),
+                        value = stringResource(R.string.view_percent_value, settings.contrastPercent),
+                        onPrevious = { onChange(settings.copy(contrastPercent = stepContrast(settings.contrastPercent, -1))) },
+                        onNext = { onChange(settings.copy(contrastPercent = stepContrast(settings.contrastPercent, 1))) },
+                    )
                     OptionRow(
                         title = stringResource(R.string.view_translation),
                         options = listOf(
@@ -168,6 +174,9 @@ fun ViewSettingsForm(
             options = listOf(
                 ImageEnhancement.OFF to stringResource(R.string.view_enhancement_off),
                 ImageEnhancement.SMOOTH to stringResource(R.string.view_enhancement_smooth),
+                ImageEnhancement.LANCZOS2 to stringResource(R.string.view_enhancement_lanczos2),
+                ImageEnhancement.LANCZOS to stringResource(R.string.view_enhancement_lanczos),
+                ImageEnhancement.LANCZOS4 to stringResource(R.string.view_enhancement_lanczos4),
                 ImageEnhancement.SHARPEN to stringResource(R.string.view_enhancement_sharpen),
                 ImageEnhancement.SHARPEN_STRONG to stringResource(R.string.view_enhancement_sharpen_strong),
             ),
@@ -176,6 +185,10 @@ fun ViewSettingsForm(
         )
     }
 }
+
+private fun stepContrast(current: Int, delta: Int): Int =
+    (current + delta * ReaderSettings.CONTRAST_STEP)
+        .coerceIn(ReaderSettings.MIN_CONTRAST_PERCENT, ReaderSettings.MAX_CONTRAST_PERCENT)
 
 private fun stepZoom(current: Int, delta: Int): Int =
     (current + delta).coerceIn(ReaderSettings.MIN_ZOOM_PERCENT, ReaderSettings.MAX_ZOOM_PERCENT)
@@ -242,7 +255,7 @@ private fun SettingRow(
                     else -> false
                 }
             }
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {

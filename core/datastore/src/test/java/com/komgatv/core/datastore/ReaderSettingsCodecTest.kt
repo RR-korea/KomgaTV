@@ -25,6 +25,7 @@ class ReaderSettingsCodecTest {
             continuousPageSpacing = 24,
             imageEnhancement = ImageEnhancement.SHARPEN,
             zoomPercent = 117,
+            contrastPercent = 125,
             pageTransition = PageTransition.FADE,
             translation = TranslationMode.JA_KO,
         )

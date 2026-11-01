@@ -7,8 +7,8 @@ plugins {
 }
 
 // 버전 — APK 파일 이름에도 들어간다 (KomgaTV-v0.2.9-b11-debug.apk)
-val appVersionCode = 15
-val appVersionName = "1.0.0"
+val appVersionCode = 16
+val appVersionName = "1.0.1"
 
 base {
     // 번역 시험판(translate 브랜치) — main 앱과 따로 설치된다
