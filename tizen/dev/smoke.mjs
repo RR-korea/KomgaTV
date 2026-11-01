@@ -14,7 +14,7 @@ const patches = [];
 server.stdout.on('data', (chunk) => {
   const text = String(chunk);
   for (const line of text.split('\n')) {
-    if (/^(PATCH|PUT progression|DELETE|POST)/.test(line)) patches.push(line.trim());
+    if (/^(PATCH|PUT progression|DELETE|POST|RAW|RENDER)/.test(line)) patches.push(line.trim());
   }
 });
 await new Promise((resolve) => server.stdout.once('data', resolve));
@@ -463,7 +463,46 @@ try {
   await expectText('다음 권 1쪽에서 같은 화면으로', '.reader-overlay-row:nth-child(1)', /04/);
   await expectText('다음 권은 1쪽부터', '.reader-overlay-row:nth-child(2)', /^1 \/ 24쪽|1 \/ \d+ 펼침/);
   await shot('next-book');
+  // 11. 이전 권으로 가기 (Android): 04권 첫 펼침에서 뒤로 → 책 첫 화면(이전 권 03 ‹ 지금 권 04) → 한 번 더 → 03권 마지막 쪽
+  await key('Escape'); // 정보 닫기
+  await key('ArrowLeft');
+  await page.waitForTimeout(600);
+  await expectText('첫 펼침에서 뒤로 → 책 첫 화면', '.end-view', /이전 권.*03.*지금 권.*04/s);
+  await shot('start-page');
+  await key('ArrowLeft');
+  await page.waitForTimeout(1200);
+  await key('Enter');
+  await expectText('한 번 더 → 이전 권(03) 마지막 쪽', '.reader-overlay-row:nth-child(2)', /24 \/ 24쪽|24 \/ 24쪽\)/);
+  await expectText('이전 권 제목', '.reader-overlay-row:nth-child(1)', /03/);
   await key('Escape');
+  await key('Escape');
+  await page.waitForTimeout(800);
+
+  // 12. PDF 책 (S8, 괴수 8호처럼): 원본 쪽에서 JPEG를 꺼내 그린다 — 서버 그림 변환(느림)은 쓰지 않는다
+  // 연 책(03)이 다 읽혀 읽는 중 줄에서 빠졌다 — 이 단계는 PDF 시험이라 카드에 바로 포커스를 둔다
+  await page.evaluate(() => (document.querySelector('[data-key="reading-book-S8B2"]'))?.focus());
+  await expectFocus('PDF 책 카드', 'reading-book-S8B2');
+  const before = patches.length;
+  await key('Enter');
+  await page.waitForTimeout(1200);
+  const pdfImg = await page.evaluate(() => document.querySelector('.reader-image')?.getAttribute('src') ?? '');
+  const pdfLog = patches.slice(before);
+  results.push(`${pdfImg.startsWith('blob:') && pdfLog.some((p) => p === 'RAW S8B2 2') ? 'PASS' : 'FAIL'} PDF 쪽 = 원본에서 꺼낸 JPEG: ${pdfLog.slice(0, 4).join(' | ')}`);
+  results.push(`${!pdfLog.some((p) => p.startsWith('RENDER')) ? 'PASS' : 'FAIL'} 서버 그림 변환 안 씀`);
+  results.push(`${pdfLog.some((p) => p === 'RAW S8B1 24') ? 'PASS' : 'FAIL'} 처음 근처 → 이전 권 마지막 쪽 미리 받기`);
+  // 두 쪽 보기 (이 작품에만)
+  await key('Enter');
+  await key('Enter');
+  await key('ArrowDown');
+  await key('ArrowRight');
+  await key('Escape');
+  await key('Escape');
+  await page.waitForTimeout(1000);
+  const pdfPages = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('.reader-image')).map((img) => (img.getAttribute('src') ?? '').slice(0, 5)),
+  );
+  results.push(`${pdfPages.length === 2 && pdfPages.every((src) => src === 'blob:') ? 'PASS' : 'FAIL'} PDF 두 쪽 보기: ${pdfPages.join(',')}`);
+  await shot('pdf-double');
   await key('Escape');
   await page.waitForTimeout(800);
 } finally {

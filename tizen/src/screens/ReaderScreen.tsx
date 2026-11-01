@@ -5,10 +5,13 @@
 //       Back = 패널/정보 닫기 → 진행 저장 후 나가기.
 // 책 끝(KMReader처럼): 마지막 쪽 다음에 책 끝 화면(다 읽은 책 ↔ 다음 권), 앞으로 한 번 더 = 다음 권 1쪽.
 //   끝까지 3펼침 이하에서 다음 권을 찾고 첫 쪽들을 미리 받아, 로딩 화면 없이 같은 화면에서 바꾼다. 다음 권이 EPUB이면 EPUB 리더로.
+// 책 처음(Android 이전 권으로 가기): 첫 펼침에서 뒤로 = 책 첫 화면(이전 권 ‹ 지금 권), 한 번 더 = 이전 권 마지막 쪽.
+//   처음 근처에서 이전 권을 찾고 마지막 두 쪽을 미리 받는다. 세로 스크롤은 1쪽 위 책 첫 카드, 맨 위에서 위 = 이전 권 끝.
+// PDF 책은 원본 쪽에서 JPEG를 꺼내 그린다(session.loadPage). 쪽이 0.25초 안에 안 뜨면 "불러오는 중…".
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { bookDisplayTitle } from '../api/display';
 import type { KomgaBook, ReadingDirection } from '../api/types';
-import { ImagePaths } from '../api/url';
+import { ImagePaths, pageKey } from '../api/url';
 import { fmt, t } from '../i18n';
 import { current, focusKeyOrFirst, move } from '../platform/focus';
 import { useKeys } from '../platform/input';
@@ -19,6 +22,7 @@ import {
   anchorOf,
   type ContinuousLayout,
   layoutContinuous,
+  withCards,
   scrollByScreen,
   scrollOf,
   stepPage,
@@ -47,8 +51,13 @@ const SCREEN: Size = { width: 1920, height: 1080 };
 const JUMP_PAGES = 10;
 /** 끝까지 이만큼 펼침이 남으면 다음 권을 찾고 미리 받는다 */
 const NEXT_BOOK_LOOKAHEAD = 3;
-/** 세로 스크롤 맨 아래 책 끝 카드 높이 */
+/** 세로 스크롤 맨 아래 책 끝 카드·맨 위 책 첫 카드 높이 */
 const END_CARD_HEIGHT = 720;
+const START_CARD_HEIGHT = 720;
+/** 쪽이 이만큼 안에 안 뜨면 로딩 표시 (Android와 같음) */
+const SPINNER_DELAY_MS = 250;
+
+const isPdfBook = (book: KomgaBook) => book.media.mediaProfile === 'PDF';
 
 interface BookData {
   book: KomgaBook;
@@ -74,17 +83,26 @@ async function loadBook(bookId: string): Promise<BookData> {
 
 function ReaderPage({
   bookId,
+  pdf,
   page,
   style,
   onNaturalSize,
 }: {
   bookId: string;
+  pdf: boolean;
   page: PageInfo;
   style: Record<string, string>;
   onNaturalSize: (pageNumber: number, size: Size) => void;
 }) {
   const currentSession = useStore(sessionStore);
-  const image = useCachedImage(currentSession?.pages, ImagePaths.bookPage(bookId, page.number));
+  const image = useCachedImage(currentSession?.pages, pageKey(bookId, page.number, pdf));
+  // 0.25초 안에 안 뜨면 스피너 + "불러오는 중…"
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    setSlow(false);
+    const timer = setTimeout(() => setSlow(true), SPINNER_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [bookId, page.number]);
   return (
     // Preact 11은 숫자 스타일 값에 px를 붙이지 않는다 — 단위를 직접 쓴다
     <div class="reader-page" style={style}>
@@ -98,9 +116,14 @@ function ReaderPage({
             onNaturalSize(page.number, { width: img.naturalWidth, height: img.naturalHeight });
           }}
         />
-      ) : (
-        <div class="reader-page-status">{image.failed ? '!' : t.readerLoading}</div>
-      )}
+      ) : image.failed ? (
+        <div class="reader-page-status failed">{t.readerPageLoadFailed}</div>
+      ) : slow ? (
+        <div class="reader-page-status">
+          <div class="spinner" />
+          {t.readerLoading}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -140,6 +163,38 @@ function EndView({ book, next }: { book: KomgaBook; next: NextBook }) {
   );
 }
 
+/** 책 첫 화면 (이전 권 ‹ 지금 권) */
+function StartView({ book, previous }: { book: KomgaBook; previous: NextBook }) {
+  const currentSession = useStore(sessionStore);
+  const cover = useCachedImage(
+    currentSession?.thumbnails,
+    previous && previous !== 'loading' ? ImagePaths.bookThumbnail(previous.id) : null,
+  );
+  return (
+    <div class="end-view">
+      <div class="end-column">
+        <div class="end-label">{t.startPagePrevious}</div>
+        {previous === 'loading' || previous === undefined ? (
+          <div class="end-title muted">{t.startPageFindingPrevious}</div>
+        ) : previous === null ? (
+          <div class="end-title muted">{t.startPageFirstBook}</div>
+        ) : (
+          <>
+            <div class="end-cover">{cover.url && <img class="card-image" src={cover.url} alt="" />}</div>
+            <div class="end-title">{bookDisplayTitle(previous)}</div>
+          </>
+        )}
+      </div>
+      <div class="end-arrow">‹</div>
+      <div class="end-column">
+        <div class="end-label">{t.startPageCurrent}</div>
+        <div class="end-title">{bookDisplayTitle(book)}</div>
+      </div>
+      <div class="end-hint">{previous && previous !== 'loading' ? t.startPageHintPrevious : t.startPageHintFirst}</div>
+    </div>
+  );
+}
+
 const px = (value: number) => `${Math.round(value)}px`;
 
 export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boolean }) {
@@ -163,13 +218,16 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
   /** 페이지 넘김의 책 끝 화면 */
   const [atEnd, setAtEnd] = useState(false);
   const [nextBook, setNextBook] = useState<NextBook>(undefined);
+  /** 페이지 넘김의 책 첫 화면 */
+  const [atStart, setAtStart] = useState(false);
+  const [previousBook, setPreviousBook] = useState<NextBook>(undefined);
   const saver = useRef<ProgressSaver | null>(null);
   const moved = useRef(false);
   const exiting = useRef(false);
   const root = useRef<HTMLDivElement>(null);
 
   /** 책을 읽는다. 다음 권으로 넘어갈 때는 지금 화면을 둔 채 바꾼다(로딩 화면 없이). */
-  const load = (id: string) => {
+  const load = (id: string, startAt: 'progress' | 'last' = 'progress') => {
     setError(null);
     loadBook(id).then(
       (loaded) => {
@@ -177,6 +235,8 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
         setOffset(false);
         setAtEnd(false);
         setNextBook(undefined);
+        setAtStart(false);
+        setPreviousBook(undefined);
         setNaturalSizes({});
         setOverlay(false);
         setPanel(false);
@@ -187,7 +247,8 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
           return;
         }
         const progress = loaded.book.readProgress;
-        const first = startPage(progress);
+        // 이전 권으로 넘어가면 그 책의 마지막 쪽에서
+        const first = startAt === 'last' ? Math.max(1, loaded.pages.length) : startPage(progress);
         setSeriesSettings(loadSeriesSettings(loaded.book.seriesId));
         setAnchorPage(first);
         setAnchor({ index: Math.min(loaded.pages.length - 1, first - 1), offset: 0 });
@@ -229,11 +290,14 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
       settings.continuousPageSpacing,
       settings.stretchToFit,
     );
-    return { pages: layout.pages, total: layout.total + END_CARD_HEIGHT };
+    return withCards(layout, START_CARD_HEIGHT, END_CARD_HEIGHT);
   }, [data, naturalSizes, settings.continuousPadding, settings.continuousPageSpacing, settings.stretchToFit]);
   const continuousScroll = scrollOf(continuous, anchor, SCREEN.height);
   const visible = visiblePages(continuous, continuousScroll, SCREEN.height);
   const continuousAtBottom = continuousScroll >= continuous.total - SCREEN.height - 1;
+  const continuousAtTop = continuousScroll <= 0;
+  const isPdf = !!data && isPdfBook(data.book);
+  const keyOf = (page: number) => pageKey(bookId, page, isPdf);
 
   const isContinuous = readerType === 'CONTINUOUS';
   /** 정보 표시·진행 저장에 쓰는 "보이는 쪽 중 가장 큰 번호" */
@@ -242,15 +306,31 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
   // 펼침이 바뀌면 맨 위부터
   useEffect(() => setScrollY(0), [index, spreads]);
 
-  // 프리로드: 페이지 넘김은 앞뒤 2펼침, 세로 스크롤은 화면 아래 다음 2쪽
+  // 미리 받기 (Android): 앞 4·뒤 2 펼침(세로 스크롤은 쪽), 가까운 것부터. 이웃이 아니게 된 미리 받기는 취소
+  const neighbourKeys = (): string[] => {
+    if (!data || data.epub) return [];
+    const order = [1, -1, 2, -2, 3, 4];
+    const near: PageInfo[] = isContinuous
+      ? order.map((d) => pages[(d > 0 ? visible.last : visible.first) + d]).filter((page): page is PageInfo => !!page)
+      : order.reduce<PageInfo[]>((all, d) => all.concat(spreads[index + d] ?? []), []);
+    const keys = near.map((page) => keyOf(page.number));
+    // 이웃 권의 첫·마지막 쪽 (미리 받은 것을 취소하지 않게)
+    if (nextBook && nextBook !== 'loading' && nextBook.media.mediaProfile !== 'EPUB') {
+      [1, 2].forEach((n) => keys.push(pageKey(nextBook.id, n, isPdfBook(nextBook))));
+    }
+    if (previousBook && previousBook !== 'loading' && previousBook.media.mediaProfile !== 'EPUB') {
+      const last = previousBook.media.pagesCount;
+      [last, last - 1].filter((n) => n >= 1).forEach((n) => keys.push(pageKey(previousBook.id, n, isPdfBook(previousBook))));
+    }
+    return keys;
+  };
   useEffect(() => {
     const cache = sessionStore.get()?.pages;
     if (!cache || !data || data.epub) return;
-    const near: PageInfo[] = isContinuous
-      ? pages.slice(visible.last + 1, visible.last + 3)
-      : [index + 1, index - 1, index + 2, index - 2].reduce<PageInfo[]>((all, i) => all.concat(spreads[i] ?? []), []);
-    near.forEach((page) => cache.prefetch(ImagePaths.bookPage(bookId, page.number)));
-  }, [isContinuous, index, spreads, visible.last, bookId]);
+    const keys = neighbourKeys();
+    cache.retainPrefetches(keys);
+    keys.forEach((key) => cache.prefetch(key));
+  }, [isContinuous, index, spreads, visible.first, visible.last, bookId, nextBook, previousBook]);
 
   // 끝이 가까우면 다음 권을 찾고 첫 쪽들을 미리 받는다
   const nearEnd = isContinuous ? visible.last >= totalPages - 1 - NEXT_BOOK_LOOKAHEAD : index >= spreads.length - 1 - NEXT_BOOK_LOOKAHEAD;
@@ -263,13 +343,36 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
         setNextBook(next);
         if (!next) return;
         if (next.media.mediaProfile !== 'EPUB') {
-          [1, 2].forEach((n) => sessionStore.get()?.pages.prefetch(ImagePaths.bookPage(next.id, n)));
+          [1, 2].forEach((n) => sessionStore.get()?.pages.prefetch(pageKey(next.id, n, isPdfBook(next))));
         }
         sessionStore.get()?.thumbnails.prefetch(ImagePaths.bookThumbnail(next.id));
       },
       () => setNextBook(null),
     );
   }, [nearEnd, data]);
+
+  // 처음이 가까우면 이전 권을 찾고 마지막 두 쪽을 미리 받는다 — 8권을 열자마자 7권으로
+  const nearStart = isContinuous ? visible.first <= NEXT_BOOK_LOOKAHEAD : index <= NEXT_BOOK_LOOKAHEAD;
+  useEffect(() => {
+    if (!data || data.epub || !nearStart || previousBook !== undefined) return;
+    setPreviousBook('loading');
+    requireSession()
+      .client.getPreviousBook(data.book.id)
+      .then(
+        (previous) => {
+          setPreviousBook(previous);
+          if (!previous) return;
+          if (previous.media.mediaProfile !== 'EPUB') {
+            const last = previous.media.pagesCount;
+            [last, last - 1]
+              .filter((n) => n >= 1)
+              .forEach((n) => sessionStore.get()?.pages.prefetch(pageKey(previous.id, n, isPdfBook(previous))));
+          }
+          sessionStore.get()?.thumbnails.prefetch(ImagePaths.bookThumbnail(previous.id));
+        },
+        () => setPreviousBook(null),
+      );
+  }, [nearStart, data]);
 
   // 세로 스크롤 진행 저장: 보이는 쪽 중 큰 번호, 마지막 쪽 끝이 보이면 완독
   useEffect(() => {
@@ -292,6 +395,14 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
     const target = nextBook;
     const done = saver.current?.flush() ?? Promise.resolve();
     void done.then(() => load(target.id));
+  };
+
+  /** 이전 권 마지막 쪽으로 (지금 책 진행은 그대로) */
+  const openPreviousBook = () => {
+    if (!previousBook || previousBook === 'loading') return;
+    const target = previousBook;
+    const done = saver.current?.flush() ?? Promise.resolve();
+    void done.then(() => load(target.id, 'last'));
   };
 
   // 보기 설정 패널: 이 작품에만 저장 (Android T14)
@@ -324,7 +435,11 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
   };
 
   const goToSpread = (target: number) => {
-    if (!data || target < 0 || target === index) return;
+    if (!data || target === index) return;
+    if (target < 0) {
+      setAtStart(true); // 첫 펼침 앞 = 책 첫 화면
+      return;
+    }
     if (target >= spreads.length) {
       setAtEnd(true); // 마지막 펼침 다음 = 책 끝 화면
       return;
@@ -342,6 +457,7 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
   const jump = (delta: number) => {
     if (!data) return;
     setAtEnd(false);
+    setAtStart(false);
     if (isContinuous) {
       const target = Math.min(totalPages - 1, Math.max(0, anchor.index + delta));
       goToAnchor({ index: target, offset: 0 });
@@ -358,6 +474,10 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
         openNextBook(); // 맨 아래 책 끝 카드에서 한 번 더 = 다음 권
         return;
       }
+      if (sign < 0 && continuousAtTop) {
+        openPreviousBook(); // 맨 위 책 첫 카드에서 위 = 이전 권 끝
+        return;
+      }
       goToAnchor(anchorOf(continuous, scrollByScreen(continuous, continuousScroll, SCREEN.height, sign)));
     } else {
       setScrollY((y) => Math.min(pagedMaxScroll, Math.max(0, y + (sign * SCREEN.height) / 2)));
@@ -370,6 +490,15 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
         openNextBook();
         return;
       }
+      if (sign < 0 && continuousAtTop) {
+        openPreviousBook();
+        return;
+      }
+      // 1쪽 맨 위에서 이전 = 책 첫 카드
+      if (sign < 0 && anchor.index === 0 && anchor.offset <= 0) {
+        goToAnchor({ index: 0, offset: -START_CARD_HEIGHT });
+        return;
+      }
       goToAnchor(stepPage(anchor, totalPages, sign));
       return;
     }
@@ -378,6 +507,11 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
     if (atEnd) {
       if (forward > 0) openNextBook();
       else setAtEnd(false); // 이전 쪽 키 = 마지막 쪽으로
+      return;
+    }
+    if (atStart) {
+      if (forward < 0) openPreviousBook();
+      else setAtStart(false); // 다음 쪽 키 = 첫 쪽으로
       return;
     }
     goToSpread(index + forward);
@@ -431,6 +565,26 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
           } else {
             cycle(focusedKey, key === 'left' ? -1 : 1);
           }
+          break;
+        default:
+          break;
+      }
+      return true;
+    }
+    if (atStart && !overlay) {
+      // 책 첫 화면: 이전 쪽 키 / OK = 이전 권 마지막 쪽, 다음 쪽 키 = 첫 쪽, Back = 나가기
+      switch (key) {
+        case 'left':
+          horizontal(-1);
+          break;
+        case 'right':
+          horizontal(1);
+          break;
+        case 'enter':
+          openPreviousBook();
+          break;
+        case 'back':
+          exit();
           break;
         default:
           break;
@@ -535,6 +689,7 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
             <ReaderPage
               key={`${bookId}-${pages[i].number}`}
               bookId={bookId}
+              pdf={isPdf}
               page={pages[i]}
               style={{
                 position: 'absolute',
@@ -547,6 +702,11 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
             />
           ),
         )}
+        {from < START_CARD_HEIGHT && (
+          <div class="end-card" style={{ top: '0px', height: px(START_CARD_HEIGHT) }}>
+            <StartView book={data.book} previous={previousBook} />
+          </div>
+        )}
         {endTop < to && (
           <div class="end-card" style={{ top: px(endTop), height: px(END_CARD_HEIGHT) }}>
             <EndView book={data.book} next={nextBook} />
@@ -556,6 +716,8 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
     );
   } else if (atEnd) {
     content = <EndView book={data.book} next={nextBook} />;
+  } else if (atStart) {
+    content = <StartView book={data.book} previous={previousBook} />;
   } else {
     const rtl = direction === 'RIGHT_TO_LEFT';
     const shownPages = rtl ? spread.slice().reverse() : spread;
@@ -568,6 +730,7 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
           <ReaderPage
             key={`${bookId}-${page.number}`}
             bookId={bookId}
+            pdf={isPdf}
             page={page}
             style={{ width: px(shownSizes[i].width), height: px(shownSizes[i].height) }}
             onNaturalSize={onNaturalSize}

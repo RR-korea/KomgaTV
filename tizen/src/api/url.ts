@@ -35,3 +35,10 @@ export const ImagePaths = {
   /** page는 1부터 */
   bookPage: (bookId: string, page: number) => `api/v1/books/${bookId}/pages/${page}`,
 };
+
+/**
+ * 리더 쪽 그림의 캐시 키. PDF 책은 "pdf:책:쪽" — 원본 PDF에서 JPEG를 꺼내 그린다 (Android PDF 속도 개선과 같은 목적).
+ */
+export function pageKey(bookId: string, page: number, pdf: boolean): string {
+  return pdf ? `pdf:${bookId}:${page}` : ImagePaths.bookPage(bookId, page);
+}

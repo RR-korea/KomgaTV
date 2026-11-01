@@ -2,7 +2,7 @@
 // 실행: npm run build && node dev/mock-komga.mjs [port]   → http://localhost:8790/
 // 로그인: test@example.com / pw  또는 API 키 test
 // 실제 서버 데이터 형태(긴 폴더 이름, 번호뿐인 책 이름, 가로 펼침 쪽, 표지 없는 시리즈)를 흉내 낸다.
-import { createReadStream, existsSync, statSync } from 'node:fs';
+import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, normalize } from 'node:path';
 
@@ -83,6 +83,24 @@ let epubProgression = {
   device: { id: 'x', name: 'x' },
   locator: { href: 'index_split_001.html', type: 'application/xhtml+xml', locations: { progression: 0, totalProgression: 0.33 } },
 };
+
+// PDF 시리즈 하나 (S8, 괴수 8호처럼): 모든 권이 PDF, 1권은 읽는 중
+for (const book of books.filter((b) => b.seriesId === 'S8')) book.media = { pagesCount: 24, mediaProfile: 'PDF' };
+{
+  const book = books.find((b) => b.id === 'S8B2');
+  book.readProgress = { page: 2, completed: false };
+  book.readDate = Date.now() - 20_000_000;
+}
+const fixtureJpeg = readFileSync(new URL('./fixtures/pdf-page.jpg', import.meta.url));
+/** JPEG 하나를 쪽 전체에 놓은 한 쪽 PDF (Komga raw 쪽과 같은 모양) */
+function pdfPage() {
+  const head = Buffer.from(
+    '%PDF-1.6\n1 0 obj\n<</Type/Page/MediaBox [0 0 600 868]/Resources<</XObject<</Im0 5 0 R>>>>>>\nendobj\n' +
+      `5 0 obj\n<</Type/XObject/Subtype/Image/Width 600/Height 868/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter [/DCTDecode]/Length ${fixtureJpeg.length}>>\nstream\r\n`,
+    'latin1',
+  );
+  return Buffer.concat([head, fixtureJpeg, Buffer.from('\r\nendstream\nendobj\n%%EOF', 'latin1')]);
+}
 
 /** 8쪽·9쪽은 가로(펼침 스캔), 나머지 세로 */
 const pageSize = (n) => (n === 8 || n === 15 ? { width: 1600, height: 1200 } : { width: 800, height: 1200 });
@@ -181,11 +199,23 @@ async function api(req, res, path, url) {
     }
     return paged(res, list, url);
   }
-  // 다음 권 (같은 시리즈의 다음 번호, 없으면 404)
-  if ((m = path.match(/^api\/v1\/books\/([^/]+)\/next$/))) {
+  // 다음 권·이전 권 (같은 시리즈의 앞뒤 번호, 없으면 404)
+  if ((m = path.match(/^api\/v1\/books\/([^/]+)\/(next|previous)$/))) {
     const book = books.find((b) => b.id === m[1]);
-    const next = book && books.find((b) => b.seriesId === book.seriesId && b.number === book.number + 1);
-    return next ? json(res, next) : json(res, {}, 404);
+    const step = m[2] === 'next' ? 1 : -1;
+    const other = book && books.find((b) => b.seriesId === book.seriesId && b.number === book.number + step);
+    return other ? json(res, other) : json(res, {}, 404);
+  }
+  // PDF 책(S8): 원본 쪽은 JPEG 하나를 감싼 한 쪽 PDF, 그림으로 받으면 느리다 (실제 Komga: 2~6초)
+  if ((m = path.match(/^api\/v1\/books\/(S8B\d)\/pages\/(\d+)\/raw$/))) {
+    console.log(`RAW ${m[1]} ${m[2]}`);
+    res.writeHead(200, { 'Content-Type': 'application/pdf' });
+    return res.end(pdfPage());
+  }
+  if ((m = path.match(/^api\/v1\/books\/(S8B\d)\/pages\/(\d+)$/))) {
+    console.log(`RENDER ${m[1]} ${m[2]}`);
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    return svg(res, 600, 868, `${m[1]} p${m[2]} (render)`, 30);
   }
   // 책·라이브러리 메뉴 (Android T13)
   if ((m = path.match(/^api\/v1\/books\/([^/]+)\/read-progress$/)) && req.method === 'DELETE') {

@@ -954,3 +954,32 @@ body {
   color: #9aa1b2;
   word-break: break-all;
 }
+
+/* 쪽 로딩 표시 (Android: 0.25초 안에 안 뜨면 스피너 + 불러오는 중…) */
+.reader-page-status {
+  flex-direction: column;
+  font-size: 26px;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.reader-page-status.failed {
+  color: #ff9b9b;
+  padding: 0 40px;
+}
+
+.spinner {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 20px;
+  border: 6px solid rgba(255, 255, 255, 0.15);
+  border-top-color: #ffb547;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

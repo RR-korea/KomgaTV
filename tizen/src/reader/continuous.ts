@@ -19,7 +19,7 @@ export interface ContinuousLayout {
 export interface Anchor {
   /** 0부터인 쪽 인덱스 */
   index: number;
-  /** 그 쪽 맨 위에서 화면 맨 위까지 거리(px, 0 이상) */
+  /** 그 쪽 맨 위에서 화면 맨 위까지 거리(px). 첫 쪽 위의 책 첫 카드를 보는 중이면 음수 */
   offset: number;
 }
 
@@ -63,7 +63,8 @@ export function anchorOf(layout: ContinuousLayout, scroll: number): Anchor {
   const { pages } = layout;
   for (let i = 0; i < pages.length; i++) {
     const bottom = pages[i].top + pages[i].height;
-    if (scroll < bottom) return { index: i, offset: Math.max(0, scroll - pages[i].top) };
+    // 첫 쪽 위(책 첫 카드 자리)는 음수 거리로 둔다
+    if (scroll < bottom) return { index: i, offset: i === 0 ? scroll - pages[i].top : Math.max(0, scroll - pages[i].top) };
   }
   const last = Math.max(0, pages.length - 1);
   return { index: last, offset: pages.length ? Math.max(0, scroll - pages[last].top) : 0 };
@@ -102,4 +103,12 @@ export function stepPage(anchor: Anchor, pageCount: number, direction: 1 | -1): 
   if (direction > 0) return { index: Math.min(pageCount - 1, anchor.index + 1), offset: 0 };
   if (anchor.offset > 0) return { index: anchor.index, offset: 0 };
   return { index: Math.max(0, anchor.index - 1), offset: 0 };
+}
+
+/** 모든 쪽을 아래로 민다 (맨 위 책 첫 카드 자리) + 전체 높이에 위·아래 카드 자리를 더한다 */
+export function withCards(layout: ContinuousLayout, top: number, bottom: number): ContinuousLayout {
+  return {
+    pages: layout.pages.map((page) => ({ ...page, top: page.top + top })),
+    total: layout.total + top + bottom,
+  };
 }

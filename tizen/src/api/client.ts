@@ -56,6 +56,12 @@ export class KomgaClient {
     const url = apiUrl(this.baseUrl, path, query && { page: query.page, size: query.size, sort: query.sort });
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    // 부른 쪽의 취소(미리 받기 취소 등)도 따른다
+    const external = rest.signal;
+    if (external) {
+      if (external.aborted) controller.abort();
+      else external.addEventListener('abort', () => controller.abort());
+    }
     try {
       const response = await this.fetchFn(url, {
         ...rest,
@@ -158,6 +164,16 @@ export class KomgaClient {
     await this.request(`api/v1/libraries/${encodeURIComponent(libraryId)}/empty-trash`, { method: 'POST' });
   }
 
+  /** 같은 시리즈의 이전 권. 없으면 null (Android 이전 권으로 가기) */
+  async getPreviousBook(bookId: string): Promise<KomgaBook | null> {
+    try {
+      return await this.json<KomgaBook>(`api/v1/books/${encodeURIComponent(bookId)}/previous`);
+    } catch (error) {
+      if (error instanceof HttpError && error.status === 404) return null;
+      throw error;
+    }
+  }
+
   /** 같은 시리즈의 다음 권. 없으면 null (Android 다음 권으로 이어 읽기) */
   async getNextBook(bookId: string): Promise<KomgaBook | null> {
     try {
@@ -216,8 +232,14 @@ export class KomgaClient {
   }
 
   /** 인증 이미지 (표지·페이지). path는 ImagePaths로 만든다. */
-  async fetchImage(path: string): Promise<Blob> {
-    return (await this.request(path, { headers: { Accept: 'image/*' } })).blob();
+  async fetchImage(path: string, signal?: AbortSignal): Promise<Blob> {
+    return (await this.request(path, { headers: { Accept: 'image/*' }, signal })).blob();
+  }
+
+  /** PDF 책의 한 쪽 원본(한 쪽짜리 PDF) */
+  async fetchRawPage(bookId: string, page: number, signal?: AbortSignal): Promise<Uint8Array> {
+    const response = await this.request(`api/v1/books/${encodeURIComponent(bookId)}/pages/${page}/raw`, { signal });
+    return new Uint8Array(await response.arrayBuffer());
   }
 }
 

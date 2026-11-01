@@ -8,6 +8,7 @@ import {
   scrollOf,
   stepPage,
   visiblePages,
+  withCards,
 } from '../src/reader/continuous';
 import {
   effectiveSettings,
@@ -130,5 +131,18 @@ describe('작품별 보기 설정 (Android T14)', () => {
     expect(parsed.S1.imageEnhancement).toBe('SHARPEN');
     expect(parsed.S3.scaleType).toBe('SCREEN');
     expect(parseSeriesSettings('{oops')).toEqual({});
+  });
+});
+
+describe('책 첫·끝 카드 (이전 권·다음 권)', () => {
+  it('첫 쪽 위 카드 자리: 위로 올라가면 음수 거리, 다시 그 위치로', () => {
+    const base = layoutContinuous([{ width: 800, height: 1200 }, { width: 800, height: 1200 }], { width: 1920, height: 1080 }, 0, 0, true);
+    const layout = withCards(base, 720, 720);
+    expect(layout.pages[0].top).toBe(720);
+    expect(layout.total).toBe(base.total + 1440);
+    const anchor = anchorOf(layout, 0);
+    expect(anchor).toEqual({ index: 0, offset: -720 });
+    expect(scrollOf(layout, anchor, 1080)).toBe(0);
+    expect(scrollOf(layout, { index: 0, offset: 0 }, 1080)).toBe(720);
   });
 });

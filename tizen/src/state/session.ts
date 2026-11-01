@@ -3,7 +3,8 @@
 import { type Auth, connect, KomgaClient } from '../api/client';
 import { ConnectionError, HttpError } from '../api/errors';
 import type { KomgaUser } from '../api/types';
-import { normalizeServerUrl } from '../api/url';
+import { ImagePaths, normalizeServerUrl } from '../api/url';
+import { extractSingleJpeg } from '../pdf/pdfJpeg';
 import { ImageCache } from '../image/ImageCache';
 import { Store } from './store';
 
@@ -115,6 +116,18 @@ export function switchServer(server: SavedServer): boolean {
 
 export const session = new Store<Session | null>(null);
 
+/**
+ * 리더 쪽 그림 받기. "pdf:책:쪽"이면 원본 PDF를 받아 JPEG를 꺼내고(0.2초), 모양이 맞지 않으면 Komga가 그린 그림(쪽당 2~6초).
+ */
+async function loadPage(client: KomgaClient, key: string, signal: AbortSignal): Promise<Blob> {
+  if (!key.startsWith('pdf:')) return client.fetchImage(key, signal);
+  const [, bookId, page] = key.split(':');
+  const raw = await client.fetchRawPage(bookId, Number(page), signal);
+  const jpeg = extractSingleJpeg(raw);
+  if (jpeg) return new Blob([jpeg.slice()], { type: 'image/jpeg' });
+  return client.fetchImage(ImagePaths.bookPage(bookId, Number(page)), signal);
+}
+
 function setSession(client: KomgaClient, user: KomgaUser | null): Session {
   const previous = session.get();
   previous?.thumbnails.clear();
@@ -122,8 +135,8 @@ function setSession(client: KomgaClient, user: KomgaUser | null): Session {
   const next: Session = {
     client,
     user,
-    thumbnails: new ImageCache((path) => client.fetchImage(path), 60),
-    pages: new ImageCache((path) => client.fetchImage(path), 10),
+    thumbnails: new ImageCache((path, signal) => client.fetchImage(path, signal), 60, undefined, undefined, 6),
+    pages: new ImageCache((key, signal) => loadPage(client, key, signal), 12, undefined, undefined, 3),
   };
   session.set(next);
   return next;
