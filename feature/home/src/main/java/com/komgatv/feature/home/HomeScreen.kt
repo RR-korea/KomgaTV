@@ -36,6 +36,8 @@ import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.Library
 import com.komgatv.core.model.Series
+import com.komgatv.core.model.cardTitle
+import com.komgatv.core.model.cardTitleShowsSeries
 import com.komgatv.core.ui.components.NameCard
 import com.komgatv.core.ui.components.PosterCard
 import com.komgatv.core.ui.components.TVRow
@@ -70,6 +72,7 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val libraryMessage by viewModel.libraryMessage.collectAsState()
     var menuLibrary by remember { mutableStateOf<Library?>(null) }
+    var menuReadingBook by remember { mutableStateOf<Book?>(null) }
 
     // 다른 화면(리더 등)에서 돌아올 때마다 조용히 다시 읽는다(진행도·순서). 첫 진입은 ViewModel init이 읽는다.
     OnReturnEffect { viewModel.refresh() }
@@ -132,6 +135,7 @@ fun HomeScreen(
                 onNavigateToSettings = onNavigateToSettings,
                 onNavigateToSearch = onNavigateToSearch,
                 onLibraryMenu = { menuLibrary = it },
+                onReadingMenu = { menuReadingBook = it },
             )
         }
     }
@@ -142,6 +146,13 @@ fun HomeScreen(
             onScan = { viewModel.scanLibrary(library.id) },
             onEmptyTrash = { viewModel.emptyTrash(library.id) },
             onDismiss = { menuLibrary = null },
+        )
+    }
+    menuReadingBook?.let { book ->
+        ReadingActionsDialog(
+            book = book,
+            onHide = { viewModel.hideFromReading(book) },
+            onDismiss = { menuReadingBook = null },
         )
     }
     libraryMessage?.let { LibraryActionMessage(it, onShown = viewModel::clearLibraryMessage) }
@@ -173,21 +184,28 @@ private fun HomeContent(
     onNavigateToSettings: () -> Unit,
     onNavigateToSearch: () -> Unit,
     onLibraryMenu: (Library) -> Unit,
+    onReadingMenu: (Book) -> Unit,
 ) {
     // 새로고침하면 읽는 중·다음 권 순서가 바뀌므로 내용이 바뀔 때도 연 항목으로 포커스를 다시 준다.
     // 처음이거나 그 항목이 없어졌으면 첫 줄.
     EntryFocusEffect(entryFocus, state.continueReading, state.onDeck, state.libraries)
 
     @Composable
-    fun bookCard(rowKey: String, book: Book, modifier: Modifier, showProgress: Boolean) {
+    fun bookCard(
+        rowKey: String,
+        book: Book,
+        modifier: Modifier,
+        showProgress: Boolean,
+        onLongClick: (() -> Unit)? = null,
+    ) {
         val key = "$rowKey:${book.id}"
         PosterCard(
             modifier = modifier.focusRequester(entryFocus.requesterFor(key)),
-            // 책 이름이 "01"처럼 번호뿐이면 무슨 책인지 알 수 없어 시리즈 이름을 붙인다
-            title = if (book.name.any { it.isLetter() }) book.name else "${book.seriesTitle} ${book.name}",
+            // 번호뿐인 이름엔 시리즈 이름을 붙이고, 해시 이름이면 시리즈 이름을 쓴다
+            title = book.cardTitle(),
             imageUrl = imageUrls.bookThumbnail(book.id).orEmpty(),
             subtitle = when {
-                !showProgress -> book.seriesTitle.takeIf { book.name.any { c -> c.isLetter() } }
+                !showProgress -> book.seriesTitle.takeUnless { book.cardTitleShowsSeries() }
                 book.readProgress?.completed == true -> stringResource(R.string.home_book_completed)
                 else -> stringResource(R.string.home_book_progress, book.readProgress?.page ?: 0, book.pageCount)
             },
@@ -195,6 +213,7 @@ private fun HomeContent(
                 entryFocus.onOpen(key)
                 onNavigateToReader(book.id)
             },
+            onLongClick = onLongClick,
         )
     }
 
@@ -215,10 +234,11 @@ private fun HomeContent(
 
     val rows = listOf(
         HomeRow("continue", R.string.home_continue_reading, state.continueReading, { it.id }) { book, m ->
-            bookCard("continue", book, m, showProgress = true)
+            // 길게 누르면 "읽는 중에서 빼기"
+            bookCard("continue", book, m, showProgress = true, onLongClick = { onReadingMenu(book) })
         },
         HomeRow("ondeck", R.string.home_on_deck, state.onDeck, { it.id }) { book, m ->
-            bookCard("ondeck", book, m, showProgress = false)
+            bookCard("ondeck", book, m, showProgress = false, onLongClick = { onReadingMenu(book) })
         },
         HomeRow("latest", R.string.home_latest_books, state.latestBooks, { it.id }) { book, m ->
             bookCard("latest", book, m, showProgress = false)

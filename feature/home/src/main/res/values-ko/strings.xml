@@ -21,4 +21,6 @@
     <string name="library_action_done_scan">스캔을 요청했습니다 — 서버가 지금 훑습니다</string>
     <string name="library_action_done_trash">휴지통을 비웠습니다</string>
     <string name="library_action_failed">하지 못했습니다 (관리자만 가능하거나 서버 오류)</string>
+    <string name="reading_action_hide">읽는 중에서 빼기</string>
+    <string name="reading_action_hint">이 시리즈를 이 TV의 "읽는 중"과 "다음 권"에서 뺍니다. 읽던 쪽은 그대로이고, 다시 읽으면 다시 나타납니다. Back: 닫기</string>
 </resources>

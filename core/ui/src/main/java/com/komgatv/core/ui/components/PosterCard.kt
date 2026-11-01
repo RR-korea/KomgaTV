@@ -1,6 +1,8 @@
 package com.komgatv.core.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,9 +11,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -82,13 +88,37 @@ fun PosterCard(
                 ),
             ),
         ) {
-            // Card 내용은 크기를 갖지 않으므로 이미지가 직접 채운다 (크기 0이면 Coil이 요청하지 않는다)
-            AsyncImage(
-                model = imageRequest,
-                contentDescription = title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
+            // 서버에 표지가 없으면(404 — 표지 그림이 없는 EPUB 등) 회색 대신 제목을 적은 대체 표지
+            var failed by remember(imageUrl) { mutableStateOf(imageUrl.isEmpty()) }
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                if (failed) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Brush.verticalGradient(listOf(Color(0xFF2B3A55), Color(0xFF151C2B)))),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = Color.White,
+                            textAlign = TextAlign.Center,
+                            maxLines = 5,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(12.dp),
+                        )
+                    }
+                } else {
+                    // Card 내용은 크기를 갖지 않으므로 이미지가 직접 채운다 (크기 0이면 Coil이 요청하지 않는다)
+                    AsyncImage(
+                        model = imageRequest,
+                        contentDescription = title,
+                        contentScale = ContentScale.Crop,
+                        onError = { failed = true },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+            }
         }
 
         // 제목 텍스트
