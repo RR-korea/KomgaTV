@@ -36,4 +36,8 @@
     <string name="view_transition_off">끄기</string>
     <string name="view_transition_slide">밀기</string>
     <string name="view_transition_fade">페이드</string>
+    <string name="view_translation">번역</string>
+    <string name="view_translation_off">끄기</string>
+    <string name="view_translation_ja_ko">일본어 → 한국어</string>
+    <string name="view_translation_en_ko">영어 → 한국어</string>
 </resources>

@@ -82,6 +82,19 @@ enum class PageTransition {
 }
 
 /**
+ * 만화 번역 (작품별). 쪽의 글자를 TV에서 읽어 한국어로 번역하고, 원래 글자 자리를 가린 뒤 번역문을 쓴다.
+ */
+enum class TranslationMode {
+    OFF,
+
+    /** 일본어 → 한국어 */
+    JA_KO,
+
+    /** 영어 → 한국어 */
+    EN_KO,
+}
+
+/**
  * 리더 보기 설정 모델 (앱 전체 기본값, 또는 한 작품의 설정)
  *
  * @property readerType 리더 종류 (기본값: PAGED)
@@ -107,6 +120,8 @@ data class ReaderSettings(
     val zoomPercent: Int = MIN_ZOOM_PERCENT,
     /** 페이지 넘김 화면 전환 효과 */
     val pageTransition: PageTransition = PageTransition.SLIDE,
+    /** 만화 번역 — 작품별로만 바꾼다 */
+    val translation: TranslationMode = TranslationMode.OFF,
 ) {
     companion object {
         const val MIN_ZOOM_PERCENT = 100

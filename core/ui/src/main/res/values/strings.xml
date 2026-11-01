@@ -36,4 +36,8 @@
     <string name="view_transition_off">Off</string>
     <string name="view_transition_slide">Slide</string>
     <string name="view_transition_fade">Fade</string>
+    <string name="view_translation">Translate</string>
+    <string name="view_translation_off">Off</string>
+    <string name="view_translation_ja_ko">Japanese → Korean</string>
+    <string name="view_translation_en_ko">English → Korean</string>
 </resources>

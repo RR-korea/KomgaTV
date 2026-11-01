@@ -7,6 +7,7 @@ import com.komgatv.core.model.ReaderSettings
 import com.komgatv.core.model.ReaderType
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.ScaleType
+import com.komgatv.core.model.TranslationMode
 
 /**
  * 작품 설정 ↔ 문자열 ("키=값;키=값"). 모르는 키·잘못된 값은 기본값으로 둔다 (앱이 바뀌어도 읽힌다).
@@ -23,6 +24,7 @@ internal object ReaderSettingsCodec {
         "imageEnhancement" to s.imageEnhancement.name,
         "zoomPercent" to s.zoomPercent.toString(),
         "pageTransition" to s.pageTransition.name,
+        "translation" to s.translation.name,
     ).joinToString(";") { (k, v) -> "$k=$v" }
 
     fun decode(text: String?): ReaderSettings? {
@@ -43,6 +45,7 @@ internal object ReaderSettingsCodec {
             zoomPercent = map["zoomPercent"]?.toIntOrNull()
                 ?.coerceIn(ReaderSettings.MIN_ZOOM_PERCENT, ReaderSettings.MAX_ZOOM_PERCENT) ?: d.zoomPercent,
             pageTransition = enumOrNull<PageTransition>(map["pageTransition"]) ?: d.pageTransition,
+            translation = enumOrNull<TranslationMode>(map["translation"]) ?: d.translation,
         )
     }
 

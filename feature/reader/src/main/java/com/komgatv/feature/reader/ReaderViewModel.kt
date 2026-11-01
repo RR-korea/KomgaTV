@@ -20,6 +20,7 @@ import com.komgatv.core.model.ReaderSettings
 import com.komgatv.core.model.ReaderType
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.ScaleType
+import com.komgatv.core.model.TranslationMode
 import com.komgatv.feature.reader.continuous.ContinuousProgressHelper
 import com.komgatv.feature.reader.continuous.ContinuousTilePlanner
 import com.komgatv.feature.reader.continuous.PageTile
@@ -93,6 +94,8 @@ sealed interface ReaderUiState {
         val zoomPercent: Int = ReaderSettings.MIN_ZOOM_PERCENT,
         /** 페이지 넘김 화면 전환 효과 */
         val pageTransition: PageTransition = PageTransition.SLIDE,
+        /** 만화 번역 (페이지 넘김) */
+        val translation: TranslationMode = TranslationMode.OFF,
         /**
          * 지금 펼침으로 어떻게 왔는지 — +1 다음 펼침, −1 이전 펼침, 0 그 밖(처음 열기·점프·설정 변경).
          * 화면 전환 효과는 ±1일 때만 쓴다.
@@ -119,6 +122,7 @@ sealed interface ReaderUiState {
                 imageEnhancement = imageEnhancement,
                 zoomPercent = zoomPercent,
                 pageTransition = pageTransition,
+                translation = translation,
             )
     }
 
@@ -213,6 +217,7 @@ class ReaderViewModel @Inject constructor(
     private var currentImageEnhancement: ImageEnhancement = ImageEnhancement.OFF
     private var currentZoomPercent: Int = ReaderSettings.MIN_ZOOM_PERCENT
     private var currentPageTransition: PageTransition = PageTransition.SLIDE
+    private var currentTranslation: TranslationMode = TranslationMode.OFF
     private var pageStep = 0
     private var currentSeriesId: String = ""
 
@@ -695,6 +700,15 @@ class ReaderViewModel @Inject constructor(
         if (new.imageEnhancement != currentImageEnhancement) setImageEnhancement(new.imageEnhancement)
         if (new.zoomPercent != currentZoomPercent) setZoomPercent(new.zoomPercent)
         if (new.pageTransition != currentPageTransition) setPageTransition(new.pageTransition)
+        if (new.translation != currentTranslation) setTranslation(new.translation)
+    }
+
+    /** 만화 번역 변경 — 이 작품에 저장 */
+    fun setTranslation(mode: TranslationMode) {
+        if (currentTranslation == mode) return
+        currentTranslation = mode
+        updateReadingState()
+        saveSeriesSettings()
     }
 
     /** 화면 전환 효과 변경 — 이 작품에 저장 */
@@ -755,6 +769,7 @@ class ReaderViewModel @Inject constructor(
         currentImageEnhancement = settings.imageEnhancement
         currentZoomPercent = settings.zoomPercent
         currentPageTransition = settings.pageTransition
+        currentTranslation = settings.translation
     }
 
     private fun currentSettings() = ReaderSettings(
@@ -767,6 +782,7 @@ class ReaderViewModel @Inject constructor(
         imageEnhancement = currentImageEnhancement,
         zoomPercent = currentZoomPercent,
         pageTransition = currentPageTransition,
+        translation = currentTranslation,
     )
 
     /** 패널에서 바꾼 값은 이 작품(시리즈)에만 저장한다 — 앱 기본값은 서버 설정 화면에서 */
@@ -1002,6 +1018,7 @@ class ReaderViewModel @Inject constructor(
             imageEnhancement = currentImageEnhancement,
             zoomPercent = currentZoomPercent,
             pageTransition = currentPageTransition,
+            translation = currentTranslation,
             pageStep = pageStep,
             seriesCustomized = seriesCustomized,
             showOverlay = existingOverlay,

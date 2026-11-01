@@ -7,6 +7,7 @@ import com.komgatv.core.model.ReaderSettings
 import com.komgatv.core.model.ReaderType
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.ScaleType
+import com.komgatv.core.model.TranslationMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -25,6 +26,7 @@ class ReaderSettingsCodecTest {
             imageEnhancement = ImageEnhancement.SHARPEN,
             zoomPercent = 117,
             pageTransition = PageTransition.FADE,
+            translation = TranslationMode.JA_KO,
         )
         assertEquals(s, ReaderSettingsCodec.decode(ReaderSettingsCodec.encode(s)))
     }

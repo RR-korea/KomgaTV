@@ -79,6 +79,9 @@ import com.komgatv.core.model.PageTransition
 import com.komgatv.core.model.ReaderType
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.ScaleType
+import com.komgatv.core.model.TranslationMode
+import com.komgatv.feature.reader.translate.MangaTranslator
+import com.komgatv.feature.reader.translate.TranslateTransformation
 import com.komgatv.core.ui.components.ProgressBar
 import com.komgatv.core.ui.components.loadErrorText
 import com.komgatv.feature.reader.continuous.ContinuousPages
@@ -208,10 +211,11 @@ private fun ReaderContent(
     // (PDF는 서버가 쪽마다 2~3초씩 그려서, 쌓이면 지금 쪽이 그 뒤에서 한참 기다린다)
     val preloads = remember { mutableMapOf<String, Disposable>() }
     LaunchedEffect(
-        state.preloadSpreads, state.spreadPageUrls, state.scaleType, state.imageEnhancement, screenWidthPx, screenHeightPx,
+        state.preloadSpreads, state.spreadPageUrls, state.scaleType, state.imageEnhancement, state.translation,
+        screenWidthPx, screenHeightPx,
     ) {
         val imageLoader = SingletonImageLoader.get(context)
-        val variant = "${state.scaleType}|${state.imageEnhancement}|${screenWidthPx}x$screenHeightPx"
+        val variant = "${state.scaleType}|${state.imageEnhancement}|${state.translation}|${screenWidthPx}x$screenHeightPx"
         val wanted = state.preloadSpreads.flatMap { urls -> urls.map { url -> "$url|${urls.size}|$variant" to (url to urls.size) } }
             .toMap()
         // 지금 보이는 쪽은 화면이 같은 주소를 받는 중일 수 있어 끊지 않는다 (같은 요청은 한 번만 받는다)
@@ -225,7 +229,10 @@ private fun ReaderContent(
             if (key in preloads) return@forEach
             val (url, slots) = page
             preloads[key] = imageLoader.enqueue(
-                pageRequest(context, url, state.scaleType, slotWidth(screenWidthPx, slots), screenHeightPx, state.imageEnhancement)
+                pageRequest(
+                    context, url, state.scaleType, slotWidth(screenWidthPx, slots), screenHeightPx,
+                    state.imageEnhancement, state.translation,
+                )
             )
         }
     }
@@ -506,8 +513,10 @@ private fun SpreadPages(
                 index == 0 -> Alignment.CenterEnd
                 else -> Alignment.CenterStart
             }
-            val request = remember(url, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement) {
-                pageRequest(context, url, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement)
+            val request = remember(url, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement, state.translation) {
+                pageRequest(
+                    context, url, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement, state.translation,
+                )
             }
             // 받는 중이면 스피너, 실패하면 문구 — 빨리 넘길 때 검은 화면이 멈춘 것처럼 보이지 않게
             var loadState by remember(request) { mutableStateOf<AsyncImagePainter.State>(AsyncImagePainter.State.Empty) }
@@ -620,6 +629,7 @@ private fun pageRequest(
     slotWidthPx: Int,
     screenHeightPx: Int,
     enhancement: ImageEnhancement,
+    translation: TranslationMode,
 ): ImageRequest {
     val size = when (scaleType) {
         ScaleType.SCREEN -> CoilSize(slotWidthPx, screenHeightPx)
@@ -633,7 +643,15 @@ private fun pageRequest(
         .size(size)
         .precision(Precision.INEXACT)
         .crossfade(false)
-        .apply { ImageEnhancer.sharpenAmount(enhancement)?.let { transformations(SharpenTransformation(it)) } }
+        .transformations(
+            listOfNotNull(
+                ImageEnhancer.sharpenAmount(enhancement)?.let { SharpenTransformation(it) },
+                // 번역은 선명하게 한 뒤에 (글자 인식이 조금 낫다)
+                translation.takeIf { it != TranslationMode.OFF }?.let {
+                    TranslateTransformation(MangaTranslator.get(context), it, url)
+                },
+            ),
+        )
         .build()
 }
 

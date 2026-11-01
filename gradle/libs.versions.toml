@@ -22,6 +22,8 @@ kotlinx-datetime = "0.8.0"
 
 # 이미지
 coil = "3.6.3"
+mlkit-text-recognition = "16.0.1"
+mlkit-translate = "17.0.3"
 
 # DI
 hilt = "2.60.1"
@@ -64,6 +66,8 @@ kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime",
 
 # 이미지
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+mlkit-text-recognition-japanese = { group = "com.google.mlkit", name = "text-recognition-japanese", version.ref = "mlkit-text-recognition" }
+mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "mlkit-translate" }
 coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 
 # DI
