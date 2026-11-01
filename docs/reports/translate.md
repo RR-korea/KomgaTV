@@ -24,3 +24,8 @@
 - 한계: ML Kit 일본어 인식이 비슷한 한자를 한 글자씩 틀리고, ML Kit 번역은 직역이라 한 글자 오류가 엉뚱한 번역이 된다. APK 155MB(엔진이 CPU 종류별 4벌).
 
 ![시험용 쪽 번역 결과](translate/01-synthetic-ja-en.jpg)
+
+## 따로 설치 구별
+- 번역 시험판 배너 오른쪽 위에 빨간 **ML**(머신러닝) 표시 — `make_banner.py ... ML`로 만든다 (main 배너에는 없음).
+
+![런처: main 앱과 ML 시험판](translate/02-launcher-ml-badge.jpg)

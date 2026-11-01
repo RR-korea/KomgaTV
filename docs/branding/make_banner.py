@@ -5,7 +5,7 @@
 출력: app/src/main/res/drawable-*/tv_banner.png (320x180dp), drawable-*/ic_launcher_foreground.png (108dp, 로고),
       drawable-*/ic_launcher_monochrome.png (테마 아이콘)
 
-    python docs/branding/make_banner.py <logo-1024.png> <NotoSans-Bold.ttf>
+    python docs/branding/make_banner.py <logo-1024.png> <NotoSans-Bold.ttf> [표시, 예: ML]
 """
 import sys
 from pathlib import Path
@@ -17,6 +17,7 @@ W, H = 1280, 720
 BG_TOP, BG_BOTTOM = (255, 255, 255), (241, 243, 244)
 INK = (60, 64, 67)  # 'Komga' — Google 글자 회색
 BLUE = (0, 94, 211)  # 'TV' — Komga 로고의 파랑
+BADGE = (232, 64, 52)  # 오른쪽 위 표시 바탕 (빨강)
 STRETCH_Y = 1.0  # 글자 비율 그대로 (세로로 늘리면 보기 싫다 — 사용자 의견)
 FONT_SIZE = 400
 TRACKING = -12  # 자간 (글자 크기 400 기준, 음수면 좁힌다 — 사용자 의견)
@@ -72,6 +73,21 @@ def banner(logo: Image.Image, font_path: str) -> Image.Image:
     return out.convert("RGB")
 
 
+def add_badge(art: Image.Image, font_path: str, label: str) -> Image.Image:
+    """오른쪽 위에 둥근 표시 (번역 시험판의 "ML" — 머신러닝)"""
+    out = art.convert("RGBA")
+    font = ImageFont.truetype(font_path, 120)
+    box = font.getbbox(label)
+    tw, th = box[2] - box[0], box[3] - box[1]
+    pad_x, pad_y, margin = 44, 26, 34
+    bw, bh = tw + pad_x * 2, th + pad_y * 2
+    x0, y0 = W - margin - bw, margin
+    draw = ImageDraw.Draw(out)
+    draw.rounded_rectangle((x0, y0, x0 + bw, y0 + bh), radius=bh // 2, fill=BADGE)
+    draw.text((x0 + pad_x - box[0], y0 + pad_y - box[1]), label, font=font, fill=(255, 255, 255))
+    return out.convert("RGB")
+
+
 def icon_foreground(logo: Image.Image, px: int) -> Image.Image:
     """108dp 캔버스 가운데 로고 (바탕은 ic_launcher_background — 흰색)"""
     canvas = Image.new("RGBA", (px, px), (0, 0, 0, 0))
@@ -93,10 +109,12 @@ def icon_monochrome(logo: Image.Image, px: int) -> Image.Image:
     return canvas
 
 
-def main(logo_path: str, font_path: str) -> None:
+def main(logo_path: str, font_path: str, badge: str | None = None) -> None:
     logo = Image.open(logo_path).convert("RGBA")
     res = Path(__file__).resolve().parents[2] / "app/src/main/res"
     art = banner(logo, font_path)
+    if badge:
+        art = add_badge(art, font_path, badge)
     for name, factor in DENSITIES.items():
         size = (round(320 * factor), round(180 * factor))
         art.resize(size, Image.LANCZOS).save(res / f"drawable-{name}/tv_banner.png", optimize=True)
@@ -112,4 +130,5 @@ def main(logo_path: str, font_path: str) -> None:
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2])
+    # 세 번째 인자: 오른쪽 위 표시 (예: ML — translate 브랜치의 번역 시험판)
+    main(sys.argv[1], sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None)
