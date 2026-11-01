@@ -1114,3 +1114,25 @@ body {
   overflow-wrap: break-word;
   word-wrap: break-word;
 }
+
+/* 묻는 창: 질문 + [유지] [제거] 나란히 */
+.confirm-question {
+  margin: 0 0 28px;
+  font-size: 28px;
+  color: #ffffff;
+}
+
+.confirm-buttons {
+  display: flex;
+}
+
+.confirm-buttons .confirm-button {
+  flex: 1 1 0;
+  margin-right: 16px;
+  justify-content: center;
+  text-align: center;
+}
+
+.confirm-buttons .confirm-button:last-child {
+  margin-right: 0;
+}

@@ -585,14 +585,21 @@ try {
   });
   results.push(`${epubCard.fallback && epubCard.fallback === epubCard.title ? 'PASS' : 'FAIL'} 표지 없는 EPUB: 대체 표지에 제목 "${epubCard.fallback}"`);
 
-  // 14. 읽는 중에서 빼기 (Android 0.3.0~0.3.1): 서버 진행을 지우고 그 시리즈를 읽는 중·다음 권에서 뺀다
+  // 14. 읽는 중에서 빼기 (Android 0.3.0~0.3.2): 묻고([유지]에 먼저 포커스) [제거]면 서버 진행을 지우고 두 줄에서 뺀다
   await page.evaluate(() => (document.querySelector('[data-key="reading-book-S8B2"]'))?.focus());
   await expectFocus('PDF 책 카드 (읽는 중)', 'reading-book-S8B2');
   const beforeHide = patches.length;
   await longPress();
-  await expectFocus('읽는 중 책 OK 길게 → 빼기 메뉴', 'menu-hide');
-  await expectText('빼기 메뉴 안내', '.menu-hint', /서버의 읽기 진행을 지우고/);
-  await shot('reading-hide-menu');
+  await expectFocus('읽는 중 책 OK 길게 → 묻는 창, [유지]에 포커스', 'confirm-cancel');
+  await expectText('묻는 창 질문', '.confirm-question', /읽는 중에서 뺄까요/);
+  await shot('reading-hide-confirm');
+  await key('Enter'); // 유지
+  await page.waitForTimeout(500);
+  results.push(`${!(await page.evaluate(() => !!document.querySelector('.confirm-question'))) && patches.length === beforeHide ? 'PASS' : 'FAIL'} [유지] → 닫히고 아무것도 안 지움`);
+  await expectFocus('유지하면 그 책 그대로', 'reading-book-S8B2');
+  await longPress();
+  await key('ArrowRight');
+  await expectFocus('[제거]로', 'confirm-ok');
   await key('Enter');
   await page.waitForTimeout(800);
   results.push(`${patches.slice(beforeHide).some((p) => p === 'DELETE read-progress S8B2') ? 'PASS' : 'FAIL'} 빼기 → 서버 진행 지움: ${patches.slice(beforeHide).join(' | ')}`);

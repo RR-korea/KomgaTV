@@ -2,7 +2,7 @@
 // → 최근 업데이트된 시리즈 → 라이브러리. 빈 줄은 그리지 않는다.
 // 읽는 중·라이브러리는 필수(실패하면 오류 화면), 나머지 줄은 실패하면 그 줄만 빈다.
 // 돌아오면 진행 저장을 기다렸다가 조용히 새로고침하고 연 항목에 포커스.
-// 읽는 중·다음 권 책을 OK 길게 → 읽는 중에서 빼기 (Android 0.3.0~0.3.1).
+// 읽는 중·다음 권 책을 OK 길게 → "읽는 중에서 뺄까요?" [유지] [제거] (Android 0.3.0~0.3.2).
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { readStatusIs } from '../api/conditions';
@@ -15,7 +15,7 @@ import { awaitWrites, type LoadError, requireSession, toLoadError, trackWrite } 
 import { BookCard, SeriesCard } from '../ui/cards';
 import { Button, ErrorView, LoadingView, Row, TextCard } from '../ui/components';
 import { useEntryFocus } from '../ui/entryFocus';
-import { ActionMenu, type MenuAction, showToast } from '../ui/overlays';
+import { ActionMenu, ConfirmDialog, type MenuAction, showToast } from '../ui/overlays';
 import { focusKeyOrFirst } from '../platform/focus';
 
 const ROW_SIZE = 20;
@@ -75,7 +75,7 @@ export function HomeScreen({ entry, active }: { entry: RouteEntry; active: boole
   const [version, setVersion] = useState(0);
   /** OK 길게 누른 라이브러리 → 라이브러리 메뉴 (Android: 스캔·휴지통 비우기, 관리자) */
   const [menuLibrary, setMenuLibrary] = useState<KomgaLibrary | null>(null);
-  /** OK 길게 누른 읽는 중·다음 권 책 → 읽는 중에서 빼기 */
+  /** OK 길게 누른 읽는 중·다음 권 책 → 읽는 중에서 뺄지 묻는다 */
   const [menuBook, setMenuBook] = useState<{ book: KomgaBook; row: string } | null>(null);
 
   /**
@@ -107,7 +107,11 @@ export function HomeScreen({ entry, active }: { entry: RouteEntry; active: boole
   const closeBookMenu = () => {
     const key = menuBook ? `${menuBook.row}-book-${menuBook.book.id}` : undefined;
     setMenuBook(null);
-    setTimeout(() => root.current && key && focusKeyOrFirst(root.current, key), 0);
+    // [제거]로 닫히면 그 카드는 없다 — 포커스는 hideFromReading이 정한다
+    setTimeout(() => {
+      if (!root.current || !key || !root.current.querySelector(`[data-key="${key}"]`)) return;
+      focusKeyOrFirst(root.current, key);
+    }, 0);
   };
 
   const libraryAction = (run: () => Promise<void>, done: string) =>
@@ -227,16 +231,13 @@ export function HomeScreen({ entry, active }: { entry: RouteEntry; active: boole
         </>
       )}
       {menuBook && (
-        <ActionMenu
+        <ConfirmDialog
           title={bookDisplayTitle(menuBook.book)}
+          question={t.readingActionQuestion}
           hint={t.readingActionHint}
-          actions={[
-            {
-              key: 'menu-hide',
-              label: t.readingActionHide,
-              run: () => hideFromReading(menuBook.book, menuBook.row),
-            },
-          ]}
+          cancelLabel={t.readingActionKeep}
+          confirmLabel={t.readingActionRemove}
+          onConfirm={() => hideFromReading(menuBook.book, menuBook.row)}
           onClose={closeBookMenu}
         />
       )}
