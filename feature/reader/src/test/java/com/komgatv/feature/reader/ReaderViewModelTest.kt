@@ -864,6 +864,36 @@ class ReaderViewModelTest {
     }
 
     @Test
+    fun `확대 - 1% 단위로 바뀌고 100~300 안에서, 이 작품에만 저장된다`() = runTest(testDispatcher) {
+        openBook()
+        advanceUntilIdle()
+        assertEquals(100, reading.zoomPercent)
+
+        viewModel.applySettings(reading.settings.copy(zoomPercent = 101))
+        advanceUntilIdle()
+        assertEquals(101, reading.zoomPercent)
+        assertEquals(101, readerPreferences.series.value["s1"]!!.zoomPercent)
+        assertEquals(100, readerPreferences.readerSettings.first().zoomPercent)
+
+        viewModel.setZoomPercent(1000)
+        assertEquals(300, reading.zoomPercent)
+        viewModel.setZoomPercent(50)
+        assertEquals(100, reading.zoomPercent)
+    }
+
+    @Test
+    fun `확대 - 저장된 작품 확대로 열고, 기본값으로 되돌리면 100`() = runTest(testDispatcher) {
+        readerPreferences.series.value = mapOf("s1" to ReaderSettings(zoomPercent = 125))
+        openBook()
+        advanceUntilIdle()
+        assertEquals(125, reading.zoomPercent)
+
+        viewModel.resetSeriesSettings()
+        advanceUntilIdle()
+        assertEquals(100, reading.zoomPercent)
+    }
+
+    @Test
     fun `EPUB 책은 EPUB 리더로 넘긴다`() = runTest(testDispatcher) {
         seriesRepository.seriesMap["s1"] = createTestSeries(id = "s1")
         bookRepository.books["e1"] = createTestBook(id = "e1", seriesId = "s1", pageCount = 0)

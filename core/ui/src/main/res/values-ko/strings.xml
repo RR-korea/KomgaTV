@@ -32,4 +32,5 @@
     <string name="view_dp_value">%1$d dp</string>
     <string name="view_on">켜짐</string>
     <string name="view_off">꺼짐</string>
+    <string name="view_zoom">확대</string>
 </resources>

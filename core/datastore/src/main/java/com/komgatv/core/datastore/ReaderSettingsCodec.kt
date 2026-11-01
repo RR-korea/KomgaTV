@@ -21,6 +21,7 @@ internal object ReaderSettingsCodec {
         "continuousPadding" to s.continuousPadding.toString(),
         "continuousPageSpacing" to s.continuousPageSpacing.toString(),
         "imageEnhancement" to s.imageEnhancement.name,
+        "zoomPercent" to s.zoomPercent.toString(),
     ).joinToString(";") { (k, v) -> "$k=$v" }
 
     fun decode(text: String?): ReaderSettings? {
@@ -39,6 +40,8 @@ internal object ReaderSettingsCodec {
             continuousPadding = map["continuousPadding"]?.toFloatOrNull() ?: d.continuousPadding,
             continuousPageSpacing = map["continuousPageSpacing"]?.toIntOrNull() ?: d.continuousPageSpacing,
             imageEnhancement = enumOrNull<ImageEnhancement>(map["imageEnhancement"]) ?: d.imageEnhancement,
+            zoomPercent = map["zoomPercent"]?.toIntOrNull()
+                ?.coerceIn(ReaderSettings.MIN_ZOOM_PERCENT, ReaderSettings.MAX_ZOOM_PERCENT) ?: d.zoomPercent,
         )
     }
 

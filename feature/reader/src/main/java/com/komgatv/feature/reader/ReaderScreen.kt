@@ -27,6 +27,13 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
+import kotlin.math.roundToInt
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -233,6 +240,15 @@ private fun ReaderContent(
         contentScaleFor(state.scaleType, state.stretchToFit)
     }
 
+    // 확대(줌인): 크기 맞춤 결과를 펼침째(두 쪽이면 두 쪽 함께, 가운데 기준) 키운다.
+    // 화면 고정 모드에서는 ▲▼로 위아래를 본다 (반 칸씩, 쪽이 바뀌면 가운데로).
+    val zoom = state.zoomPercent / 100f
+    var panStep by remember(state.currentSpreadIndex, state.zoomPercent, state.scaleType) { mutableIntStateOf(0) }
+    val panOffset by animateFloatAsState(
+        targetValue = -panStep / PAN_STEPS.toFloat() * (zoom - 1f) * screenHeightPx / 2f,
+        label = "zoom-pan",
+    )
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -268,6 +284,8 @@ private fun ReaderContent(
                         coroutineScope.launch {
                             scrollState.animateScrollTo((scrollState.value - screenHeightPx / 2).coerceAtLeast(0))
                         }
+                    } else if (!scrollable && zoom > 1f) {
+                        panStep = (panStep - 1).coerceAtLeast(-PAN_STEPS)
                     }
                     Key.DirectionDown -> if (state.showOverlay) {
                         viewModel.jumpPages(-10)
@@ -284,6 +302,8 @@ private fun ReaderContent(
                                 (scrollState.value + screenHeightPx / 2).coerceAtMost(scrollState.maxValue)
                             )
                         }
+                    } else if (!scrollable && zoom > 1f) {
+                        panStep = (panStep + 1).coerceAtMost(PAN_STEPS)
                     }
                     else -> return@onPreviewKeyEvent false
                 }
@@ -331,6 +351,7 @@ private fun ReaderContent(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .zoomedFromTop(zoom)
                         .heightIn(min = screenHeightDp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -338,7 +359,17 @@ private fun ReaderContent(
                 }
             }
         } else {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clipToBounds()
+                    .graphicsLayer {
+                        scaleX = zoom
+                        scaleY = zoom
+                        translationY = panOffset
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
                 spreadContent()
             }
         }
@@ -534,6 +565,29 @@ private fun pageRequest(
         .apply { ImageEnhancer.sharpenAmount(enhancement)?.let { transformations(SharpenTransformation(it)) } }
         .build()
 }
+
+/** 확대 상태에서 ▲▼ 한 번에 움직이는 양 — 넘치는 높이의 절반을 이만큼 나눈다 */
+private const val PAN_STEPS = 2
+
+/**
+ * 스크롤 모드(너비 맞춤·원본)의 확대: 위쪽 가운데를 기준으로 키우고, 키운 높이만큼 자리를 차지해 끝까지 스크롤된다.
+ * 좌우로 넘치는 부분은 잘린다.
+ */
+private fun Modifier.zoomedFromTop(zoom: Float): Modifier =
+    if (zoom <= 1f) {
+        this
+    } else {
+        clipToBounds().layout { measurable, constraints ->
+            val placeable = measurable.measure(constraints)
+            layout(placeable.width, (placeable.height * zoom).roundToInt()) {
+                placeable.placeWithLayer(0, 0) {
+                    scaleX = zoom
+                    scaleY = zoom
+                    transformOrigin = TransformOrigin(0.5f, 0f)
+                }
+            }
+        }
+    }
 
 /** Komelia의 크기 맞춤 + 작은 이미지 키우기(stretchToFit)를 Compose ContentScale로 */
 private fun contentScaleFor(scaleType: ScaleType, stretchToFit: Boolean): ContentScale {

@@ -90,6 +90,8 @@ sealed interface ReaderUiState {
         val scrollToTileIndex: Int? = null,
         val stretchToFit: Boolean,
         val imageEnhancement: ImageEnhancement = ImageEnhancement.OFF,
+        /** 크기 맞춤 결과를 더 확대하는 비율 % (페이지 넘김) */
+        val zoomPercent: Int = ReaderSettings.MIN_ZOOM_PERCENT,
         /** 이 작품에 따로 저장된 보기 설정이 있다 (없으면 앱 기본값을 따른다) */
         val seriesCustomized: Boolean = false,
         val showOverlay: Boolean = false,
@@ -110,6 +112,7 @@ sealed interface ReaderUiState {
                 continuousPadding = continuousPadding,
                 continuousPageSpacing = continuousPageSpacing,
                 imageEnhancement = imageEnhancement,
+                zoomPercent = zoomPercent,
             )
     }
 
@@ -203,6 +206,7 @@ class ReaderViewModel @Inject constructor(
     private var currentContinuousPadding: Float = 0f
     private var currentContinuousPageSpacing: Int = 0
     private var currentImageEnhancement: ImageEnhancement = ImageEnhancement.OFF
+    private var currentZoomPercent: Int = ReaderSettings.MIN_ZOOM_PERCENT
     private var currentSeriesId: String = ""
 
     // 다음 권 (KMReader처럼 책 끝 근처에서 미리 찾고 첫 쪽을 미리 받는다)
@@ -693,6 +697,16 @@ class ReaderViewModel @Inject constructor(
         if (new.continuousPadding != currentContinuousPadding) setContinuousPadding(new.continuousPadding)
         if (new.continuousPageSpacing != currentContinuousPageSpacing) setContinuousPageSpacing(new.continuousPageSpacing)
         if (new.imageEnhancement != currentImageEnhancement) setImageEnhancement(new.imageEnhancement)
+        if (new.zoomPercent != currentZoomPercent) setZoomPercent(new.zoomPercent)
+    }
+
+    /** 확대(줌인) 비율 변경 — 이 작품에 저장 */
+    fun setZoomPercent(percent: Int) {
+        val clamped = percent.coerceIn(ReaderSettings.MIN_ZOOM_PERCENT, ReaderSettings.MAX_ZOOM_PERCENT)
+        if (currentZoomPercent == clamped) return
+        currentZoomPercent = clamped
+        updateReadingState()
+        saveSeriesSettings()
     }
 
     /** 이 작품의 보기 설정을 지우고 앱 기본값으로 되돌린다 (보던 쪽은 그대로) */
@@ -735,6 +749,7 @@ class ReaderViewModel @Inject constructor(
         currentContinuousPadding = settings.continuousPadding
         currentContinuousPageSpacing = settings.continuousPageSpacing
         currentImageEnhancement = settings.imageEnhancement
+        currentZoomPercent = settings.zoomPercent
     }
 
     private fun currentSettings() = ReaderSettings(
@@ -746,6 +761,7 @@ class ReaderViewModel @Inject constructor(
         continuousPadding = currentContinuousPadding,
         continuousPageSpacing = currentContinuousPageSpacing,
         imageEnhancement = currentImageEnhancement,
+        zoomPercent = currentZoomPercent,
     )
 
     /** 패널에서 바꾼 값은 이 작품(시리즈)에만 저장한다 — 앱 기본값은 서버 설정 화면에서 */
@@ -978,6 +994,7 @@ class ReaderViewModel @Inject constructor(
             scrollToTileIndex = scrollToTileIndex,
             stretchToFit = currentStretchToFit,
             imageEnhancement = currentImageEnhancement,
+            zoomPercent = currentZoomPercent,
             seriesCustomized = seriesCustomized,
             showOverlay = existingOverlay,
             showSettingsPanel = existingSettings,
