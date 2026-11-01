@@ -22,4 +22,8 @@
     <string name="library_action_done_scan">Scan requested — the server works on it now</string>
     <string name="library_action_done_trash">Trash emptied</string>
     <string name="library_action_failed">Could not do that (admin only, or server error)</string>
+    <string name="reading_action_hint">Clears the reading progress on the server (on every device) and hides this series from Keep reading and Up next. It comes back when you read it again.</string>
+    <string name="reading_action_question">Remove this series from Keep reading?</string>
+    <string name="reading_action_keep">Keep</string>
+    <string name="reading_action_remove">Remove</string>
 </resources>

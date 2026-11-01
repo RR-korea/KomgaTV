@@ -1,5 +1,7 @@
 package com.komgatv.feature.home
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import com.komgatv.core.datastore.HomePreferences
 import com.komgatv.core.model.EpubPosition
 import com.komgatv.core.model.EpubManifest
 import com.komgatv.core.model.LoadError
@@ -37,6 +39,7 @@ class HomeViewModelTest {
     private lateinit var fakeBookRepository: FakeBookRepository
     private val progressEvents = ReadProgressEvents()
     private val fakeSeriesRepository = FakeSeriesRepository()
+    private val homePreferences = FakeHomePreferences()
 
     @Before
     fun setUp() {
@@ -50,8 +53,20 @@ class HomeViewModelTest {
             bookRepository = fakeBookRepository,
             seriesRepository = fakeSeriesRepository,
             progressEvents = progressEvents,
+            homePreferences = homePreferences,
             imageUrls = FakeImageUrls,
         )
+    }
+
+    private class FakeHomePreferences : HomePreferences {
+        val hidden = MutableStateFlow<Map<String, Long>>(emptyMap())
+        override val hiddenReadingSeries: Flow<Map<String, Long>> = hidden
+        override suspend fun hideReadingSeries(seriesId: String, atMillis: Long) {
+            hidden.value = hidden.value + (seriesId to atMillis)
+        }
+        override suspend fun unhideReadingSeries(seriesIds: Set<String>) {
+            hidden.value = hidden.value - seriesIds
+        }
     }
 
     @Test
@@ -97,6 +112,41 @@ class HomeViewModelTest {
 
         val state = viewModel.uiState.value as HomeUiState.Success
         assertTrue(state.onDeck.isEmpty())
+    }
+
+    @Test
+    fun `읽는 중에서 빼면 서버 진행을 지우고 그 시리즈가 두 줄에서 빠지며, 다시 읽으면 돌아온다`() = runTest {
+        val reading = Book(
+            id = "k9", seriesId = "kingdom", seriesTitle = "킹덤", name = "킹덤 09권", number = 9,
+            pageCount = 210, metadata = BookMetadata("킹덤 09권", "", "9"),
+            readProgress = ReadProgress(page = 57, completed = false, readDateMillis = 1_000L),
+        )
+        val next = reading.copy(id = "k10", name = "킹덤 10권", readProgress = null)
+        fakeBookRepository.inProgressBooksToReturn = listOf(reading)
+        fakeBookRepository.onDeckToReturn = listOf(next)
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.hideFromReading(reading)
+        advanceUntilIdle()
+        var state = viewModel.uiState.value as HomeUiState.Success
+        assertTrue(state.continueReading.isEmpty())
+        assertTrue(state.onDeck.isEmpty())
+        // 읽던 책은 서버 진행도 지운다, 다음 권은 지울 진행이 없다
+        assertEquals(listOf("k9"), fakeBookRepository.unread)
+        assertTrue(homePreferences.hidden.value.containsKey("kingdom"))
+
+        // 새로 읽어 서버의 읽은 시각이 뺀 시각보다 뒤 → 다시 보이고 뺀 기록을 지운다
+        val hiddenAt = homePreferences.hidden.value.getValue("kingdom")
+        fakeBookRepository.inProgressBooksToReturn = listOf(
+            reading.copy(readProgress = ReadProgress(page = 60, completed = false, readDateMillis = hiddenAt + 1)),
+        )
+        progressEvents.notifyUpdated("k9")
+        advanceUntilIdle()
+        state = viewModel.uiState.value as HomeUiState.Success
+        assertEquals(listOf("k9"), state.continueReading.map { it.id })
+        assertEquals(listOf("k10"), state.onDeck.map { it.id })
+        assertTrue(homePreferences.hidden.value.isEmpty())
     }
 
     @Test
@@ -264,7 +314,11 @@ class HomeViewModelTest {
 
         override suspend fun markRead(bookId: String) = Unit
 
-        override suspend fun markUnread(bookId: String) = Unit
+        val unread = mutableListOf<String>()
+
+        override suspend fun markUnread(bookId: String) {
+            unread += bookId
+        }
 
         override suspend fun analyze(bookId: String) = Unit
 
