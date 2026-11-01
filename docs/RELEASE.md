@@ -3,10 +3,8 @@
 정식 릴리즈(스토어 배포) 때 할 일. 개발 중에는 바꾸지 않는다.
 
 ## 패키지 이름 (applicationId)
-- 릴리즈: **`com.rock.komga`** (사용자 결정, 2026-11-01)
-- 지금(개발): `com.komgatv.app` — TV·에뮬레이터에 깔린 시험판과 저장된 서버 설정을 그대로 쓰려고 유지한다.
-- 바꿀 곳: `app/build.gradle.kts`의 `applicationId` 한 줄. 코드 패키지(`namespace`, `com.komgatv.*`)는 그대로 둬도 된다.
-- 바꾸면 TV에서는 다른 앱으로 깔린다 — 예전 시험판은 지우고, 서버 연결은 다시 해야 한다.
+- **`com.komgatv.app` 그대로 쓴다** (사용자 결정, 2026-11-01 — 한때 `com.rock.komga`로 바꾸기로 했다가 취소).
+- 개발판·릴리즈판이 같은 이름이라 TV에 깔린 앱을 그대로 업데이트할 수 있다(서명 키가 같아야 함).
 
 ## 그 밖에
 - 버전: `app/build.gradle.kts` 위쪽 `appVersionCode`·`appVersionName` (APK 이름에도 들어간다).
