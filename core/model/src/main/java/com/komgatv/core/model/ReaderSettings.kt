@@ -78,7 +78,8 @@ enum class ImageEnhancement {
  * @property continuousPadding 세로 스크롤 시 좌우 여백 (화면 너비 비율, 기본값: 0f)
  * @property continuousPageSpacing 세로 스크롤 시 쪽 사이 간격 dp (기본값: 0)
  * @property zoomPercent 페이지 넘김에서 크기 맞춤으로 맞춘 결과를 더 확대(줌인)하는 비율 %
- *   ([MIN_ZOOM_PERCENT]~[MAX_ZOOM_PERCENT], 1% 단위). 스캔 여백을 잘라 크게 볼 때 — 작품별로만 바꾼다.
+ *   ([MIN_ZOOM_PERCENT]~[MAX_ZOOM_PERCENT], 1% 단위 — 100이면 확대 안 함, 120%까지면 충분하다는 사용자 의견).
+ *   스캔 여백을 잘라 크게 볼 때 — 작품별로만 바꾼다.
  */
 data class ReaderSettings(
     val readerType: ReaderType = ReaderType.PAGED,
@@ -95,6 +96,6 @@ data class ReaderSettings(
 ) {
     companion object {
         const val MIN_ZOOM_PERCENT = 100
-        const val MAX_ZOOM_PERCENT = 300
+        const val MAX_ZOOM_PERCENT = 120
     }
 }

@@ -864,7 +864,7 @@ class ReaderViewModelTest {
     }
 
     @Test
-    fun `확대 - 1% 단위로 바뀌고 100~300 안에서, 이 작품에만 저장된다`() = runTest(testDispatcher) {
+    fun `확대 - 1% 단위로 바뀌고 100~120 안에서, 이 작품에만 저장된다`() = runTest(testDispatcher) {
         openBook()
         advanceUntilIdle()
         assertEquals(100, reading.zoomPercent)
@@ -876,7 +876,7 @@ class ReaderViewModelTest {
         assertEquals(100, readerPreferences.readerSettings.first().zoomPercent)
 
         viewModel.setZoomPercent(1000)
-        assertEquals(300, reading.zoomPercent)
+        assertEquals(120, reading.zoomPercent)
         viewModel.setZoomPercent(50)
         assertEquals(100, reading.zoomPercent)
     }
