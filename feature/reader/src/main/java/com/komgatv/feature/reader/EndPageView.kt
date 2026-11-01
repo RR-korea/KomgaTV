@@ -74,7 +74,7 @@ internal fun EndPageView(endPage: ReaderUiState.EndPage, modifier: Modifier = Mo
 }
 
 /**
- * 책 첫 화면 — 책 끝 화면의 거울. 이전 권과 지금 권을 나란히 보이고,
+ * 책 첫 화면 — 책 끝 화면과 같은 모양으로 지금 권 › 이전 권을 나란히 보이고,
  * 뒤로(이전 쪽 키·OK) 한 번 더 누르면 이전 권 마지막 쪽으로 이어진다.
  */
 @Composable
@@ -85,6 +85,15 @@ internal fun StartPageView(startPage: ReaderUiState.StartPage, modifier: Modifie
                 horizontalArrangement = Arrangement.spacedBy(56.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                // 책 끝 화면과 같은 모양: 왼쪽 지금 권 › 오른쪽 갈 곳(이전 권)
+                BookSlot(
+                    label = stringResource(R.string.start_page_current),
+                    title = startPage.currentTitle,
+                    thumbnail = startPage.currentThumbnail,
+                    coverWidth = 150.dp,
+                    dimmed = true,
+                )
+                Text(text = "›", style = MaterialTheme.typography.displayMedium, color = Color(0xFF80B9FF))
                 when {
                     !startPage.previousResolved -> NextMessage(stringResource(R.string.start_page_finding_previous))
                     startPage.previousBook == null -> NextMessage(stringResource(R.string.start_page_first_book))
@@ -96,14 +105,6 @@ internal fun StartPageView(startPage: ReaderUiState.StartPage, modifier: Modifie
                         dimmed = false,
                     )
                 }
-                Text(text = "‹", style = MaterialTheme.typography.displayMedium, color = Color(0xFF80B9FF))
-                BookSlot(
-                    label = stringResource(R.string.start_page_current),
-                    title = startPage.currentTitle,
-                    thumbnail = startPage.currentThumbnail,
-                    coverWidth = 150.dp,
-                    dimmed = true,
-                )
             }
             Spacer(Modifier.height(36.dp))
             Text(
