@@ -15,4 +15,10 @@
     <plurals name="home_series_books_count">
         <item quantity="other">%1$d권</item>
     </plurals>
+    <string name="library_action_scan">라이브러리 스캔 (관리자)</string>
+    <string name="library_action_empty_trash">휴지통 비우기 (관리자)</string>
+    <string name="library_action_hint">서버에서 파일을 지웠다면: 스캔 → 끝날 때까지 잠시 기다린 뒤 → 휴지통 비우기.</string>
+    <string name="library_action_done_scan">스캔을 요청했습니다 — 서버가 지금 훑습니다</string>
+    <string name="library_action_done_trash">휴지통을 비웠습니다</string>
+    <string name="library_action_failed">하지 못했습니다 (관리자만 가능하거나 서버 오류)</string>
 </resources>

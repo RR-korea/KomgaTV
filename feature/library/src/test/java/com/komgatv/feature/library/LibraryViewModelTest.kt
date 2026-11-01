@@ -154,6 +154,10 @@ class LibraryViewModelTest {
             if (shouldFail) throw RuntimeException("라이브러리 조회 실패")
             return Library(libraryId, "테스트 라이브러리")
         }
+
+        override suspend fun scan(libraryId: String) = Unit
+
+        override suspend fun emptyTrash(libraryId: String) = Unit
     }
 
     private class FakeSeriesRepository : SeriesRepository {

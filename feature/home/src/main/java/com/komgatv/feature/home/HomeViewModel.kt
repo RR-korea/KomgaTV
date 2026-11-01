@@ -158,8 +158,44 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    /** 라이브러리 메뉴 결과 — 화면이 짧게 알려 준다 */
+    private val _libraryMessage = MutableStateFlow<LibraryActionResult?>(null)
+    val libraryMessage: StateFlow<LibraryActionResult?> = _libraryMessage.asStateFlow()
+
+    /** 라이브러리 다시 훑기. 서버가 따로 하므로 요청만 보낸다. */
+    fun scanLibrary(libraryId: String) = libraryAction(LibraryActionResult.ScanRequested) {
+        libraryRepository.scan(libraryId)
+    }
+
+    /** 휴지통 비우기 — 지운 파일의 책이 목록에서 사라진다. 홈 줄을 다시 읽는다. */
+    fun emptyTrash(libraryId: String) = libraryAction(LibraryActionResult.TrashEmptied) {
+        libraryRepository.emptyTrash(libraryId)
+        loadHomeData()
+    }
+
+    fun clearLibraryMessage() {
+        _libraryMessage.value = null
+    }
+
+    private fun libraryAction(success: LibraryActionResult, action: suspend () -> Unit) {
+        viewModelScope.launch {
+            _libraryMessage.value = try {
+                action()
+                success
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.w(e, "라이브러리 메뉴 실패")
+                LibraryActionResult.Failed
+            }
+        }
+    }
+
     /** 데이터 새로고침 (다른 화면에서 돌아왔을 때 — 읽기 진행이 바뀌었을 수 있다) */
     fun refresh() {
         loadHomeData()
     }
 }
+
+/** 라이브러리 메뉴 결과 */
+enum class LibraryActionResult { ScanRequested, TrashEmptied, Failed }

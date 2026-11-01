@@ -28,9 +28,11 @@ fun NameCard(
     title: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
 ) {
     Card(
         onClick = onClick,
+        onLongClick = onLongClick,
         modifier = modifier
             .width(240.dp)
             .aspectRatio(16f / 9f),
