@@ -44,3 +44,43 @@ export function layoutSpread(sizes: Size[], scale: ScaleType, stretchToFit: bool
   const pages = ratios.map((ratio) => ({ width: Math.round(ratio * height), height }));
   return { pages, width: pages.reduce((sum, page) => sum + page.width, 0), height };
 }
+
+// ---------- 확대(줌인), Android 0.2.5 "작품별 확대" ----------
+export const MIN_ZOOM_PERCENT = 100;
+export const MAX_ZOOM_PERCENT = 300;
+/** 화면 고정 모드에서 ▲▼ 한 번에 움직이는 양 — 넘치는 높이의 절반을 이만큼 나눈다 */
+export const PAN_STEPS = 2;
+
+export function clampZoom(percent: number): number {
+  return Math.min(MAX_ZOOM_PERCENT, Math.max(MIN_ZOOM_PERCENT, Math.round(percent)));
+}
+
+/** 크기 맞춤 결과를 펼침째(두 쪽이면 함께) 키운다 */
+export function zoomLayout(layout: SpreadLayout, zoomPercent: number): SpreadLayout {
+  const zoom = clampZoom(zoomPercent) / 100;
+  if (zoom === 1) return layout;
+  const pages = layout.pages.map((page) => ({ width: Math.round(page.width * zoom), height: Math.round(page.height * zoom) }));
+  return { pages, width: pages.reduce((sum, page) => sum + page.width, 0), height: Math.round(layout.height * zoom) };
+}
+
+/**
+ * 펼침의 화면 위치.
+ * - 확대 전 펼침이 화면 높이 안이면(화면·높이 맞춤): 가운데 기준, ▲▼(panStep −2…2)로 넘친 위아래를 반씩 본다
+ * - 확대 전에도 넘치면(너비 맞춤·원본): 위쪽 기준, scrollY로 끝까지 스크롤
+ * 좌우로 넘치는 부분은 가운데 기준으로 잘린다.
+ */
+export function spreadPosition(
+  base: SpreadLayout,
+  zoomed: SpreadLayout,
+  screen: Size,
+  panStep: number,
+  scrollY: number,
+): { left: number; top: number } {
+  const left = (screen.width - zoomed.width) / 2;
+  if (base.height <= screen.height) {
+    const overflow = Math.max(0, zoomed.height - screen.height);
+    const top = (screen.height - zoomed.height) / 2 + (-panStep / PAN_STEPS) * (overflow / 2);
+    return { left, top };
+  }
+  return { left, top: -scrollY };
+}

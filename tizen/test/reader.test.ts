@@ -96,3 +96,30 @@ describe('ProgressSaver', () => {
     expect(save).toHaveBeenCalledTimes(2);
   });
 });
+
+import { clampZoom, spreadPosition, zoomLayout } from '../src/reader/layout';
+
+describe('확대 (Android 작품별 확대)', () => {
+  const two = layoutSpread([portrait, portrait], 'SCREEN', true, screen); // 1440×1080
+  it('100~300%, 1% 단위로 펼침째 키운다', () => {
+    expect(clampZoom(99)).toBe(100);
+    expect(clampZoom(301)).toBe(300);
+    const zoomed = zoomLayout(two, 125);
+    expect(zoomed.height).toBe(1350);
+    expect(zoomed.width).toBe(1800);
+    expect(zoomed.pages[0].width).toBe(900); // 두 쪽이 같이 커져 벌어지지 않는다
+  });
+
+  it('화면 맞춤: 가운데 기준, ▲▼로 넘친 위아래를 본다', () => {
+    const zoomed = zoomLayout(two, 150); // 2160×1620
+    expect(spreadPosition(two, zoomed, screen, 0, 0)).toEqual({ left: -120, top: -270 });
+    expect(spreadPosition(two, zoomed, screen, -2, 0).top).toBe(0); // 위 끝
+    expect(spreadPosition(two, zoomed, screen, 2, 0).top).toBe(-540); // 아래 끝
+  });
+
+  it('너비 맞춤: 위쪽 기준, 키운 만큼 스크롤', () => {
+    const wide = layoutSpread([portrait], 'FIT_WIDTH', true, screen); // 1920×2880
+    const zoomed = zoomLayout(wide, 120);
+    expect(spreadPosition(wide, zoomed, screen, 0, 500)).toEqual({ left: -192, top: -500 });
+  });
+});

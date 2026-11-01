@@ -22,6 +22,11 @@ export interface ReaderSettings {
   /** EPUB 글자 크기 (%, 60~200) — Android T12 epubTextZoom */
   epubTextZoom: number;
   imageEnhancement: ImageEnhancement;
+  /**
+   * 페이지 넘김에서 크기 맞춤 결과를 더 확대하는 비율 % (100~300, 1% 단위, Android 0.2.5).
+   * 스캔 여백을 잘라 크게 볼 때 — 작품별로만 바꾼다 (앱 기본값은 늘 100).
+   */
+  zoomPercent: number;
 }
 
 export const defaultReaderSettings: ReaderSettings = {
@@ -34,6 +39,7 @@ export const defaultReaderSettings: ReaderSettings = {
   continuousPageSpacing: 0,
   epubTextZoom: 100,
   imageEnhancement: 'OFF',
+  zoomPercent: 100,
 };
 
 export const READER_TYPES: ReaderType[] = ['PAGED', 'CONTINUOUS'];
@@ -69,6 +75,10 @@ export function parseReaderSettings(raw: unknown): ReaderSettings {
         ? p.epubTextZoom
         : d.epubTextZoom,
     imageEnhancement: oneOf(ENHANCEMENTS, p.imageEnhancement, d.imageEnhancement),
+    zoomPercent:
+      typeof p.zoomPercent === 'number' && Number.isInteger(p.zoomPercent) && p.zoomPercent >= 100 && p.zoomPercent <= 300
+        ? p.zoomPercent
+        : d.zoomPercent,
   };
 }
 
@@ -123,7 +133,8 @@ export function withSeriesRules(defaults: ReaderSettings, seriesDirection: Readi
   const readerType = resolveReaderType(seriesDirection, defaults.readerType);
   const readingDirection =
     seriesDirection === 'LEFT_TO_RIGHT' || seriesDirection === 'RIGHT_TO_LEFT' ? seriesDirection : defaults.readingDirection;
-  return { ...defaults, readerType, readingDirection };
+  // 확대는 작품 설정에만 있다
+  return { ...defaults, readerType, readingDirection, zoomPercent: defaultReaderSettings.zoomPercent };
 }
 
 /** 작품에 쓸 설정. EPUB 글자 크기는 작품과 상관없이 앱 기본값. */

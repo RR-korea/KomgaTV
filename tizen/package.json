@@ -1,6 +1,6 @@
 {
   "name": "komgatv-tizen",
-  "version": "0.2.4",
+  "version": "0.2.7",
   "private": true,
   "description": "KomgaTV — 삼성 Tizen TV용 Komga 클라이언트",
   "license": "MIT",
@@ -33,5 +33,5 @@
     "typescript-eslint": "^8.72.1",
     "vitest": "^5.0.5"
   },
-  "build": 6
+  "build": 9
 }

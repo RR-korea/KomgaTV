@@ -26,12 +26,12 @@ Copyright (c) 2015-present Jason Miller — bundled into `app.js`.
 
 ## Komga logo — MIT
 
-`static/icon.png` (same artwork as the Android TV banner, `docs/branding/make_banner.py`) shows the Komga logo
+`static/icon.png` (the Android TV banner artwork redrawn at 512x423, `docs/branding/make_banner.py`: white background, Komga logo + "KomgaTV") shows the Komga logo
 from https://github.com/gotson/komga (`komga-webui/src/assets/logo.svg`). Copyright (c) 2019 Gauthier Roebroeck. MIT License.
 
 ## Noto Sans — SIL Open Font License 1.1
 
-The stretched "KomgaTV" wordmark in `static/icon.png` is drawn with Noto Sans Bold.
+The "KomgaTV" wordmark in `static/icon.png` is drawn with Noto Sans Bold.
 Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic). Licensed under the SIL Open Font License, Version 1.1.
 
 ## Thanks

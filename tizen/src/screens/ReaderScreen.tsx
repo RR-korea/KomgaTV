@@ -30,7 +30,7 @@ import {
   visiblePages,
 } from '../reader/continuous';
 import { type BoundaryLayout, boundaryLayout } from '../reader/boundary';
-import { FALLBACK_SIZE, layoutSpread, type Size } from '../reader/layout';
+import { FALLBACK_SIZE, layoutSpread, PAN_STEPS, type Size, spreadPosition, zoomLayout } from '../reader/layout';
 import { ProgressSaver } from '../reader/progress';
 import { buildSpreads, highestPage, type PageInfo, spreadContains, spreadIndexOf } from '../reader/spreads';
 import {
@@ -243,6 +243,8 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
   const [overlay, setOverlay] = useState(false);
   const [panel, setPanel] = useState(false);
   const [scrollY, setScrollY] = useState(0);
+  /** 확대한 화면·높이 맞춤에서 ▲▼로 본 위치 (−PAN_STEPS 위 끝 … +PAN_STEPS 아래 끝) */
+  const [panStep, setPanStep] = useState(0);
   const [naturalSizes, setNaturalSizes] = useState<Record<number, Size>>({});
   /** 페이지 넘김의 책 끝 화면 */
   const [atEnd, setAtEnd] = useState(false);
@@ -308,7 +310,11 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
   const index = spreadIndexOf(spreads, anchorPage);
   const spread = spreads[index] ?? [];
   const pagedLayout = layoutSpread(spread.map(sizeOf), settings.scaleType, settings.stretchToFit, SCREEN);
-  const pagedMaxScroll = Math.max(0, pagedLayout.height - SCREEN.height);
+  // 확대(Android 0.2.5): 크기 맞춤 결과를 펼침째 키운다
+  const zoomedLayout = zoomLayout(pagedLayout, settings.zoomPercent);
+  /** 확대 전에도 화면 높이 안이면 가운데 기준 + ▲▼ 위아래 보기, 넘치면 위에서부터 스크롤 */
+  const pagedFixed = pagedLayout.height <= SCREEN.height;
+  const pagedMaxScroll = Math.max(0, zoomedLayout.height - SCREEN.height);
 
   // ---------- 세로 스크롤 (맨 아래 책 끝 카드 자리까지) ----------
   const continuous: ContinuousLayout = useMemo(() => {
@@ -333,7 +339,11 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
   const shownHighest = isContinuous ? pages[visible.last]?.number ?? 1 : highestPage(spread);
 
   // 펼침이 바뀌면 맨 위부터
-  useEffect(() => setScrollY(0), [index, spreads]);
+  useEffect(() => {
+    setScrollY(0);
+    setPanStep(0);
+  }, [index, spreads]);
+  useEffect(() => setPanStep(0), [settings.zoomPercent]);
 
   // 미리 받기 (Android): 앞 4·뒤 2 펼침(세로 스크롤은 쪽), 가까운 것부터. 이웃이 아니게 된 미리 받기는 취소
   const neighbourKeys = (): string[] => {
@@ -508,6 +518,8 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
         return;
       }
       goToAnchor(anchorOf(continuous, scrollByScreen(continuous, continuousScroll, SCREEN.height, sign)));
+    } else if (pagedFixed) {
+      if (pagedMaxScroll > 0) setPanStep((step) => Math.min(PAN_STEPS, Math.max(-PAN_STEPS, step + sign)));
     } else {
       setScrollY((y) => Math.min(pagedMaxScroll, Math.max(0, y + (sign * SCREEN.height) / 2)));
     }
@@ -751,9 +763,8 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
   } else {
     const rtl = direction === 'RIGHT_TO_LEFT';
     const shownPages = rtl ? spread.slice().reverse() : spread;
-    const shownSizes = rtl ? pagedLayout.pages.slice().reverse() : pagedLayout.pages;
-    const top = pagedLayout.height < SCREEN.height ? (SCREEN.height - pagedLayout.height) / 2 : -scrollY;
-    const left = (SCREEN.width - pagedLayout.width) / 2;
+    const shownSizes = rtl ? zoomedLayout.pages.slice().reverse() : zoomedLayout.pages;
+    const { left, top } = spreadPosition(pagedLayout, zoomedLayout, SCREEN, panStep, scrollY);
     content = (
       <div class="reader-spread" style={{ transform: `translate(${px(left)}, ${px(top)})` }}>
         {shownPages.map((page, i) => (

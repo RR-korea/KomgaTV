@@ -2,6 +2,7 @@
 // 항목은 한 줄(왼쪽 이름, 오른쪽 ‹ 값 ›) — 1080p 한 화면에 스크롤 없이 들어간다. 좌/우 = 값 바꾸기, OK = 다음 값.
 import { fmt, t } from '../i18n';
 import { FOCUSABLE_CLASS } from '../platform/focus';
+import { MAX_ZOOM_PERCENT, MIN_ZOOM_PERCENT } from '../reader/layout';
 import {
   DIRECTIONS,
   ENHANCEMENTS,
@@ -13,6 +14,9 @@ import {
   SPACING_STEPS,
 } from '../state/readerPrefs';
 
+const ZOOM_STEPS: number[] = [];
+for (let percent = MIN_ZOOM_PERCENT; percent <= MAX_ZOOM_PERCENT; percent++) ZOOM_STEPS.push(percent);
+
 export type ViewKey =
   | 'opt-type'
   | 'opt-layout'
@@ -22,7 +26,8 @@ export type ViewKey =
   | 'opt-padding'
   | 'opt-spacing'
   | 'opt-stretch'
-  | 'opt-enhance';
+  | 'opt-enhance'
+  | 'opt-zoom';
 
 export interface ViewOption {
   key: ViewKey;
@@ -31,6 +36,8 @@ export interface ViewOption {
   labels: string[];
   value: unknown;
   enabled: boolean;
+  /** 끝에서 처음으로 돌아가지 않는 항목 (확대 %) */
+  clamp?: boolean;
 }
 
 /**
@@ -115,9 +122,19 @@ export function viewOptions(
     value: s.imageEnhancement,
     enabled: true,
   };
+  // 크기 맞춤 결과를 1%씩 더 확대 — 길게 누르면 키 반복으로 빨리 바뀐다. 작품 설정(리더)에서만
+  const zoom: ViewOption = {
+    key: 'opt-zoom',
+    label: t.viewZoom,
+    values: ZOOM_STEPS,
+    labels: ZOOM_STEPS.map((v) => fmt(t.viewPercent, v)),
+    value: s.zoomPercent,
+    enabled: true,
+    clamp: true,
+  };
   switch (mode) {
     case 'reader-paged':
-      return [type, layout, offsetRow, direction, scale, stretch, enhance];
+      return [type, layout, offsetRow, direction, scale, zoom, stretch, enhance];
     case 'reader-continuous':
       return [type, padding, spacing, stretch, enhance];
     default:
@@ -144,6 +161,8 @@ export function applyViewOption(s: ReaderSettings, key: ViewKey, value: unknown)
       return { ...s, stretchToFit: value as boolean };
     case 'opt-enhance':
       return { ...s, imageEnhancement: value as ReaderSettings['imageEnhancement'] };
+    case 'opt-zoom':
+      return { ...s, zoomPercent: value as number };
     default:
       return s;
   }
@@ -153,6 +172,10 @@ export function applyViewOption(s: ReaderSettings, key: ViewKey, value: unknown)
 export function cycledValue(option: ViewOption, delta: number): unknown {
   if (!option.enabled) return null;
   const at = option.values.indexOf(option.value);
+  if (option.clamp) {
+    const to = Math.min(option.values.length - 1, Math.max(0, at + delta));
+    return to === at ? null : option.values[to];
+  }
   return option.values[(at + delta + option.values.length) % option.values.length];
 }
 

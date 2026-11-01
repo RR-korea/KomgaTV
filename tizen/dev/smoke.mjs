@@ -140,6 +140,37 @@ try {
   await shot('reader-double-9-10');
   await key('Enter');
   await expectText('두 쪽 보기 → 9,10쪽 펼침', '.reader-overlay-row:nth-child(2)', /9, 10 \/ 24/);
+  // 작품별 확대 (Android 0.2.5): 크기 맞춤 아래 확대 줄, ▶ 25번 → 125%, 펼침째 커지고 ▼로 아래 끝까지 본다
+  await key('Enter');
+  await key('ArrowDown', 5);
+  await expectFocus('패널: 크기 맞춤 아래 확대', 'opt-zoom');
+  await key('ArrowLeft');
+  await expectText('확대: 100%에서 ◀는 그대로', '[data-key="opt-zoom"] .view-row-value', /^‹100%›$/);
+  await key('ArrowRight', 25);
+  await expectText('확대: ▶ 25번 → 125%', '[data-key="opt-zoom"] .view-row-value', /125%/);
+  await key('Escape');
+  await key('Escape');
+  await page.waitForTimeout(300);
+  const zoomed = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('.reader-page')).map((el) => Math.round(el.getBoundingClientRect().height)),
+  );
+  results.push(`${zoomed.length === 2 && zoomed.every((h) => h === 1350) ? 'PASS' : 'FAIL'} 확대 125%: 두 쪽이 함께 1350: ${zoomed.join(',')}`);
+  const spreadTop = () =>
+    page.evaluate(() => Math.round(document.querySelector('.reader-spread').getBoundingClientRect().top));
+  results.push(`${(await spreadTop()) === -135 ? 'PASS' : 'FAIL'} 확대: 가운데 기준 (위 -135)`);
+  await key('ArrowDown', 3);
+  results.push(`${(await spreadTop()) === -270 ? 'PASS' : 'FAIL'} 확대: ▼로 아래 끝까지 (위 -270, 더 안 내려감)`);
+  await shot('reader-zoom-125-bottom');
+  await key('ArrowRight');
+  await page.waitForTimeout(200);
+  results.push(`${(await spreadTop()) === -135 ? 'PASS' : 'FAIL'} 확대: 펼침이 바뀌면 다시 가운데`);
+  await key('ArrowLeft');
+  await key('Enter');
+  await key('Enter');
+  await key('ArrowDown', 5);
+  await key('ArrowLeft', 25);
+  await expectText('확대 되돌림 100%', '[data-key="opt-zoom"] .view-row-value', /100%/);
+  await key('Escape');
   await key('Escape');
   await key('Escape'); // 나가기 → 즉시 저장
   await page.waitForTimeout(1200);
