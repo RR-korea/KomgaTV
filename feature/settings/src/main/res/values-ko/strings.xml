@@ -31,4 +31,11 @@
     <string name="settings_server_switch">바꾸기</string>
     <string name="settings_server_remove">삭제</string>
     <string name="settings_server_add">다른 서버 추가</string>
+    <string name="settings_section_view_defaults">보기 기본값</string>
+    <string name="settings_view_defaults_hint">모든 작품에 쓰입니다. 리더의 보기 설정에서 바꾼 작품은 그 작품의 설정을 따릅니다.</string>
+    <string name="about_title">앱 정보</string>
+    <string name="about_app_version">KomgaTV %1$s</string>
+    <string name="about_developer">만든 사람: %1$s · %2$s</string>
+    <string name="about_tribute">Komga와 Komelia 프로젝트에 대한 존경을 담아 만들었습니다. 두 프로젝트의 제작자와 기여자들께 감사드립니다.</string>
+    <string name="about_licenses">오픈소스: Komelia(Apache-2.0, 리더 로직 일부), komga-client(MIT), Noto Sans(SIL OFL 1.1, 로고), AndroidX·Jetpack Compose, Coil, OkHttp, Ktor(Apache-2.0). KomgaTV는 Komga·Komelia와 공식 관계가 없습니다.</string>
 </resources>

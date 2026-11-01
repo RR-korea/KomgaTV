@@ -1,7 +1,7 @@
 package com.komgatv.feature.search
 
 import com.komgatv.core.model.EpubPosition
-import com.komgatv.core.model.EpubChapter
+import com.komgatv.core.model.EpubManifest
 import com.komgatv.core.data.image.ImageUrls
 import com.komgatv.core.data.repository.BookPageResult
 import com.komgatv.core.data.repository.BookRepository
@@ -179,11 +179,19 @@ class SearchViewModelTest {
         override suspend fun getBooksOnDeck(size: Int): List<Book> = emptyList()
         override suspend fun getLatestBooks(size: Int): List<Book> = emptyList()
 
-        override suspend fun getEpubChapters(bookId: String): List<EpubChapter> = throw NotImplementedError()
+        override suspend fun getEpubManifest(bookId: String): EpubManifest = throw NotImplementedError()
 
         override suspend fun getEpubPosition(bookId: String): EpubPosition? = null
 
         override suspend fun saveEpubPosition(bookId: String, position: EpubPosition) = Unit
+
+        override suspend fun markRead(bookId: String) = Unit
+
+        override suspend fun markUnread(bookId: String) = Unit
+
+        override suspend fun analyze(bookId: String) = Unit
+
+        override suspend fun getNextBook(bookId: String): Book? = null
     }
 
     private class FakeSeriesRepository : SeriesRepository {

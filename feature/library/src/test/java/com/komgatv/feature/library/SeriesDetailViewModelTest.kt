@@ -1,7 +1,7 @@
 package com.komgatv.feature.library
 
 import com.komgatv.core.model.EpubPosition
-import com.komgatv.core.model.EpubChapter
+import com.komgatv.core.model.EpubManifest
 import com.komgatv.core.model.LoadError
 import com.komgatv.core.data.repository.BookPageResult
 import com.komgatv.core.data.repository.BookRepository
@@ -120,6 +120,33 @@ class SeriesDetailViewModelTest {
         progressEvents.notifyUpdated("book-2")
         advanceUntilIdle()
         assertEquals(7, (viewModel.uiState.value as SeriesDetailUiState.Success).books[1].readProgress?.page)
+    }
+
+    @Test
+    fun `책 메뉴 - 읽지 않음·분석은 서버에 보내고 결과를 알린다, 실패하면 실패로`() = runTest {
+        fakeSeriesRepository.seriesToReturn = Series(
+            id = "series-1", libraryId = "lib-1", name = "시리즈", booksCount = 1,
+            booksReadCount = 0, booksInProgressCount = 0,
+            metadata = SeriesMetadata("시리즈", "", "ENDED", "", emptyList(), null),
+        )
+        fakeBookRepository.pages[0] = BookPageResult(listOf(createTestBook("book-1", 1)), 1, 1, 0, true)
+        val viewModel = createViewModel()
+        viewModel.loadSeriesDetail("series-1")
+        advanceUntilIdle()
+
+        viewModel.markUnread("book-1")
+        advanceUntilIdle()
+        assertEquals(BookActionResult.MarkedUnread, viewModel.actionMessage.value)
+
+        viewModel.analyze("book-1")
+        advanceUntilIdle()
+        assertEquals(listOf("unread:book-1", "analyze:book-1"), fakeBookRepository.actions)
+        assertEquals(BookActionResult.AnalyzeRequested, viewModel.actionMessage.value)
+
+        fakeBookRepository.failAnalyze = true
+        viewModel.analyze("book-1")
+        advanceUntilIdle()
+        assertEquals(BookActionResult.Failed, viewModel.actionMessage.value)
     }
 
     @Test
@@ -272,10 +299,28 @@ class SeriesDetailViewModelTest {
 
         override fun searchBooks(query: String, page: Int, size: Int): Flow<BookPageResult> = throw NotImplementedError()
 
-        override suspend fun getEpubChapters(bookId: String): List<EpubChapter> = throw NotImplementedError()
+        override suspend fun getEpubManifest(bookId: String): EpubManifest = throw NotImplementedError()
 
         override suspend fun getEpubPosition(bookId: String): EpubPosition? = null
 
         override suspend fun saveEpubPosition(bookId: String, position: EpubPosition) = Unit
+
+        val actions = mutableListOf<String>()
+        var failAnalyze = false
+
+        override suspend fun markRead(bookId: String) {
+            actions += "read:$bookId"
+        }
+
+        override suspend fun markUnread(bookId: String) {
+            actions += "unread:$bookId"
+        }
+
+        override suspend fun analyze(bookId: String) {
+            if (failAnalyze) throw RuntimeException("403")
+            actions += "analyze:$bookId"
+        }
+
+        override suspend fun getNextBook(bookId: String): Book? = null
     }
 }

@@ -1,5 +1,7 @@
 package com.komgatv.feature.home
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -66,6 +68,8 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val libraryMessage by viewModel.libraryMessage.collectAsState()
+    var menuLibrary by remember { mutableStateOf<Library?>(null) }
 
     // 다른 화면(리더 등)에서 돌아올 때마다 조용히 다시 읽는다(진행도·순서). 첫 진입은 ViewModel init이 읽는다.
     OnReturnEffect { viewModel.refresh() }
@@ -127,9 +131,20 @@ fun HomeScreen(
                 onNavigateToSeries = onNavigateToSeries,
                 onNavigateToSettings = onNavigateToSettings,
                 onNavigateToSearch = onNavigateToSearch,
+                onLibraryMenu = { menuLibrary = it },
             )
         }
     }
+
+    menuLibrary?.let { library ->
+        LibraryActionsDialog(
+            library = library,
+            onScan = { viewModel.scanLibrary(library.id) },
+            onEmptyTrash = { viewModel.emptyTrash(library.id) },
+            onDismiss = { menuLibrary = null },
+        )
+    }
+    libraryMessage?.let { LibraryActionMessage(it, onShown = viewModel::clearLibraryMessage) }
 }
 
 /** 홈의 한 줄: 제목, 항목, 항목을 그리는 법 */
@@ -157,6 +172,7 @@ private fun HomeContent(
     onNavigateToSeries: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToSearch: () -> Unit,
+    onLibraryMenu: (Library) -> Unit,
 ) {
     // 새로고침하면 읽는 중·다음 권 순서가 바뀌므로 내용이 바뀔 때도 연 항목으로 포커스를 다시 준다.
     // 처음이거나 그 항목이 없어졌으면 첫 줄.
@@ -223,6 +239,8 @@ private fun HomeContent(
                     entryFocus.onOpen(key)
                     onNavigateToLibrary(library.id)
                 },
+                // OK를 길게 — 라이브러리 메뉴 (스캔, 휴지통 비우기)
+                onLongClick = { onLibraryMenu(library) },
             )
         },
     ).filter { it.items.isNotEmpty() }

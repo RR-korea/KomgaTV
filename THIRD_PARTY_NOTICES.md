@@ -30,3 +30,28 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
+---
+
+## komga-client
+
+- **Project:** komga-client (https://github.com/Snd-R/komga-client)
+- **License:** MIT License
+- **Use:** Komga REST API client library (dependency).
+
+---
+
+## Noto Sans
+
+- **Project:** Noto Sans (https://github.com/notofonts/latin-greek-cyrillic)
+- **Copyright:** Copyright 2022 The Noto Project Authors
+- **License:** SIL Open Font License 1.1
+- **Use:** The "KomgaTV" wordmark in the app icon and TV banner is rendered from Noto Sans Bold.
+
+---
+
+## Acknowledgements
+
+KomgaTV was made with deep respect for the **Komga** (https://github.com/gotson/komga) and
+**Komelia** (https://github.com/Snd-R/Komelia) projects. KomgaTV is an independent project and is not affiliated with either.
+

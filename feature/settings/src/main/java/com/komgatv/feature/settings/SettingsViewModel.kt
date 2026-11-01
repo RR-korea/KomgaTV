@@ -3,8 +3,10 @@ package com.komgatv.feature.settings
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.komgatv.core.datastore.ReaderPreferences
 import com.komgatv.core.datastore.SavedServer
 import com.komgatv.core.datastore.ServerPreferences
+import com.komgatv.core.model.ReaderSettings
 import com.komgatv.core.network.AuthMode
 import com.komgatv.core.network.ServerConnectionException
 import com.komgatv.core.network.ServerSessionManager
@@ -65,11 +67,20 @@ data class SettingsUiState(
 class SettingsViewModel @Inject constructor(
     private val serverPreferences: ServerPreferences,
     private val sessionManager: ServerSessionManager,
+    private val readerPreferences: ReaderPreferences,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+
+    /** 보기 기본값 — 작품에 따로 저장된 설정이 없으면 리더가 이것을 쓴다 */
+    val viewDefaults: StateFlow<ReaderSettings> = readerPreferences.readerSettings
+        .stateIn(viewModelScope, SharingStarted.Eagerly, ReaderSettings())
+
+    fun updateViewDefaults(settings: ReaderSettings) {
+        viewModelScope.launch { readerPreferences.saveReaderSettings(settings) }
+    }
 
     /** 연결에 성공했던 서버들 (지금 서버 포함) */
     val savedServers: StateFlow<List<SavedServer>> = serverPreferences.savedServers

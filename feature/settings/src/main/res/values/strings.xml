@@ -31,4 +31,11 @@
     <string name="settings_server_switch">Switch</string>
     <string name="settings_server_remove">Remove</string>
     <string name="settings_server_add">Add another server</string>
+    <string name="settings_section_view_defaults">View defaults</string>
+    <string name="settings_view_defaults_hint">Used for every series unless you change a series in the reader (View settings there apply to that series only).</string>
+    <string name="about_title">About</string>
+    <string name="about_app_version">KomgaTV %1$s</string>
+    <string name="about_developer">Made by %1$s · %2$s</string>
+    <string name="about_tribute">Made with deep respect for the Komga and Komelia projects. Thank you to their authors and contributors.</string>
+    <string name="about_licenses">Open source: Komelia (Apache-2.0, parts of the reader logic), komga-client (MIT), Noto Sans (SIL OFL 1.1, logo), AndroidX / Jetpack Compose, Coil, OkHttp, Ktor (Apache-2.0). KomgaTV is not affiliated with Komga or Komelia.</string>
 </resources>

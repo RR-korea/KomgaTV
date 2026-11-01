@@ -55,12 +55,16 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Precision
+import com.komgatv.core.model.ImageEnhancement
 import com.komgatv.core.model.ReaderType
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.ScaleType
 import com.komgatv.core.ui.components.ProgressBar
 import com.komgatv.core.ui.components.loadErrorText
 import com.komgatv.feature.reader.continuous.ContinuousPages
+import com.komgatv.feature.reader.enhance.ImageEnhancer
+import com.komgatv.feature.reader.enhance.SharpenTransformation
+import coil3.request.transformations
 import com.komgatv.feature.reader.epub.EpubReaderScreen
 import kotlinx.coroutines.launch
 import coil3.size.Size as CoilSize
@@ -114,7 +118,8 @@ fun ReaderScreen(
             Color.Red,
         )
 
-        ReaderUiState.Epub -> EpubReaderScreen(bookId = bookId, onNavigateBack = onNavigateBack)
+        // 다음 권으로 이어 온 EPUB이면 그 책을 연다
+        is ReaderUiState.Epub -> EpubReaderScreen(bookId = state.bookId, onNavigateBack = onNavigateBack)
 
         is ReaderUiState.Reading -> {
             ReaderContent(
@@ -178,12 +183,12 @@ private fun ReaderContent(
     }
 
     // 이웃 펼침(±2) 프리로드 — 실제 표시와 같은 요청(크기·정밀도)이라야 메모리 캐시에 맞는다
-    LaunchedEffect(state.preloadSpreads, state.scaleType, screenWidthPx, screenHeightPx) {
+    LaunchedEffect(state.preloadSpreads, state.scaleType, state.imageEnhancement, screenWidthPx, screenHeightPx) {
         val imageLoader = SingletonImageLoader.get(context)
         state.preloadSpreads.forEach { urls ->
             urls.forEach { url ->
                 imageLoader.enqueue(
-                    pageRequest(context, url, state.scaleType, slotWidth(screenWidthPx, urls.size), screenHeightPx)
+                    pageRequest(context, url, state.scaleType, slotWidth(screenWidthPx, urls.size), screenHeightPx, state.imageEnhancement)
                 )
             }
         }
@@ -217,8 +222,11 @@ private fun ReaderContent(
                 when (keyEvent.key) {
                     Key.DirectionLeft -> viewModel.onDpadLeft()
                     Key.DirectionRight -> viewModel.onDpadRight()
-                    Key.DirectionCenter, Key.Enter -> {
-                        if (state.showOverlay) viewModel.openSettingsPanel() else viewModel.toggleOverlay()
+                    Key.DirectionCenter, Key.Enter -> when {
+                        state.showOverlay -> viewModel.openSettingsPanel()
+                        // 책 끝 화면에서 OK = 다음 권
+                        state.endPage != null -> viewModel.openNextBook()
+                        else -> viewModel.toggleOverlay()
                     }
                     Key.DirectionUp -> if (state.showOverlay) {
                         viewModel.jumpPages(10)
@@ -232,7 +240,12 @@ private fun ReaderContent(
                     Key.DirectionDown -> if (state.showOverlay) {
                         viewModel.jumpPages(-10)
                     } else if (continuous) {
-                        coroutineScope.launch { listState.animateScrollBy(screenHeightPx.toFloat()) }
+                        // 책 끝 카드까지 내려왔으면 아래 = 다음 권
+                        if (state.endPage != null && !listState.canScrollForward) {
+                            viewModel.openNextBook()
+                        } else {
+                            coroutineScope.launch { listState.animateScrollBy(screenHeightPx.toFloat()) }
+                        }
                     } else if (scrollable && scrollState.value < scrollState.maxValue) {
                         coroutineScope.launch {
                             scrollState.animateScrollTo(
@@ -256,14 +269,20 @@ private fun ReaderContent(
             )
         }
 
-        if (continuous) {
+        if (!continuous && state.endPage != null) {
+            EndPageView(state.endPage, Modifier.fillMaxSize())
+        } else if (continuous) {
             ContinuousPages(
                 tiles = state.continuousTiles,
                 listState = listState,
+                filterQuality = ImageEnhancer.filterQuality(state.imageEnhancement),
                 scrollToTileIndex = state.scrollToTileIndex,
-                loadTile = viewModel::loadTile,
+                // 화질 설정이 바뀌면 보이는 타일도 다시 불러오게 함수 자체를 바꾼다
+                loadTile = remember(state.imageEnhancement) { { tile -> viewModel.loadTile(tile) } },
                 onScrolled = viewModel::onTileScrolled,
                 onVisibleTilesChanged = viewModel::onContinuousVisibleTilesChanged,
+                endPage = state.endPage,
+                onEndVisible = viewModel::onContinuousEndVisible,
             )
         } else if (scrollable) {
             // 화면보다 클 수 있는 모드: 세로 스크롤, 작은 페이지는 가운데
@@ -304,22 +323,12 @@ private fun ReaderContent(
             exit = fadeOut(),
         ) {
             ReaderSettingsPanel(
-                readerType = state.readerType,
-                continuousPadding = state.continuousPadding,
-                continuousPageSpacing = state.continuousPageSpacing,
-                onReaderTypeChange = viewModel::setReaderType,
-                onContinuousPaddingChange = viewModel::setContinuousPadding,
-                onContinuousPageSpacingChange = viewModel::setContinuousPageSpacing,
-                pageLayout = state.pageLayout,
+                settings = state.settings,
                 layoutOffset = state.layoutOffset,
-                readingDirection = state.readingDirection,
-                scaleType = state.scaleType,
-                stretchToFit = state.stretchToFit,
-                onPageLayoutChange = viewModel::setPageLayout,
+                seriesCustomized = state.seriesCustomized,
+                onChange = viewModel::applySettings,
                 onLayoutOffsetChange = viewModel::setLayoutOffset,
-                onReadingDirectionChange = viewModel::setReadingDirection,
-                onScaleTypeChange = viewModel::setScaleType,
-                onStretchToFitChange = viewModel::setStretchToFit,
+                onReset = viewModel::resetSeriesSettings,
             )
         }
     }
@@ -359,8 +368,8 @@ private fun SpreadPages(
                 index == 0 -> Alignment.CenterEnd
                 else -> Alignment.CenterStart
             }
-            val request = remember(url, state.scaleType, slotWidthPx, screenHeightPx) {
-                pageRequest(context, url, state.scaleType, slotWidthPx, screenHeightPx)
+            val request = remember(url, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement) {
+                pageRequest(context, url, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement)
             }
             AsyncImage(
                 model = request,
@@ -371,6 +380,7 @@ private fun SpreadPages(
                 ),
                 contentScale = contentScale,
                 alignment = alignment,
+                filterQuality = ImageEnhancer.filterQuality(state.imageEnhancement),
                 modifier = Modifier
                     .weight(1f)
                     .then(if (scrollable) Modifier else Modifier.fillMaxHeight())
@@ -456,6 +466,7 @@ private fun pageRequest(
     scaleType: ScaleType,
     slotWidthPx: Int,
     screenHeightPx: Int,
+    enhancement: ImageEnhancement,
 ): ImageRequest {
     val size = when (scaleType) {
         ScaleType.SCREEN -> CoilSize(slotWidthPx, screenHeightPx)
@@ -469,6 +480,7 @@ private fun pageRequest(
         .size(size)
         .precision(Precision.INEXACT)
         .crossfade(false)
+        .apply { ImageEnhancer.sharpenAmount(enhancement)?.let { transformations(SharpenTransformation(it)) } }
         .build()
 }
 

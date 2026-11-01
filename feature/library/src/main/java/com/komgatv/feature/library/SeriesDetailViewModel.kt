@@ -140,6 +140,37 @@ class SeriesDetailViewModel @Inject constructor(
         }
     }
 
+    /** 책 메뉴의 결과 — 화면이 짧게 알려 준다 */
+    private val _actionMessage = MutableStateFlow<BookActionResult?>(null)
+    val actionMessage: StateFlow<BookActionResult?> = _actionMessage.asStateFlow()
+
+    fun markRead(bookId: String) = bookAction(BookActionResult.MarkedRead) { bookRepository.markRead(bookId) }
+
+    fun markUnread(bookId: String) = bookAction(BookActionResult.MarkedUnread) { bookRepository.markUnread(bookId) }
+
+    /** 분석은 서버가 따로 하므로 요청만 보내고, 잠시 뒤 목록을 다시 읽는다 */
+    fun analyze(bookId: String) = bookAction(BookActionResult.AnalyzeRequested) { bookRepository.analyze(bookId) }
+
+    fun clearActionMessage() {
+        _actionMessage.value = null
+    }
+
+    private fun bookAction(success: BookActionResult, action: suspend () -> Unit) {
+        viewModelScope.launch {
+            _actionMessage.value = try {
+                action()
+                // 읽음 표시는 진행 저장 알림으로도 새로고침되지만, 분석은 알림이 없다
+                refreshProgress()
+                success
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.w(e, "책 메뉴 실패")
+                BookActionResult.Failed
+            }
+        }
+    }
+
     /**
      * 진행도 새로고침 (리더에서 돌아왔을 때)
      *
@@ -164,3 +195,6 @@ class SeriesDetailViewModel @Inject constructor(
         }
     }
 }
+
+/** 책 메뉴 결과 */
+enum class BookActionResult { MarkedRead, MarkedUnread, AnalyzeRequested, Failed }

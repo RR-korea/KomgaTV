@@ -1,7 +1,7 @@
 package com.komgatv.feature.home
 
 import com.komgatv.core.model.EpubPosition
-import com.komgatv.core.model.EpubChapter
+import com.komgatv.core.model.EpubManifest
 import com.komgatv.core.model.LoadError
 import com.komgatv.core.data.repository.BookPageResult
 import com.komgatv.core.data.repository.BookRepository
@@ -52,6 +52,21 @@ class HomeViewModelTest {
             progressEvents = progressEvents,
             imageUrls = FakeImageUrls,
         )
+    }
+
+    @Test
+    fun `라이브러리 스캔과 휴지통 비우기를 서버에 보내고 결과를 알린다`() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.scanLibrary("lib-1")
+        advanceUntilIdle()
+        assertEquals(LibraryActionResult.ScanRequested, viewModel.libraryMessage.value)
+
+        viewModel.emptyTrash("lib-1")
+        advanceUntilIdle()
+        assertEquals(LibraryActionResult.TrashEmptied, viewModel.libraryMessage.value)
+        assertEquals(listOf("scan:lib-1", "trash:lib-1"), fakeLibraryRepository.actions)
     }
 
     @Test
@@ -185,6 +200,16 @@ class HomeViewModelTest {
             return librariesToReturn.firstOrNull { it.id == libraryId }
                 ?: Library(libraryId, "가짜 라이브러리")
         }
+
+        val actions = mutableListOf<String>()
+
+        override suspend fun scan(libraryId: String) {
+            actions += "scan:$libraryId"
+        }
+
+        override suspend fun emptyTrash(libraryId: String) {
+            actions += "trash:$libraryId"
+        }
     }
 
     private class FakeBookRepository : BookRepository {
@@ -231,11 +256,19 @@ class HomeViewModelTest {
 
         override fun searchBooks(query: String, page: Int, size: Int): Flow<BookPageResult> = throw NotImplementedError()
 
-        override suspend fun getEpubChapters(bookId: String): List<EpubChapter> = throw NotImplementedError()
+        override suspend fun getEpubManifest(bookId: String): EpubManifest = throw NotImplementedError()
 
         override suspend fun getEpubPosition(bookId: String): EpubPosition? = null
 
         override suspend fun saveEpubPosition(bookId: String, position: EpubPosition) = Unit
+
+        override suspend fun markRead(bookId: String) = Unit
+
+        override suspend fun markUnread(bookId: String) = Unit
+
+        override suspend fun analyze(bookId: String) = Unit
+
+        override suspend fun getNextBook(bookId: String): Book? = null
     }
 
     private class FakeSeriesRepository : SeriesRepository {
