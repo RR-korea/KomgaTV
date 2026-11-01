@@ -769,3 +769,156 @@ body {
   border-color: #ffffff;
   background: #2f2f2f;
 }
+
+/* ---------- 보기 설정 한 줄 항목 (Android T14: 스크롤 없는 패널) ---------- */
+
+.view-rows {
+  margin-bottom: 16px;
+}
+
+.view-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  background: #262626;
+  border: 3px solid transparent;
+}
+
+.view-row:focus {
+  background: #2f2f2f;
+  border-color: #ffffff;
+}
+
+.view-row.disabled {
+  opacity: 0.4;
+}
+
+.view-row-label {
+  font-size: 24px;
+  color: #c3c8d4;
+  margin-right: 16px;
+  white-space: nowrap;
+}
+
+.view-row-value {
+  font-size: 26px;
+  white-space: nowrap;
+}
+
+.view-row-arrow {
+  color: #6b7280;
+  margin: 0 10px;
+}
+
+.view-row:focus .view-row-arrow {
+  color: #ffffff;
+}
+
+.reader-panel-status {
+  margin: -16px 0 20px;
+  font-size: 20px;
+  line-height: 1.4;
+  color: #9aa1b2;
+}
+
+.panel-buttons .panel-close {
+  margin-top: 12px;
+}
+
+.settings .view-row {
+  background: #262b36;
+}
+
+/* ---------- 화질 개선 (Android T14) ---------- */
+
+.svg-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.reader.enhance-sharpen .reader-image {
+  filter: url(#ktv-sharpen);
+}
+
+.reader.enhance-sharpen_strong .reader-image {
+  filter: url(#ktv-sharpen-strong);
+}
+
+/* ---------- 책 끝 화면 (다음 권으로 이어 읽기) ---------- */
+
+.end-view {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0d0f14;
+}
+
+.end-card .end-view {
+  height: 100%;
+}
+
+.end-card {
+  position: absolute;
+  left: 0;
+  width: 1920px;
+}
+
+.end-column {
+  width: 520px;
+  text-align: center;
+}
+
+.end-label {
+  font-size: 26px;
+  color: #ffb547;
+  margin-bottom: 20px;
+}
+
+.end-title {
+  font-size: 34px;
+  line-height: 1.4;
+}
+
+.end-title.muted {
+  color: #9aa1b2;
+  font-size: 28px;
+}
+
+.end-cover {
+  width: 220px;
+  height: 330px;
+  margin: 0 auto 20px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #262b36;
+}
+
+.end-arrow {
+  font-size: 72px;
+  color: #6b7280;
+  margin: 0 64px;
+}
+
+.end-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 64px;
+  text-align: center;
+  font-size: 24px;
+  color: #9aa1b2;
+}
+
+.panel-buttons .button + .button {
+  margin-left: 0;
+}

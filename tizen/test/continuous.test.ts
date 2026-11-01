@@ -9,7 +9,13 @@ import {
   stepPage,
   visiblePages,
 } from '../src/reader/continuous';
-import { parseReaderSettings, resolveReaderType, startPage } from '../src/state/readerPrefs';
+import {
+  effectiveSettings,
+  parseReaderSettings,
+  parseSeriesSettings,
+  resolveReaderType,
+  startPage,
+} from '../src/state/readerPrefs';
 
 const screen = { width: 1920, height: 1080 };
 const webtoon = { width: 800, height: 12000 }; // 화면보다 훨씬 긴 쪽
@@ -96,5 +102,33 @@ describe('parseReaderSettings', () => {
     expect(parsed.pageLayout).toBe('DOUBLE_PAGES');
     expect(parsed.readerType).toBe('PAGED');
     expect(parsed.continuousPadding).toBe(0);
+  });
+});
+
+describe('작품별 보기 설정 (Android T14)', () => {
+  const defaults = { ...parseReaderSettings({}), pageLayout: 'DOUBLE_PAGES' as const, epubTextZoom: 120 };
+
+  it('작품 설정이 없으면 앱 기본값 + 시리즈 규칙 (RTL → 페이지·오른쪽에서 왼쪽, WEBTOON → 세로)', () => {
+    const rtl = effectiveSettings({ ...defaults, readerType: 'CONTINUOUS' }, null, 'RIGHT_TO_LEFT');
+    expect(rtl.readerType).toBe('PAGED');
+    expect(rtl.readingDirection).toBe('RIGHT_TO_LEFT');
+    expect(rtl.pageLayout).toBe('DOUBLE_PAGES');
+    expect(effectiveSettings(defaults, null, 'WEBTOON').readerType).toBe('CONTINUOUS');
+  });
+
+  it('작품 설정이 있으면 그것 (시리즈 규칙보다 우선), EPUB 글자 크기만 앱 기본값', () => {
+    const series = { ...parseReaderSettings({}), readerType: 'CONTINUOUS' as const, epubTextZoom: 60 };
+    const effective = effectiveSettings(defaults, series, 'RIGHT_TO_LEFT');
+    expect(effective.readerType).toBe('CONTINUOUS');
+    expect(effective.epubTextZoom).toBe(120);
+  });
+
+  it('저장 문자열 왕복, 잘못된 값은 기본값, 깨진 문자열은 빈 모음', () => {
+    const saved = JSON.stringify({ S1: { readerType: 'CONTINUOUS', imageEnhancement: 'SHARPEN' }, S2: 'x', S3: { scaleType: 'NOPE' } });
+    const parsed = parseSeriesSettings(saved);
+    expect(Object.keys(parsed)).toEqual(['S1', 'S3']);
+    expect(parsed.S1.imageEnhancement).toBe('SHARPEN');
+    expect(parsed.S3.scaleType).toBe('SCREEN');
+    expect(parseSeriesSettings('{oops')).toEqual({});
   });
 });

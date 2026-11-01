@@ -181,6 +181,12 @@ async function api(req, res, path, url) {
     }
     return paged(res, list, url);
   }
+  // 다음 권 (같은 시리즈의 다음 번호, 없으면 404)
+  if ((m = path.match(/^api\/v1\/books\/([^/]+)\/next$/))) {
+    const book = books.find((b) => b.id === m[1]);
+    const next = book && books.find((b) => b.seriesId === book.seriesId && b.number === book.number + 1);
+    return next ? json(res, next) : json(res, {}, 404);
+  }
   // 책·라이브러리 메뉴 (Android T13)
   if ((m = path.match(/^api\/v1\/books\/([^/]+)\/read-progress$/)) && req.method === 'DELETE') {
     const book = books.find((b) => b.id === m[1]);

@@ -123,6 +123,7 @@ try {
   await expectFocus('아래 → 쪽 배치', 'opt-layout');
   await key('ArrowRight');
   await shot('reader-panel-double');
+  await expectText('패널 상태 줄: 이 작품만의 설정', '.reader-panel-status', /이 작품만의 설정/);
   await key('ArrowDown', 3);
   await expectFocus('패널 아래로 3 → 크기 맞춤', 'opt-scale');
   await key('Escape');
@@ -156,7 +157,9 @@ try {
   await key('ArrowLeft');
   await page.waitForTimeout(300);
   await key('Enter');
-  await expectText('RTL: 왼쪽 → 다음 펼침 (12→13)', '.reader-overlay-row:nth-child(2)', /13/);
+  await expectText('RTL: 왼쪽 → 다음 쪽 (12→13)', '.reader-overlay-row:nth-child(2)', /13/);
+  // 작품별 보기 설정 (Android T14): 앞 책(S1)에서 바꾼 두 쪽 보기는 이 작품(S2)에 번지지 않는다
+  await expectText('다른 작품은 앱 기본값(한 쪽)', '.reader-overlay-row:nth-child(2)', /^13 \/ 24쪽/);
   await key('Escape');
   await key('Escape');
   await page.waitForTimeout(800);
@@ -171,7 +174,7 @@ try {
   await key('Enter');
   await key('Enter');
   await key('ArrowRight'); // 리더 종류 → 세로 스크롤
-  await expectText('패널: 세로 스크롤', '[data-key="opt-type"] .panel-option-value', /세로 스크롤/);
+  await expectText('패널: 세로 스크롤', '[data-key="opt-type"] .view-row-value', /세로 스크롤/);
   await key('ArrowDown');
   await expectFocus('세로 스크롤 패널: 좌우 여백', 'opt-padding');
   await key('ArrowRight', 2); // 10%
@@ -193,16 +196,16 @@ try {
   await page.waitForTimeout(400);
   const after = await column();
   results.push(`${after.transform !== start.transform ? 'PASS' : 'FAIL'} 아래 → 한 화면 스크롤: ${after.transform.match(/translateY\([^)]+\)/)?.[0]}`);
-  // 두 쪽 보기 상태에서 바꿨으므로 [2,3] 펼침의 첫 쪽(2쪽)에서 시작 → 오른쪽 두 번이면 4쪽 맨 위
+  // 이 작품은 앱 기본값(한 쪽)이라 3쪽에서 시작 → 오른쪽 두 번이면 5쪽 맨 위
   await key('ArrowRight', 2);
   await page.waitForTimeout(400);
   await key('Enter');
-  await expectText('오른쪽 ×2 → 4쪽', '.reader-overlay-row:nth-child(2)', /4 \/ 24/);
+  await expectText('오른쪽 ×2 → 5쪽', '.reader-overlay-row:nth-child(2)', /5 \/ 24/);
   await shot('continuous-overlay');
   await key('Escape');
   await key('Escape');
   await page.waitForTimeout(1000);
-  results.push(`${patches.some((p) => p.includes('S5B2 page=4')) ? 'PASS' : 'FAIL'} 세로 스크롤 진행 저장 4쪽: ${patches.filter((p) => p.includes('S5B2')).join(' | ')}`);
+  results.push(`${patches.some((p) => p.includes('S5B2 page=5')) ? 'PASS' : 'FAIL'} 세로 스크롤 진행 저장 5쪽: ${patches.filter((p) => p.includes('S5B2')).join(' | ')}`);
   await expectFocus('세로 스크롤 책에서 돌아오면 그 책', 'reading-book-S5B2');
   await page.waitForTimeout(1500); // 돌아온 뒤 조용한 새로고침이 끝나기를 기다린다
 
@@ -359,6 +362,8 @@ try {
     Array.from(document.querySelectorAll('.saved-server')).map((el) => el.textContent?.replace(/\s+/g, ' ').trim()),
   );
   results.push(`${saved.length === 2 ? 'PASS' : 'FAIL'} 저장된 서버 2개: ${saved.join(' / ')}`);
+  const defaultRows = await page.evaluate(() => document.querySelectorAll('.settings .view-row').length);
+  results.push(`${defaultRows === 8 ? 'PASS' : 'FAIL'} 서버 설정 "보기 기본값" 8줄 (Android T14): ${defaultRows}`);
   await expectFocus('목록 맨 위 = 다른 서버의 바꾸기', 'server-switch-0');
   await shot('saved-servers');
   await key('Enter');
@@ -431,6 +436,34 @@ try {
   await key('Enter');
   await page.waitForTimeout(1500);
   results.push(`${(await epub()).heading === '셋째 장' ? 'PASS' : 'FAIL'} 다시 열면 저장한 장(셋째 장)`);
+  await key('Escape');
+  await page.waitForTimeout(800);
+
+  // 10. 다음 권으로 이어 읽기 (Android, KMReader처럼): S1B3 끝 → 책 끝 화면 → 다음 권(S1B4) 1쪽
+  for (let i = 0; i < 8 && (await focused()) !== 'reading-book-S1B3'; i++) await key('ArrowLeft');
+  await expectFocus('S1B3 카드', 'reading-book-S1B3');
+  await key('Enter');
+  await page.waitForTimeout(1200);
+  await key('Enter'); // 정보
+  await key('ArrowUp', 3); // 10쪽씩 앞으로 → 끝
+  await key('Escape');
+  await page.waitForTimeout(400);
+  await key('ArrowRight');
+  await page.waitForTimeout(800);
+  await expectText('마지막 쪽 다음 → 책 끝 화면, 다음 권', '.end-view', /다 읽음.*다음 권.*시리즈 001 04|다 읽음.*킹덤.*04/s);
+  await shot('end-page');
+  results.push(`${patches.some((p) => /PATCH read-progress S1B3 page=24 completed=true/.test(p)) ? 'PASS' : 'FAIL'} 마지막 펼침 → 완독 저장`);
+  await key('ArrowLeft');
+  await page.waitForTimeout(300);
+  results.push(`${(await page.evaluate(() => !document.querySelector('.end-view'))) ? 'PASS' : 'FAIL'} 이전 쪽 키 → 마지막 쪽으로`);
+  await key('ArrowRight');
+  await key('ArrowRight'); // 책 끝에서 한 번 더 = 다음 권
+  await page.waitForTimeout(1200);
+  await key('Enter');
+  await expectText('다음 권 1쪽에서 같은 화면으로', '.reader-overlay-row:nth-child(1)', /04/);
+  await expectText('다음 권은 1쪽부터', '.reader-overlay-row:nth-child(2)', /^1 \/ 24쪽|1 \/ \d+ 펼침/);
+  await shot('next-book');
+  await key('Escape');
   await key('Escape');
   await page.waitForTimeout(800);
 } finally {

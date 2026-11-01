@@ -16,7 +16,11 @@ import {
   session,
   switchServer,
 } from '../state/session';
-import { focusKeyOrFirst } from '../platform/focus';
+import { current, focusKeyOrFirst } from '../platform/focus';
+import { useKeys } from '../platform/input';
+import { readerPrefs, saveReaderPrefs } from '../state/readerPrefs';
+import { useStore } from '../state/store';
+import { applyViewOption, cycledValue, type ViewKey, viewOptions, ViewRows } from '../ui/viewSettings';
 import { Button, TextField } from '../ui/components';
 import { useEntryFocus } from '../ui/entryFocus';
 
@@ -53,6 +57,21 @@ export function SettingsScreen({ entry, active }: { entry: RouteEntry; active: b
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
   const language = useRef(getLanguageChoice()).current;
   const [servers, setServers] = useState<SavedServer[]>(() => loadServerList());
+  const viewDefaults = useStore(readerPrefs);
+  const viewRows = viewOptions(viewDefaults, 'defaults');
+  const cycleDefault = (key: ViewKey, delta: number) => {
+    const option = viewRows.find((row) => row.key === key);
+    const value = option ? cycledValue(option, delta) : null;
+    if (value !== null) saveReaderPrefs(applyViewOption(viewDefaults, key, value));
+  };
+  // 보기 기본값 줄에서 좌/우 = 값 바꾸기 (Android T14)
+  useKeys((key) => {
+    if (key !== 'left' && key !== 'right') return false;
+    const focused = current();
+    if (!focused?.dataset.viewRow) return false;
+    cycleDefault(focused.dataset.key as ViewKey, key === 'left' ? -1 : 1);
+    return true;
+  }, active);
   const currentId = saved ? serverId(saved) : null;
 
   // 첫 실행이면 주소 칸, 아니면 화면 맨 위(저장된 서버 목록)부터
@@ -203,6 +222,10 @@ export function SettingsScreen({ entry, active }: { entry: RouteEntry; active: b
 
       {!(entry.route.name === 'settings' && entry.route.first) && (
         <>
+          <h2 class="section-title">{t.settingsSectionViewDefaults}</h2>
+          <div class="field-label standalone">{t.settingsViewDefaultsHint}</div>
+          <ViewRows options={viewRows} onCycle={cycleDefault} />
+
           <h2 class="section-title">{t.settingsSectionCache}</h2>
           <div class="button-row">
             <Button focusKey="clear-cache" onClick={clearCache}>

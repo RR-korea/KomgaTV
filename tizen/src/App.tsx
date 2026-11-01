@@ -61,6 +61,17 @@ export function App() {
         );
       })}
       <ToastView />
+      {/* 화질 개선 "선명하게"(0.6)·"더 선명하게"(1.2): 라플라시안 언샤프 마스크 (Android T14와 같은 세기) */}
+      <svg class="svg-defs" width="0" height="0" aria-hidden="true">
+        <defs>
+          <filter id="ktv-sharpen" color-interpolation-filters="sRGB">
+            <feConvolveMatrix order="3" kernelMatrix="0 -0.6 0 -0.6 3.4 -0.6 0 -0.6 0" preserveAlpha="true" edgeMode="duplicate" />
+          </filter>
+          <filter id="ktv-sharpen-strong" color-interpolation-filters="sRGB">
+            <feConvolveMatrix order="3" kernelMatrix="0 -1.2 0 -1.2 5.8 -1.2 0 -1.2 0" preserveAlpha="true" edgeMode="duplicate" />
+          </filter>
+        </defs>
+      </svg>
     </div>
   );
 }

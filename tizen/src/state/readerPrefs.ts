@@ -6,6 +6,8 @@ export type ReaderType = 'PAGED' | 'CONTINUOUS';
 export type PageLayout = 'SINGLE_PAGE' | 'DOUBLE_PAGES' | 'DOUBLE_PAGES_NO_COVER';
 export type ScaleType = 'SCREEN' | 'FIT_WIDTH' | 'FIT_HEIGHT' | 'ORIGINAL';
 export type Direction = 'LEFT_TO_RIGHT' | 'RIGHT_TO_LEFT';
+/** 화질 개선 (Android T14): 끄기 / 부드럽게 확대 / 선명하게 / 더 선명하게 */
+export type ImageEnhancement = 'OFF' | 'SMOOTH' | 'SHARPEN' | 'SHARPEN_STRONG';
 
 export interface ReaderSettings {
   readerType: ReaderType;
@@ -19,6 +21,7 @@ export interface ReaderSettings {
   continuousPageSpacing: number;
   /** EPUB 글자 크기 (%, 60~200) — Android T12 epubTextZoom */
   epubTextZoom: number;
+  imageEnhancement: ImageEnhancement;
 }
 
 export const defaultReaderSettings: ReaderSettings = {
@@ -30,12 +33,14 @@ export const defaultReaderSettings: ReaderSettings = {
   continuousPadding: 0,
   continuousPageSpacing: 0,
   epubTextZoom: 100,
+  imageEnhancement: 'OFF',
 };
 
 export const READER_TYPES: ReaderType[] = ['PAGED', 'CONTINUOUS'];
 export const PAGE_LAYOUTS: PageLayout[] = ['SINGLE_PAGE', 'DOUBLE_PAGES', 'DOUBLE_PAGES_NO_COVER'];
 export const SCALE_TYPES: ScaleType[] = ['SCREEN', 'FIT_WIDTH', 'FIT_HEIGHT', 'ORIGINAL'];
 export const DIRECTIONS: Direction[] = ['LEFT_TO_RIGHT', 'RIGHT_TO_LEFT'];
+export const ENHANCEMENTS: ImageEnhancement[] = ['OFF', 'SMOOTH', 'SHARPEN', 'SHARPEN_STRONG'];
 /** 패널에서 고르는 값 (Android T6과 같음) */
 export const PADDING_STEPS = [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45];
 export const SPACING_STEPS = [0, 8, 16, 24, 32, 40, 48, 56, 64];
@@ -63,6 +68,7 @@ export function parseReaderSettings(raw: unknown): ReaderSettings {
       typeof p.epubTextZoom === 'number' && p.epubTextZoom >= 60 && p.epubTextZoom <= 200 && p.epubTextZoom % 10 === 0
         ? p.epubTextZoom
         : d.epubTextZoom,
+    imageEnhancement: oneOf(ENHANCEMENTS, p.imageEnhancement, d.imageEnhancement),
   };
 }
 
@@ -105,4 +111,73 @@ export function resolveReaderType(seriesDirection: ReadingDirection | null, save
 /** 이어 읽기 시작 쪽: 진행이 없거나 다 읽었으면 1쪽, 아니면 저장된 쪽 (Komelia와 같음). */
 export function startPage(progress: { page: number; completed: boolean } | null): number {
   return !progress || progress.completed ? 1 : Math.max(1, progress.page);
+}
+
+// ---------- 작품별 보기 설정 (Android T14) ----------
+// 리더의 보기 설정 패널은 그 작품(시리즈)에만 저장한다. 우선순위: 작품 설정 > (앱 기본값 + 시리즈 메타데이터 규칙).
+
+const SERIES_KEY = 'komgatv.reader.series';
+
+/** 앱 기본값 + 시리즈 메타데이터의 방향·웹툰 규칙 (Komelia와 같음) */
+export function withSeriesRules(defaults: ReaderSettings, seriesDirection: ReadingDirection | null): ReaderSettings {
+  const readerType = resolveReaderType(seriesDirection, defaults.readerType);
+  const readingDirection =
+    seriesDirection === 'LEFT_TO_RIGHT' || seriesDirection === 'RIGHT_TO_LEFT' ? seriesDirection : defaults.readingDirection;
+  return { ...defaults, readerType, readingDirection };
+}
+
+/** 작품에 쓸 설정. EPUB 글자 크기는 작품과 상관없이 앱 기본값. */
+export function effectiveSettings(
+  defaults: ReaderSettings,
+  series: ReaderSettings | null,
+  seriesDirection: ReadingDirection | null,
+): ReaderSettings {
+  return series ? { ...series, epubTextZoom: defaults.epubTextZoom } : withSeriesRules(defaults, seriesDirection);
+}
+
+/** 저장된 작품 설정 모음 문자열 → {시리즈 ID: 설정}. 깨진 값은 버리고 모르는 키·값은 기본값 */
+export function parseSeriesSettings(raw: string | null): Record<string, ReaderSettings> {
+  if (!raw) return {};
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    const result: Record<string, ReaderSettings> = {};
+    for (const [id, value] of Object.entries(parsed as Record<string, unknown>)) {
+      if (value && typeof value === 'object') result[id] = parseReaderSettings(value);
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
+
+function readAllSeries(): Record<string, ReaderSettings> {
+  try {
+    return parseSeriesSettings(localStorage.getItem(SERIES_KEY));
+  } catch {
+    return {};
+  }
+}
+
+function writeAllSeries(all: Record<string, ReaderSettings>): void {
+  try {
+    localStorage.setItem(SERIES_KEY, JSON.stringify(all));
+  } catch {
+    // 저장소를 못 쓰면 이번 세션에서만
+  }
+}
+
+export function loadSeriesSettings(seriesId: string): ReaderSettings | null {
+  return readAllSeries()[seriesId] ?? null;
+}
+
+export function saveSeriesSettings(seriesId: string, settings: ReaderSettings): void {
+  writeAllSeries({ ...readAllSeries(), [seriesId]: settings });
+}
+
+/** 앱 기본값으로 되돌리기 */
+export function clearSeriesSettings(seriesId: string): void {
+  const all = readAllSeries();
+  delete all[seriesId];
+  writeAllSeries(all);
 }
