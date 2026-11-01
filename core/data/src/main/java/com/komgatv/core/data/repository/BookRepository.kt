@@ -60,6 +60,9 @@ interface BookRepository {
     /** 같은 시리즈의 다음 권 (Komga 정렬 순서). 마지막 권이면 null */
     suspend fun getNextBook(bookId: String): Book?
 
+    /** 같은 시리즈의 이전 권 (Komga 정렬 순서). 첫 권이면 null */
+    suspend fun getPreviousBook(bookId: String): Book?
+
     /** 다 읽음으로 표시 */
     suspend fun markRead(bookId: String)
 
@@ -155,6 +158,9 @@ class BookRepositoryImpl @Inject constructor(
     // 다음 권이 없으면 komga-client가 null을 돌려준다 (서버 404)
     override suspend fun getNextBook(bookId: String): Book? =
         sessionManager.requireClient().bookClient().getBookSiblingNext(KomgaBookId(bookId))?.toDomain()
+
+    override suspend fun getPreviousBook(bookId: String): Book? =
+        sessionManager.requireClient().bookClient().getBookSiblingPrevious(KomgaBookId(bookId))?.toDomain()
 
     override suspend fun markRead(bookId: String) {
         sessionManager.requireClient().bookClient().markReadProgress(

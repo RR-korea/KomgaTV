@@ -1,6 +1,5 @@
 package com.komgatv.feature.settings
 
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -253,7 +252,8 @@ fun SettingsScreen(
         ViewSettingsForm(
             settings = viewDefaults,
             onChange = viewModel::updateViewDefaults,
-            modifier = Modifier.widthIn(max = 720.dp),
+            // 위 서버 입력칸과 같은 폭
+            modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(modifier = Modifier.height(36.dp))

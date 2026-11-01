@@ -50,6 +50,15 @@ limitations under the License.
 
 ---
 
+## Komga logo
+
+- **Project:** Komga (https://github.com/gotson/komga), `komga-webui/src/assets/logo.svg`
+- **Copyright:** Copyright (c) 2019 Gauthier Roebroeck
+- **License:** MIT
+- **Use:** The TV banner shows the Komga logo next to the "KomgaTV" wordmark, as a Komga client.
+
+---
+
 ## Acknowledgements
 
 KomgaTV was made with deep respect for the **Komga** (https://github.com/gotson/komga) and

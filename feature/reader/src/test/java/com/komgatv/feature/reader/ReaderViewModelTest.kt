@@ -354,9 +354,9 @@ class ReaderViewModelTest {
         val state = viewModel.uiState.value as ReaderUiState.Reading
         // 현재 펼침: index 2 ([5, 6])
         assertEquals(2, state.currentSpreadIndex)
-        // 앞뒤 2개 펼침 인덱스: 0([1, 2]), 1([3, 4]), 3([7, 8]), 4([9, 10])
+        // 가까운 것부터, 앞쪽을 먼저: 3([7, 8]), 4([9, 10]), 1([3, 4]), 0([1, 2])
         val url = { n: Int -> "http://localhost:8080/api/v1/books/b1/pages/$n" }
-        val expected = listOf(listOf(url(1), url(2)), listOf(url(3), url(4)), listOf(url(7), url(8)), listOf(url(9), url(10)))
+        val expected = listOf(listOf(url(7), url(8)), listOf(url(9), url(10)), listOf(url(3), url(4)), listOf(url(1), url(2)))
         assertEquals(expected, state.preloadSpreads)
     }
 
@@ -773,6 +773,96 @@ class ReaderViewModelTest {
         assertEquals(6, reading.totalPages)
     }
 
+    private fun addPreviousBook(id: String = "b0", pages: Int = 8) {
+        bookRepository.books[id] = createTestBook(id = id, seriesId = "s1", pageCount = pages)
+        bookRepository.pagesMap[id] = (1..pages).map { BookPage(number = it, width = 1000, height = 1000) }
+        bookRepository.previousOf["b1"] = id
+    }
+
+    @Test
+    fun `이전 권 - 열자마자 찾고 마지막 쪽을 미리 받으며, 1쪽에서 뒤로 두 번이면 이전 권 마지막 쪽`() = runTest(testDispatcher) {
+        openBook()
+        addPreviousBook()
+        advanceUntilIdle()
+        assertEquals(listOf("b1"), bookRepository.previousRequests)
+        assertTrue(reading.preloadSpreads.flatten().any { it.endsWith("/books/b0/pages/8") })
+
+        viewModel.previousSpread()
+        assertEquals("b0", reading.startPage!!.previousBook?.id)
+
+        viewModel.previousSpread()
+        // 이전 권을 불러오는 동안에도 로딩 화면으로 바뀌지 않는다
+        assertTrue(viewModel.uiState.value is ReaderUiState.Reading)
+        advanceUntilIdle()
+
+        assertEquals(8, reading.totalPages)
+        assertEquals(8, reading.currentSpread.pages.first().number)
+        assertEquals(null, reading.startPage)
+        // 끝에서 열기만 했으니 이전 권 진행은 그대로
+        assertTrue(bookRepository.progressUpdates.none { it.bookId == "b0" })
+    }
+
+    @Test
+    fun `이전 권 - 첫 권이면 책 첫 화면에 머물고, 앞으로 가면 1쪽`() = runTest(testDispatcher) {
+        openBook()
+        advanceUntilIdle()
+
+        viewModel.previousSpread()
+        viewModel.previousSpread()
+        advanceUntilIdle()
+        assertTrue(reading.startPage!!.previousResolved)
+        assertEquals(null, reading.startPage!!.previousBook)
+
+        viewModel.nextSpread()
+        assertEquals(null, reading.startPage)
+        assertEquals(1, reading.currentSpread.pages.first().number)
+    }
+
+    @Test
+    fun `이전 권 - 책 중간에서 열면 처음 근처로 갈 때까지 찾지 않는다`() = runTest(testDispatcher) {
+        openBook(progress = ReadProgress(page = 8, completed = false))
+        addPreviousBook()
+        advanceUntilIdle()
+        assertTrue(bookRepository.previousRequests.isEmpty())
+
+        repeat(4) { viewModel.previousSpread() } // 4쪽
+        advanceUntilIdle()
+        assertEquals(listOf("b1"), bookRepository.previousRequests)
+    }
+
+    @Test
+    fun `이전 권 - 세로 스크롤은 1쪽 처음에서 이전이면 책 첫 카드로, 그다음 이전 권 끝`() = runTest(testDispatcher) {
+        readerPreferences.saveReaderType(ReaderType.CONTINUOUS)
+        openBook()
+        addPreviousBook()
+        advanceUntilIdle()
+        // 1쪽이어도 맨 위 책 첫 카드 아래(첫 타일)로 스크롤한다
+        assertEquals(0, reading.scrollToTileIndex)
+        viewModel.onTileScrolled()
+        viewModel.onContinuousVisibleTilesChanged(listOf("1_0"))
+
+        viewModel.onDpadLeft()
+        advanceUntilIdle()
+        assertEquals(-1, reading.scrollToTileIndex)
+        assertEquals("b0", reading.startPage?.previousBook?.id)
+
+        viewModel.onDpadLeft()
+        advanceUntilIdle()
+        assertEquals(8, reading.totalPages)
+        // 마지막 타일이 화면(1000px)을 채우게 — 쪽 하나가 화면 한 장
+        assertEquals("8_0", reading.continuousTiles[reading.scrollToTileIndex!!].key)
+    }
+
+    @Test
+    fun `PDF 책은 페이지 넘김에서 서버가 그리지 않은 원래 쪽(raw)을 받는다`() = runTest(testDispatcher) {
+        openBook()
+        bookRepository.books["b1"] = bookRepository.books["b1"]!!.copy(mediaProfile = MediaProfile.PDF)
+        advanceUntilIdle()
+
+        assertEquals(listOf("http://localhost:8080/api/v1/books/b1/pages/1/raw"), reading.spreadPageUrls)
+        assertTrue(reading.preloadSpreads.flatten().all { it.endsWith("/raw") })
+    }
+
     @Test
     fun `EPUB 책은 EPUB 리더로 넘긴다`() = runTest(testDispatcher) {
         seriesRepository.seriesMap["s1"] = createTestSeries(id = "s1")
@@ -853,6 +943,15 @@ class ReaderViewModelTest {
         override suspend fun getNextBook(bookId: String): Book? {
             nextRequests += bookId
             return nextOf[bookId]?.let { books[it] }
+        }
+
+        /** 책 ID → 이전 권 ID */
+        val previousOf = mutableMapOf<String, String>()
+        val previousRequests = mutableListOf<String>()
+
+        override suspend fun getPreviousBook(bookId: String): Book? {
+            previousRequests += bookId
+            return previousOf[bookId]?.let { books[it] }
         }
 
         override fun getBooks(seriesId: String, page: Int, size: Int): Flow<BookPageResult> {
