@@ -2,6 +2,7 @@ package com.komgatv.core.datastore
 
 import com.komgatv.core.model.ImageEnhancement
 import com.komgatv.core.model.PageLayout
+import com.komgatv.core.model.PageTransition
 import com.komgatv.core.model.ReaderSettings
 import com.komgatv.core.model.ReaderType
 import com.komgatv.core.model.ReadingDirection
@@ -16,12 +17,12 @@ internal object ReaderSettingsCodec {
         "readerType" to s.readerType.name,
         "pageLayout" to s.pageLayout.name,
         "scaleType" to s.scaleType.name,
-        "stretchToFit" to s.stretchToFit.toString(),
         "readingDirection" to s.readingDirection.name,
         "continuousPadding" to s.continuousPadding.toString(),
         "continuousPageSpacing" to s.continuousPageSpacing.toString(),
         "imageEnhancement" to s.imageEnhancement.name,
         "zoomPercent" to s.zoomPercent.toString(),
+        "pageTransition" to s.pageTransition.name,
     ).joinToString(";") { (k, v) -> "$k=$v" }
 
     fun decode(text: String?): ReaderSettings? {
@@ -35,13 +36,13 @@ internal object ReaderSettingsCodec {
             readerType = enumOrNull<ReaderType>(map["readerType"]) ?: d.readerType,
             pageLayout = enumOrNull<PageLayout>(map["pageLayout"]) ?: d.pageLayout,
             scaleType = enumOrNull<ScaleType>(map["scaleType"]) ?: d.scaleType,
-            stretchToFit = map["stretchToFit"]?.toBooleanStrictOrNull() ?: d.stretchToFit,
             readingDirection = enumOrNull<ReadingDirection>(map["readingDirection"]) ?: d.readingDirection,
             continuousPadding = map["continuousPadding"]?.toFloatOrNull() ?: d.continuousPadding,
             continuousPageSpacing = map["continuousPageSpacing"]?.toIntOrNull() ?: d.continuousPageSpacing,
             imageEnhancement = enumOrNull<ImageEnhancement>(map["imageEnhancement"]) ?: d.imageEnhancement,
             zoomPercent = map["zoomPercent"]?.toIntOrNull()
                 ?.coerceIn(ReaderSettings.MIN_ZOOM_PERCENT, ReaderSettings.MAX_ZOOM_PERCENT) ?: d.zoomPercent,
+            pageTransition = enumOrNull<PageTransition>(map["pageTransition"]) ?: d.pageTransition,
         )
     }
 

@@ -2,6 +2,7 @@ package com.komgatv.core.datastore
 
 import com.komgatv.core.model.ImageEnhancement
 import com.komgatv.core.model.PageLayout
+import com.komgatv.core.model.PageTransition
 import com.komgatv.core.model.ReaderSettings
 import com.komgatv.core.model.ReaderType
 import com.komgatv.core.model.ReadingDirection
@@ -18,12 +19,12 @@ class ReaderSettingsCodecTest {
             readerType = ReaderType.CONTINUOUS,
             pageLayout = PageLayout.DOUBLE_PAGES,
             scaleType = ScaleType.FIT_WIDTH,
-            stretchToFit = false,
             readingDirection = ReadingDirection.RIGHT_TO_LEFT,
             continuousPadding = 0.15f,
             continuousPageSpacing = 24,
             imageEnhancement = ImageEnhancement.SHARPEN,
             zoomPercent = 117,
+            pageTransition = PageTransition.FADE,
         )
         assertEquals(s, ReaderSettingsCodec.decode(ReaderSettingsCodec.encode(s)))
     }
@@ -36,12 +37,17 @@ class ReaderSettingsCodecTest {
     }
 
     @Test
+    fun `화면 전환이 없던 예전 설정은 밀기`() {
+        assertEquals(PageTransition.SLIDE, ReaderSettingsCodec.decode("pageLayout=DOUBLE_PAGES")!!.pageTransition)
+    }
+
+    @Test
     fun `없으면 null, 모르는 키와 잘못된 값은 기본값`() {
         assertNull(ReaderSettingsCodec.decode(null))
         assertNull(ReaderSettingsCodec.decode(""))
-        val s = ReaderSettingsCodec.decode("pageLayout=DOUBLE_PAGES;scaleType=NOPE;future=1;stretchToFit=maybe")!!
+        // stretchToFit은 없어진 키 — 예전 저장값에 있어도 무시된다
+        val s = ReaderSettingsCodec.decode("pageLayout=DOUBLE_PAGES;scaleType=NOPE;future=1;stretchToFit=false")!!
         assertEquals(PageLayout.DOUBLE_PAGES, s.pageLayout)
         assertEquals(ScaleType.SCREEN, s.scaleType)
-        assertEquals(true, s.stretchToFit)
     }
 }

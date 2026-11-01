@@ -3,7 +3,6 @@ package com.komgatv.core.datastore
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -11,6 +10,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.komgatv.core.model.ImageEnhancement
 import com.komgatv.core.model.PageLayout
+import com.komgatv.core.model.PageTransition
 import com.komgatv.core.model.ReaderSettings
 import com.komgatv.core.model.ReaderType
 import com.komgatv.core.model.ReadingDirection
@@ -63,12 +63,12 @@ class DefaultReaderPreferences @Inject constructor(
         val KEY_READER_TYPE = stringPreferencesKey("reader_type")
         val KEY_PAGE_LAYOUT = stringPreferencesKey("page_layout")
         val KEY_SCALE_TYPE = stringPreferencesKey("scale_type")
-        val KEY_STRETCH_TO_FIT = booleanPreferencesKey("stretch_to_fit")
         val KEY_READING_DIRECTION = stringPreferencesKey("reading_direction")
         val KEY_CONTINUOUS_PADDING = floatPreferencesKey("continuous_padding")
         val KEY_CONTINUOUS_PAGE_SPACING = intPreferencesKey("continuous_page_spacing")
         val KEY_IMAGE_ENHANCEMENT = stringPreferencesKey("image_enhancement")
         val KEY_EPUB_TEXT_ZOOM = intPreferencesKey("epub_text_zoom")
+        val KEY_PAGE_TRANSITION = stringPreferencesKey("page_transition")
         val DEFAULTS = ReaderSettings()
 
         fun seriesKey(seriesId: String) = stringPreferencesKey("series:$seriesId")
@@ -79,13 +79,13 @@ class DefaultReaderPreferences @Inject constructor(
             readerType = enumOrNull<ReaderType>(prefs[KEY_READER_TYPE]) ?: DEFAULTS.readerType,
             pageLayout = enumOrNull<PageLayout>(prefs[KEY_PAGE_LAYOUT]) ?: DEFAULTS.pageLayout,
             scaleType = enumOrNull<ScaleType>(prefs[KEY_SCALE_TYPE]) ?: DEFAULTS.scaleType,
-            stretchToFit = prefs[KEY_STRETCH_TO_FIT] ?: DEFAULTS.stretchToFit,
             readingDirection = enumOrNull<ReadingDirection>(prefs[KEY_READING_DIRECTION])
                 ?: DEFAULTS.readingDirection,
             continuousPadding = prefs[KEY_CONTINUOUS_PADDING] ?: DEFAULTS.continuousPadding,
             continuousPageSpacing = prefs[KEY_CONTINUOUS_PAGE_SPACING] ?: DEFAULTS.continuousPageSpacing,
             imageEnhancement = enumOrNull<ImageEnhancement>(prefs[KEY_IMAGE_ENHANCEMENT]) ?: DEFAULTS.imageEnhancement,
             epubTextZoom = prefs[KEY_EPUB_TEXT_ZOOM] ?: DEFAULTS.epubTextZoom,
+            pageTransition = enumOrNull<PageTransition>(prefs[KEY_PAGE_TRANSITION]) ?: DEFAULTS.pageTransition,
         )
     }
 
@@ -94,11 +94,11 @@ class DefaultReaderPreferences @Inject constructor(
             it[KEY_READER_TYPE] = settings.readerType.name
             it[KEY_PAGE_LAYOUT] = settings.pageLayout.name
             it[KEY_SCALE_TYPE] = settings.scaleType.name
-            it[KEY_STRETCH_TO_FIT] = settings.stretchToFit
             it[KEY_READING_DIRECTION] = settings.readingDirection.name
             it[KEY_CONTINUOUS_PADDING] = settings.continuousPadding
             it[KEY_CONTINUOUS_PAGE_SPACING] = settings.continuousPageSpacing
             it[KEY_IMAGE_ENHANCEMENT] = settings.imageEnhancement.name
+            it[KEY_PAGE_TRANSITION] = settings.pageTransition.name
         }
     }
 
