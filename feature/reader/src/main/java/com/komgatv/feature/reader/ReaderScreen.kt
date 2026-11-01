@@ -118,7 +118,8 @@ fun ReaderScreen(
             Color.Red,
         )
 
-        ReaderUiState.Epub -> EpubReaderScreen(bookId = bookId, onNavigateBack = onNavigateBack)
+        // 다음 권으로 이어 온 EPUB이면 그 책을 연다
+        is ReaderUiState.Epub -> EpubReaderScreen(bookId = state.bookId, onNavigateBack = onNavigateBack)
 
         is ReaderUiState.Reading -> {
             ReaderContent(
@@ -221,8 +222,11 @@ private fun ReaderContent(
                 when (keyEvent.key) {
                     Key.DirectionLeft -> viewModel.onDpadLeft()
                     Key.DirectionRight -> viewModel.onDpadRight()
-                    Key.DirectionCenter, Key.Enter -> {
-                        if (state.showOverlay) viewModel.openSettingsPanel() else viewModel.toggleOverlay()
+                    Key.DirectionCenter, Key.Enter -> when {
+                        state.showOverlay -> viewModel.openSettingsPanel()
+                        // 책 끝 화면에서 OK = 다음 권
+                        state.endPage != null -> viewModel.openNextBook()
+                        else -> viewModel.toggleOverlay()
                     }
                     Key.DirectionUp -> if (state.showOverlay) {
                         viewModel.jumpPages(10)
@@ -236,7 +240,12 @@ private fun ReaderContent(
                     Key.DirectionDown -> if (state.showOverlay) {
                         viewModel.jumpPages(-10)
                     } else if (continuous) {
-                        coroutineScope.launch { listState.animateScrollBy(screenHeightPx.toFloat()) }
+                        // 책 끝 카드까지 내려왔으면 아래 = 다음 권
+                        if (state.endPage != null && !listState.canScrollForward) {
+                            viewModel.openNextBook()
+                        } else {
+                            coroutineScope.launch { listState.animateScrollBy(screenHeightPx.toFloat()) }
+                        }
                     } else if (scrollable && scrollState.value < scrollState.maxValue) {
                         coroutineScope.launch {
                             scrollState.animateScrollTo(
@@ -260,7 +269,9 @@ private fun ReaderContent(
             )
         }
 
-        if (continuous) {
+        if (!continuous && state.endPage != null) {
+            EndPageView(state.endPage, Modifier.fillMaxSize())
+        } else if (continuous) {
             ContinuousPages(
                 tiles = state.continuousTiles,
                 listState = listState,
@@ -270,6 +281,8 @@ private fun ReaderContent(
                 loadTile = remember(state.imageEnhancement) { { tile -> viewModel.loadTile(tile) } },
                 onScrolled = viewModel::onTileScrolled,
                 onVisibleTilesChanged = viewModel::onContinuousVisibleTilesChanged,
+                endPage = state.endPage,
+                onEndVisible = viewModel::onContinuousEndVisible,
             )
         } else if (scrollable) {
             // 화면보다 클 수 있는 모드: 세로 스크롤, 작은 페이지는 가운데

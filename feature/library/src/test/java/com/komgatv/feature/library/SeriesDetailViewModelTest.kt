@@ -320,5 +320,7 @@ class SeriesDetailViewModelTest {
             if (failAnalyze) throw RuntimeException("403")
             actions += "analyze:$bookId"
         }
+
+        override suspend fun getNextBook(bookId: String): Book? = null
     }
 }

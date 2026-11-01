@@ -17,4 +17,10 @@
     <string name="reader_settings_series_default">앱 기본값을 쓰는 중 (서버 설정 → 보기 기본값). 여기서 바꾸면 이 작품에만 적용됩니다.</string>
     <string name="reader_settings_series_custom">이 작품만의 설정을 쓰는 중입니다.</string>
     <string name="reader_settings_reset">앱 기본값으로 되돌리기</string>
+    <string name="end_page_finished">다 읽음</string>
+    <string name="end_page_next">다음 권</string>
+    <string name="end_page_finding_next">다음 권을 찾는 중…</string>
+    <string name="end_page_last_book">이 시리즈의 마지막 권입니다.</string>
+    <string name="end_page_hint_next">다음 쪽 키 / OK: 다음 권 읽기 · Back: 나가기</string>
+    <string name="end_page_hint_last">이전 쪽 키: 마지막 쪽으로 · Back: 나가기</string>
 </resources>

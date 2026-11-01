@@ -679,6 +679,100 @@ class ReaderViewModelTest {
         assertTrue(readerPreferences.series.value.isEmpty())
     }
 
+    private fun addNextBook(id: String = "b2", pages: Int = 6) {
+        bookRepository.books[id] = createTestBook(id = id, seriesId = "s1", pageCount = pages)
+        bookRepository.pagesMap[id] = (1..pages).map { BookPage(number = it, width = 1000, height = 1000) }
+        bookRepository.nextOf["b1"] = id
+    }
+
+    @Test
+    fun `다음 권 - 마지막 쪽에서 앞으로 가면 책 끝 화면, 한 번 더 가면 다음 권 1쪽 (로딩 화면 없이)`() = runTest(testDispatcher) {
+        openBook(progress = ReadProgress(page = 10, completed = false))
+        addNextBook()
+        advanceUntilIdle()
+        assertEquals(10, reading.currentSpread.pages.first().number)
+
+        viewModel.nextSpread()
+        advanceUntilIdle()
+        val end = reading.endPage!!
+        assertTrue(end.nextResolved)
+        assertEquals("b2", end.nextBook?.id)
+
+        viewModel.nextSpread()
+        // 다음 권을 불러오는 동안에도 로딩 화면으로 바뀌지 않는다
+        assertTrue(viewModel.uiState.value is ReaderUiState.Reading)
+        advanceUntilIdle()
+
+        assertEquals(1, reading.currentSpread.pages.first().number)
+        assertEquals(6, reading.totalPages)
+        assertEquals(null, reading.endPage)
+    }
+
+    @Test
+    fun `다음 권 - 책 끝 근처에서 미리 찾고 다음 권 첫 쪽을 미리 받는다`() = runTest(testDispatcher) {
+        openBook(progress = ReadProgress(page = 5, completed = false))
+        addNextBook()
+        advanceUntilIdle()
+        assertTrue(bookRepository.nextRequests.isEmpty())
+
+        repeat(4) { viewModel.nextSpread() } // 9쪽 — 끝까지 펼침 1개
+        advanceUntilIdle()
+
+        assertEquals(listOf("b1"), bookRepository.nextRequests)
+        assertTrue(reading.preloadSpreads.flatten().any { it.endsWith("/books/b2/pages/1") })
+    }
+
+    @Test
+    fun `다음 권 - 넘어가기 전에 다 읽은 책을 완독으로 저장한다`() = runTest(testDispatcher) {
+        openBook(progress = ReadProgress(page = 9, completed = false))
+        addNextBook()
+        advanceUntilIdle()
+
+        viewModel.nextSpread() // 10쪽 (마지막)
+        viewModel.nextSpread() // 책 끝
+        viewModel.nextSpread() // 다음 권
+        advanceUntilIdle()
+
+        assertTrue(bookRepository.progressUpdates.contains(ProgressUpdate("b1", 10, true)))
+    }
+
+    @Test
+    fun `다음 권 - 마지막 권이면 책 끝 화면에 머물고, 뒤로 가면 마지막 쪽`() = runTest(testDispatcher) {
+        openBook(progress = ReadProgress(page = 10, completed = false))
+        advanceUntilIdle()
+
+        viewModel.nextSpread()
+        advanceUntilIdle()
+        assertEquals(null, reading.endPage!!.nextBook)
+        assertTrue(reading.endPage!!.nextResolved)
+
+        viewModel.nextSpread()
+        advanceUntilIdle()
+        assertTrue(reading.endPage != null)
+
+        viewModel.previousSpread()
+        assertEquals(null, reading.endPage)
+        assertEquals(10, reading.currentSpread.pages.first().number)
+    }
+
+    @Test
+    fun `다음 권 - 세로 스크롤은 마지막 쪽에서 다음이면 책 끝 카드로, 그다음 다음 권`() = runTest(testDispatcher) {
+        readerPreferences.saveReaderType(ReaderType.CONTINUOUS)
+        openBook()
+        addNextBook()
+        advanceUntilIdle()
+        viewModel.onContinuousVisibleTilesChanged(listOf("10_0"))
+
+        viewModel.onDpadRight()
+        advanceUntilIdle()
+        assertEquals(reading.continuousTiles.size, reading.scrollToTileIndex)
+        assertEquals("b2", reading.endPage?.nextBook?.id)
+
+        viewModel.onDpadRight()
+        advanceUntilIdle()
+        assertEquals(6, reading.totalPages)
+    }
+
     @Test
     fun `EPUB 책은 EPUB 리더로 넘긴다`() = runTest(testDispatcher) {
         seriesRepository.seriesMap["s1"] = createTestSeries(id = "s1")
@@ -688,7 +782,7 @@ class ReaderViewModelTest {
         viewModel.loadBook("e1")
         advanceUntilIdle()
 
-        assertEquals(ReaderUiState.Epub, viewModel.uiState.value)
+        assertEquals(ReaderUiState.Epub("e1"), viewModel.uiState.value)
     }
 
     @Test
@@ -751,6 +845,15 @@ class ReaderViewModelTest {
         val books = mutableMapOf<String, Book>()
         val pagesMap = mutableMapOf<String, List<BookPage>>()
         val progressUpdates = mutableListOf<ProgressUpdate>()
+
+        /** 책 ID → 다음 권 ID */
+        val nextOf = mutableMapOf<String, String>()
+        val nextRequests = mutableListOf<String>()
+
+        override suspend fun getNextBook(bookId: String): Book? {
+            nextRequests += bookId
+            return nextOf[bookId]?.let { books[it] }
+        }
 
         override fun getBooks(seriesId: String, page: Int, size: Int): Flow<BookPageResult> {
             throw NotImplementedError()

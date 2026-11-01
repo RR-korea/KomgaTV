@@ -18,4 +18,10 @@
     <string name="reader_settings_series_default">Using the app defaults (Server settings → View defaults). Changes here apply to this series only.</string>
     <string name="reader_settings_series_custom">This series has its own settings.</string>
     <string name="reader_settings_reset">Reset to app defaults</string>
+    <string name="end_page_finished">Finished</string>
+    <string name="end_page_next">Next</string>
+    <string name="end_page_finding_next">Looking for the next book…</string>
+    <string name="end_page_last_book">This is the last book in the series.</string>
+    <string name="end_page_hint_next">Next / OK: start the next book · Back: close</string>
+    <string name="end_page_hint_last">Previous: back to the last page · Back: close</string>
 </resources>

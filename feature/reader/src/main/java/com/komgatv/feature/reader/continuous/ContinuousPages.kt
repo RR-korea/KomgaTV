@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,12 +23,17 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.distinctUntilChanged
+import com.komgatv.feature.reader.EndPageView
+import com.komgatv.feature.reader.ReaderUiState
 import timber.log.Timber
+
+private const val END_KEY = "end"
 
 /**
  * 세로 스크롤 리더 본문. 항목 하나가 타일 하나이고, 보이는 타일만 디코딩한다.
@@ -44,9 +50,12 @@ internal fun ContinuousPages(
     loadTile: suspend (PageTile) -> ImageBitmap,
     onScrolled: () -> Unit,
     onVisibleTilesChanged: (List<String>) -> Unit,
+    endPage: ReaderUiState.EndPage?,
+    onEndVisible: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val currentOnVisible by rememberUpdatedState(onVisibleTilesChanged)
+    val currentOnEndVisible by rememberUpdatedState(onEndVisible)
 
     LaunchedEffect(scrollToTileIndex) {
         if (scrollToTileIndex != null) {
@@ -58,7 +67,10 @@ internal fun ContinuousPages(
     LaunchedEffect(listState) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.map { it.key as String } }
             .distinctUntilChanged()
-            .collect { currentOnVisible(it) }
+            .collect { keys ->
+                currentOnVisible(keys)
+                currentOnEndVisible(END_KEY in keys)
+            }
     }
 
     LazyColumn(
@@ -68,6 +80,13 @@ internal fun ContinuousPages(
     ) {
         items(tiles, key = { it.key }) { tile ->
             TileItem(tile, loadTile, filterQuality)
+        }
+        // 책 끝 카드 — KMReader처럼 마지막 쪽 다음에 다음 권을 보인다 (아래 한 번 더 = 다음 권)
+        item(key = END_KEY) {
+            // 책 끝 카드는 화면 한 장 높이 (창 크기는 스크롤 중에 바뀌지 않는다)
+            val screenHeight = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp() }
+            val info = endPage ?: ReaderUiState.EndPage("", null, null, null, nextResolved = false)
+            EndPageView(info, Modifier.fillMaxWidth().height(screenHeight.coerceAtLeast(400.dp)))
         }
     }
 }
