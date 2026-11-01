@@ -923,6 +923,23 @@ class ReaderViewModelTest {
     }
 
     @Test
+    fun `대비 - 5% 단위, 50~150 안에서, 이 작품에만 저장된다`() = runTest(testDispatcher) {
+        openBook()
+        advanceUntilIdle()
+        assertEquals(100, reading.contrastPercent)
+
+        viewModel.applySettings(reading.settings.copy(contrastPercent = 125))
+        advanceUntilIdle()
+        assertEquals(125, reading.contrastPercent)
+        assertEquals(125, readerPreferences.series.value["s1"]!!.contrastPercent)
+
+        viewModel.setContrastPercent(500)
+        assertEquals(150, reading.contrastPercent)
+        viewModel.setContrastPercent(0)
+        assertEquals(50, reading.contrastPercent)
+    }
+
+    @Test
     fun `EPUB 책은 EPUB 리더로 넘긴다`() = runTest(testDispatcher) {
         seriesRepository.seriesMap["s1"] = createTestSeries(id = "s1")
         bookRepository.books["e1"] = createTestBook(id = "e1", seriesId = "s1", pageCount = 0)
@@ -1114,7 +1131,8 @@ class ReaderViewModelTest {
     private class FakeTileSource : TileSource {
         val sizes = mutableMapOf<Int, Pair<Int, Int>>()
 
-        override suspend fun tile(bookId: String, tile: PageTile, sharpen: Float?): ImageBitmap = throw NotImplementedError()
+        override suspend fun tile(bookId: String, tile: PageTile, sharpen: Float?, lanczos: Int?): ImageBitmap =
+            throw NotImplementedError()
 
         override suspend fun bounds(bookId: String, pageNumber: Int): Pair<Int, Int>? = sizes[pageNumber]
 

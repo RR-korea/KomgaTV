@@ -1,6 +1,8 @@
 package com.komgatv.feature.reader.enhance
 
 import android.graphics.Bitmap
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.core.graphics.createBitmap
 import coil3.size.Size
@@ -18,6 +20,27 @@ internal object ImageEnhancer {
 
     fun filterQuality(enhancement: ImageEnhancement): FilterQuality =
         if (enhancement == ImageEnhancement.OFF) FilterQuality.Low else FilterQuality.High
+
+    /** Lanczos 창 크기 (CPU, 디코딩할 때 화면 크기로 맞춘다). null이면 하지 않는다 */
+    fun lanczos(enhancement: ImageEnhancement): Int? = when (enhancement) {
+        ImageEnhancement.LANCZOS2 -> 2
+        ImageEnhancement.LANCZOS -> 3
+        ImageEnhancement.LANCZOS4 -> 4
+        else -> null
+    }
+
+    /**
+     * 대비 — 화면에 그릴 때 GPU 색 변환으로 (부담 없음). 100%면 null.
+     * 가운데 회색(128)을 기준으로 밝은 곳은 더 밝게, 어두운 곳은 더 어둡게.
+     */
+    fun contrastFilter(percent: Int): ColorFilter? {
+        if (percent == 100) return null
+        val c = percent / 100f
+        val t = 128f * (1f - c)
+        return ColorFilter.colorMatrix(
+            ColorMatrix(floatArrayOf(c, 0f, 0f, 0f, t, 0f, c, 0f, 0f, t, 0f, 0f, c, 0f, t, 0f, 0f, 0f, 1f, 0f)),
+        )
+    }
 
     /** 언샤프 마스크 세기. null이면 하지 않는다 */
     fun sharpenAmount(enhancement: ImageEnhancement): Float? = when (enhancement) {
