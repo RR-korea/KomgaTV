@@ -12,6 +12,10 @@
 - 라이브러리: Comics, eBooks (2026-11-02 로그인 확인)
 - Play Console → 앱 콘텐츠 → **앱 액세스**에 이 계정을 적어 심사자가 로그인할 수 있게 한다. 개인 서버 정보는 절대 쓰지 않는다.
 
+## 개인정보처리방침
+- URL: https://rr-korea.github.io/KomgaTV/privacy/ (한·영, GitHub Pages — main 브랜치 /docs, `docs/privacy/index.html`)
+- Play Console → 앱 콘텐츠 → 개인정보처리방침에 이 주소를 넣는다. 앱이 다루는 데이터가 바뀌면 이 페이지도 고친다.
+
 ## 그 밖에
 - 버전: `app/build.gradle.kts` 위쪽 `appVersionCode`·`appVersionName` (APK 이름에도 들어간다).
 - 서명: 릴리즈 키 만들기, `release` 빌드(`isMinifyEnabled = true`) 실기 확인.
