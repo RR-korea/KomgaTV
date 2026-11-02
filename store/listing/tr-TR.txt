@@ -1,0 +1,48 @@
+[title]
+TV Reader for Komga
+
+[short_description]
+Kendi Komga sunucunuzdaki çizgi roman, manga ve kitapları Android TV'de okuyun.
+
+[full_description]
+TV Reader for Komga, uzaktan kumanda için tasarlanmış bir Android TV çizgi roman ve kitap okuyucusudur. Kendi Komga sunucunuza bağlanır; böylece kitaplıklarınıza göz atabilir, çizgi roman, manga, PDF ve EPUB kitapları büyük ekranda okuyabilirsiniz.
+
+Bu uygulama hiçbir kitap içermez. Kendi Komga sunucunuza (komga.org) ihtiyacınız vardır. Henüz sunucunuz yok mu? Sunucu ayarlarında "Komga demo sunucusunu dene" seçeneğini seçerek resmî demo sunucusunu ve herkese açık örnek kitaplarını inceleyebilirsiniz.
+
+NEDEN TV READER FOR KOMGA
+• Reklam yok. Ne şimdi ne de ileride.
+• Hızlı: Sonraki sayfalar önceden yüklenip önbelleğe alınır; böylece büyük PDF'lerde bile sayfalar anında çevrilir.
+• Gizlilik odaklı: Analiz yok, izleme yok, bizde hesap açmanız gerekmez. Uygulama hiçbir kişisel veri toplamaz. Giriş bilgileriniz TV'nizde şifreli olarak saklanır ve yalnızca kendi sunucunuza gönderilir.
+• Kumanda için tasarlandı: Her ekran yön tuşlarıyla kullanılabilir; dokunmatik ekran veya fare gerekmez.
+• Açık kaynak.
+
+ANA SAYFA
+• "Okumaya devam et", "Sıradaki", "Son eklenen kitaplar", "Son eklenen seriler" ve "Son güncellenen seriler"
+• Bir kitabı "Okumaya devam et" listesinden kaldırmak için üzerine uzun basın
+
+ÇİZGİ ROMAN VE MANGA
+• Tek sayfa veya çift sayfa (kapak ayrı gösterilerek ya da gösterilmeden), sayfa kaydırma desteğiyle
+• Sağdan sola veya soldan sağa okuma; sonraki ve önceki cilt de aynı yönde açılır
+• Sayfalı veya kesintisiz (webtoon tarzı) okuma
+• Ölçekleme: ekrana, genişliğe veya yüksekliğe sığdırma ya da orijinal boyut
+• Sayfa geçişi: kaydırma veya solma
+• Yukarı/aşağı ile 10 sayfa atlama ve ilerleme çubuğu
+
+SERİ BAZINDA GÖRÜNÜM AYARLARI
+• Her seri kendi ayarlarını saklar: okuma yönü, sayfa düzeni, ölçekleme türü, yakınlaştırma (%100–120), kontrast (%50–150)
+• Büyük TV'ler için görüntü iyileştirme: Lanczos2/3/4 büyütme, yumuşak büyütme ve keskinleştirme
+
+KİTAPLAR
+• PDF ve EPUB desteği
+• Okuma ilerlemeniz Komga sunucunuza kaydedilir; istediğiniz cihazda kaldığınız yerden devam edebilirsiniz
+
+DİĞER
+• Seri ve kitapları başlığa göre arama, sesli arama
+• Birden fazla sunucu; her biri için e-posta ve şifre ya da API anahtarı ile giriş
+• 15 dilde kullanılabilir
+• Samsung TV'ler (Tizen) için bir sürüm de yolda
+
+TV Reader for Komga resmî olmayan bir uygulamadır; Komga veya geliştiricileriyle herhangi bir bağlantısı yoktur. Kaynak kodu: github.com/RR-korea/KomgaTV
+
+[release_notes]
+İlk sürüm.

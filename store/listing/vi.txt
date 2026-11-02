@@ -1,0 +1,48 @@
+[title]
+TV Reader for Komga
+
+[short_description]
+Đọc truyện tranh, manga và sách từ máy chủ Komga của riêng bạn trên Android TV.
+
+[full_description]
+TV Reader for Komga là ứng dụng đọc truyện tranh và sách dành cho Android TV, được thiết kế để dùng bằng điều khiển từ xa. Ứng dụng kết nối với máy chủ Komga của riêng bạn để bạn duyệt thư viện và đọc truyện tranh, manga, PDF và sách EPUB trên màn hình lớn.
+
+Ứng dụng không kèm theo sách nào. Bạn cần có máy chủ Komga của riêng mình (komga.org). Chưa có máy chủ? Hãy chọn "Dùng thử máy chủ demo Komga" trong cài đặt máy chủ để trải nghiệm với máy chủ demo chính thức và các sách mẫu công khai trên đó.
+
+VÌ SAO NÊN CHỌN TV READER FOR KOMGA
+• Không quảng cáo. Bây giờ không, sau này cũng không.
+• Nhanh: các trang tiếp theo được tải trước và lưu vào bộ nhớ đệm, nên lật trang gần như tức thì, kể cả với tệp PDF lớn.
+• Riêng tư: không phân tích, không theo dõi, không cần tạo tài khoản với chúng tôi. Ứng dụng không thu thập dữ liệu cá nhân nào. Thông tin đăng nhập của bạn được mã hóa trên TV và chỉ được gửi đến máy chủ của chính bạn.
+• Thiết kế cho điều khiển từ xa: mọi màn hình đều dùng được bằng phím điều hướng, không cần cảm ứng hay chuột.
+• Mã nguồn mở.
+
+TRANG CHỦ
+• "Đọc tiếp", "Cuốn tiếp theo", "Sách mới thêm", "Bộ truyện mới thêm" và "Bộ truyện mới cập nhật"
+• Nhấn giữ một cuốn sách để xóa khỏi "Đọc tiếp"
+
+TRUYỆN TRANH VÀ MANGA
+• Một trang hoặc hai trang (có hoặc không tách riêng bìa), có lệch trang
+• Đọc từ phải sang trái hoặc trái sang phải; tập tiếp theo và tập trước cũng theo cùng hướng
+• Đọc theo trang hoặc cuộn liên tục (kiểu webtoon)
+• Tỉ lệ: vừa màn hình, vừa chiều rộng, vừa chiều cao hoặc kích thước gốc
+• Chuyển trang: trượt hoặc mờ dần
+• Lên/xuống để nhảy 10 trang, kèm thanh tiến độ
+
+CÀI ĐẶT HIỂN THỊ THEO TỪNG BỘ TRUYỆN
+• Mỗi bộ truyện lưu cài đặt riêng: hướng đọc, bố cục trang, kiểu tỉ lệ, thu phóng (100–120%), độ tương phản (50–150%)
+• Tăng cường hình ảnh cho TV màn hình lớn: phóng to Lanczos2/3/4, phóng to mượt và làm nét
+
+SÁCH
+• Hỗ trợ PDF và EPUB
+• Tiến độ đọc được lưu trên máy chủ Komga của bạn, nên bạn có thể đọc tiếp trên mọi thiết bị
+
+KHÁC
+• Tìm bộ truyện và sách theo tên, có tìm kiếm bằng giọng nói
+• Nhiều máy chủ, mỗi máy chủ đăng nhập bằng email và mật khẩu hoặc khóa API
+• Hỗ trợ 15 ngôn ngữ
+• Phiên bản cho TV Samsung (Tizen) sắp ra mắt
+
+TV Reader for Komga là ứng dụng không chính thức và không liên kết với Komga hay các nhà phát triển của Komga. Mã nguồn: github.com/RR-korea/KomgaTV
+
+[release_notes]
+Bản phát hành đầu tiên.
