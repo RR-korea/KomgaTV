@@ -132,12 +132,6 @@ fun ViewSettingsForm(
                         onPrevious = { onChange(settings.copy(zoomPercent = stepZoom(settings.zoomPercent, -1))) },
                         onNext = { onChange(settings.copy(zoomPercent = stepZoom(settings.zoomPercent, 1))) },
                     )
-                    SettingRow(
-                        title = stringResource(R.string.view_contrast),
-                        value = stringResource(R.string.view_percent_value, settings.contrastPercent),
-                        onPrevious = { onChange(settings.copy(contrastPercent = stepContrast(settings.contrastPercent, -1))) },
-                        onNext = { onChange(settings.copy(contrastPercent = stepContrast(settings.contrastPercent, 1))) },
-                    )
                 }
             }
 
@@ -157,6 +151,15 @@ fun ViewSettingsForm(
                     wrap = false,
                 )
             }
+        }
+        if (showZoom) {
+            // 대비는 페이지 넘김·세로 스크롤 모두 (작품별)
+            SettingRow(
+                title = stringResource(R.string.view_contrast),
+                value = stringResource(R.string.view_percent_value, settings.contrastPercent),
+                onPrevious = { onChange(settings.copy(contrastPercent = stepContrast(settings.contrastPercent, -1))) },
+                onNext = { onChange(settings.copy(contrastPercent = stepContrast(settings.contrastPercent, 1))) },
+            )
         }
         OptionRow(
             title = stringResource(R.string.view_enhancement),
