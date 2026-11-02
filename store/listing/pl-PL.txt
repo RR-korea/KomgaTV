@@ -1,0 +1,48 @@
+[title]
+TV Reader for Komga
+
+[short_description]
+Czytaj komiksy, mangi i książki z własnego serwera Komga na Android TV.
+
+[full_description]
+TV Reader for Komga to czytnik komiksów i książek na Android TV, stworzony z myślą o pilocie. Łączy się z Twoim własnym serwerem Komga, dzięki czemu możesz przeglądać biblioteki i czytać komiksy, mangi, pliki PDF i książki EPUB na dużym ekranie.
+
+Aplikacja nie zawiera żadnych książek. Potrzebujesz własnego serwera Komga (komga.org). Nie masz jeszcze serwera? Wybierz „Wypróbuj serwer demo Komga” w ustawieniach serwera, aby rozejrzeć się na oficjalnym serwerze demo z publicznymi przykładowymi książkami.
+
+DLACZEGO TV READER FOR KOMGA
+• Bez reklam. Ani teraz, ani później.
+• Szybkość: kolejne strony są wczytywane z wyprzedzeniem i zapisywane w pamięci podręcznej, więc przewracanie stron jest natychmiastowe, nawet w dużych plikach PDF.
+• Prywatność: bez analityki, bez śledzenia, bez zakładania u nas konta. Aplikacja nie zbiera żadnych danych osobowych. Twoje dane logowania są przechowywane w postaci zaszyfrowanej na telewizorze i wysyłane wyłącznie do Twojego serwera.
+• Stworzona z myślą o pilocie: każdy ekran obsłużysz przyciskami kierunkowymi, bez dotyku i myszy.
+• Otwarty kod źródłowy.
+
+EKRAN GŁÓWNY
+• „Czytaj dalej”, „Następne”, „Ostatnio dodane książki”, „Ostatnio dodane serie” i „Ostatnio zaktualizowane serie”
+• Przytrzymaj książkę, aby usunąć ją z „Czytaj dalej”
+
+KOMIKSY I MANGA
+• Pojedyncza strona lub dwie strony (z osobną okładką lub bez), z przesunięciem stron
+• Czytanie od prawej do lewej lub od lewej do prawej – następny i poprzedni tom zachowują ten sam kierunek
+• Czytanie stronicowe lub ciągłe (w stylu webtoonów)
+• Skalowanie: do ekranu, do szerokości, do wysokości lub oryginalny rozmiar
+• Przejścia stron: przesunięcie lub zanikanie
+• Góra/dół – skok o 10 stron, pasek postępu
+
+USTAWIENIA WIDOKU DLA KAŻDEJ SERII
+• Każda seria zapamiętuje własne ustawienia: kierunek czytania, układ stron, skalowanie, powiększenie (100–120%), kontrast (50–150%)
+• Poprawa obrazu na dużych telewizorach: skalowanie Lanczos2/3/4, płynne powiększanie i wyostrzanie
+
+KSIĄŻKI
+• Obsługa PDF i EPUB
+• Postęp czytania jest zapisywany na Twoim serwerze Komga, więc możesz kontynuować na dowolnym urządzeniu
+
+WIĘCEJ
+• Wyszukiwanie serii i książek po tytule, także głosowe
+• Wiele serwerów, każdy z logowaniem przez e-mail i hasło lub klucz API
+• Dostępna w 15 językach
+• Wkrótce pojawi się wersja na telewizory Samsung (Tizen)
+
+TV Reader for Komga to nieoficjalna aplikacja, niezwiązana z projektem Komga ani jego twórcami. Kod źródłowy: github.com/RR-korea/KomgaTV
+
+[release_notes]
+Pierwsze wydanie.
