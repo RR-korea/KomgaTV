@@ -24,6 +24,7 @@ class ReaderSettingsCodecTest {
             continuousPageSpacing = 24,
             imageEnhancement = ImageEnhancement.SHARPEN,
             zoomPercent = 117,
+            contrastPercent = 125,
             pageTransition = PageTransition.FADE,
         )
         assertEquals(s, ReaderSettingsCodec.decode(ReaderSettingsCodec.encode(s)))
