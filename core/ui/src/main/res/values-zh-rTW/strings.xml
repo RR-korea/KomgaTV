@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_not_connected">尚未連線至 Komga 伺服器。請檢查伺服器設定。</string>
+    <string name="error_unreachable">無法連線至伺服器。請檢查位址與網路。</string>
+    <string name="error_unauthorized">伺服器拒絕登入。請檢查電子郵件/密碼或 API 金鑰。</string>
+    <string name="error_unknown">載入時發生錯誤。</string>
+    <string name="view_reader_type">閱讀模式</string>
+    <string name="view_reader_type_paged">翻頁</string>
+    <string name="view_reader_type_continuous">連續捲動</string>
+    <string name="view_layout">頁面配置</string>
+    <string name="view_layout_single">單頁</string>
+    <string name="view_layout_double">雙頁</string>
+    <string name="view_layout_double_no_cover">雙頁（無封面）</string>
+    <string name="view_offset">偏移一頁</string>
+    <string name="view_direction">閱讀方向</string>
+    <string name="view_direction_ltr">由左至右</string>
+    <string name="view_direction_rtl">由右至左</string>
+    <string name="view_scale">縮放方式</string>
+    <string name="view_scale_screen">符合螢幕</string>
+    <string name="view_scale_fit_width">符合寬度</string>
+    <string name="view_scale_fit_height">符合高度</string>
+    <string name="view_scale_original">原始大小</string>
+    <string name="view_side_padding">兩側邊距</string>
+    <string name="view_page_spacing">頁面間距</string>
+    <string name="view_enhancement">畫質增強</string>
+    <string name="view_enhancement_off">關閉</string>
+    <string name="view_enhancement_smooth">平滑放大</string>
+    <string name="view_enhancement_sharpen">銳利化</string>
+    <string name="view_enhancement_sharpen_strong">加強銳利化</string>
+    <string name="view_percent_value">%1$d%%</string>
+    <string name="view_dp_value">%1$d dp</string>
+    <string name="view_on">開啟</string>
+    <string name="view_off">關閉</string>
+    <string name="view_zoom">縮放</string>
+    <string name="view_transition">翻頁效果</string>
+    <string name="view_transition_off">關閉</string>
+    <string name="view_transition_slide">滑動</string>
+    <string name="view_transition_fade">淡入淡出</string>
+    <string name="view_contrast">對比</string>
+    <string name="view_enhancement_lanczos2">Lanczos2（快速）</string>
+    <string name="view_enhancement_lanczos">Lanczos3</string>
+    <string name="view_enhancement_lanczos4">Lanczos4（最佳）</string>
+</resources>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_title">Ara</string>
+    <string name="search_placeholder">Seri veya kitap adı</string>
+    <string name="search_voice">Sesli</string>
+    <string name="search_hint">Bir seri veya kitap adı yazın. Klavyeyi açmak için kutunun üzerinde OK\'a basın.</string>
+    <string name="search_loading">Aranıyor…</string>
+    <string name="search_empty">“%1$s” ile eşleşen sonuç yok.</string>
+    <plurals name="search_books_count">
+        <item quantity="one">%1$d kitap</item>
+        <item quantity="other">%1$d kitap</item>
+    </plurals>
+    <string name="search_series_title">Seriler (%1$d)</string>
+    <string name="search_books_title">Kitaplar (%1$d)</string>
+</resources>

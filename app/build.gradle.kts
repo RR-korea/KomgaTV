@@ -7,11 +7,11 @@ plugins {
 }
 
 // 버전 — APK 파일 이름에도 들어간다 (KomgaTV-v0.2.9-b11-debug.apk)
-val appVersionCode = 17
-val appVersionName = "1.0.2"
+val appVersionCode = 21
+val appVersionName = "1.0.6"
 
 base {
-    archivesName = "KomgaTV-v$appVersionName-b$appVersionCode"
+    archivesName = "TVReaderForKomga-v$appVersionName-b$appVersionCode"
 }
 
 android {
@@ -23,8 +23,23 @@ android {
         versionName = appVersionName
     }
 
+    // 업로드 키 — 비밀번호는 저장소에 두지 않고 환경 변수로만 받는다 (tools/build-release.ps1)
+    val uploadStore = System.getenv("KOMGATV_UPLOAD_STORE_FILE")
+    val uploadPassword = System.getenv("KOMGATV_UPLOAD_STORE_PASSWORD")
+    val uploadSigning = if (uploadStore != null && uploadPassword != null) {
+        signingConfigs.create("upload") {
+            storeFile = file(uploadStore)
+            storePassword = uploadPassword
+            keyAlias = System.getenv("KOMGATV_UPLOAD_KEY_ALIAS") ?: "upload"
+            keyPassword = System.getenv("KOMGATV_UPLOAD_KEY_PASSWORD") ?: uploadPassword
+        }
+    } else {
+        null
+    }
+
     buildTypes {
         release {
+            signingConfig = uploadSigning
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

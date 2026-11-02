@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_loading">Caricamento&#8230;</string>
+    <string name="library_loading_more">Caricamento altri elementi&#8230;</string>
+    <plurals name="series_books_count">
+        <item quantity="one">%1$d libro</item>
+        <item quantity="many">%1$d libri</item>
+        <item quantity="other">%1$d libri</item>
+    </plurals>
+    <string name="series_detail_loading">Caricamento&#8230;</string>
+    <string name="series_detail_error_title">Si è verificato un errore</string>
+    <string name="series_detail_books_header">Libri</string>
+    <string name="series_detail_status_prefix">Stato: %1$s</string>
+    <string name="series_detail_publisher_prefix">Editore: %1$s</string>
+    <string name="series_detail_genres_prefix">Generi: %1$s</string>
+    <string name="series_detail_progress">Pagina %1$d/%2$d</string>
+    <string name="series_detail_completed">Completato</string>
+    <string name="series_detail_unread">Non letto</string>
+    <string name="series_status_ended">Conclusa</string>
+    <string name="series_status_ongoing">In corso</string>
+    <string name="series_status_abandoned">Abbandonata</string>
+    <string name="series_status_hiatus">In pausa</string>
+    <string name="book_action_mark_read">Segna come letto</string>
+    <string name="book_action_mark_unread">Segna come non letto</string>
+    <string name="book_action_analyze">Analizza (admin)</string>
+    <string name="book_action_done_read">Segnato come letto</string>
+    <string name="book_action_done_unread">Segnato come non letto</string>
+    <string name="book_action_done_analyze">Analisi richiesta — il server ci sta lavorando</string>
+    <string name="book_action_failed">Operazione non riuscita (solo admin o errore del server)</string>
+</resources>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_loading">Wird geladen&#8230;</string>
+    <string name="library_loading_more">Wird nachgeladen&#8230;</string>
+    <plurals name="series_books_count">
+        <item quantity="one">%1$d Band</item>
+        <item quantity="other">%1$d Bände</item>
+    </plurals>
+    <string name="series_detail_loading">Wird geladen&#8230;</string>
+    <string name="series_detail_error_title">Etwas ist schiefgelaufen</string>
+    <string name="series_detail_books_header">Bände</string>
+    <string name="series_detail_status_prefix">Status: %1$s</string>
+    <string name="series_detail_publisher_prefix">Verlag: %1$s</string>
+    <string name="series_detail_genres_prefix">Genres: %1$s</string>
+    <string name="series_detail_progress">Seite %1$d/%2$d</string>
+    <string name="series_detail_completed">Gelesen</string>
+    <string name="series_detail_unread">Ungelesen</string>
+    <string name="series_status_ended">Abgeschlossen</string>
+    <string name="series_status_ongoing">Laufend</string>
+    <string name="series_status_abandoned">Abgebrochen</string>
+    <string name="series_status_hiatus">Pausiert</string>
+    <string name="book_action_mark_read">Als gelesen markieren</string>
+    <string name="book_action_mark_unread">Als ungelesen markieren</string>
+    <string name="book_action_analyze">Analysieren (Admin)</string>
+    <string name="book_action_done_read">Als gelesen markiert</string>
+    <string name="book_action_done_unread">Als ungelesen markiert</string>
+    <string name="book_action_done_analyze">Analyse angefordert — der Server arbeitet jetzt daran</string>
+    <string name="book_action_failed">Nicht möglich (nur für Admins oder Serverfehler)</string>
+</resources>

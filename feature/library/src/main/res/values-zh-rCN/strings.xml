@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_loading">加载中&#8230;</string>
+    <string name="library_loading_more">正在加载更多&#8230;</string>
+    <plurals name="series_books_count">
+        <item quantity="other">%1$d 本</item>
+    </plurals>
+    <string name="series_detail_loading">加载中&#8230;</string>
+    <string name="series_detail_error_title">出错了</string>
+    <string name="series_detail_books_header">书籍</string>
+    <string name="series_detail_status_prefix">状态：%1$s</string>
+    <string name="series_detail_publisher_prefix">出版社：%1$s</string>
+    <string name="series_detail_genres_prefix">类型：%1$s</string>
+    <string name="series_detail_progress">第 %1$d/%2$d 页</string>
+    <string name="series_detail_completed">已读完</string>
+    <string name="series_detail_unread">未读</string>
+    <string name="series_status_ended">已完结</string>
+    <string name="series_status_ongoing">连载中</string>
+    <string name="series_status_abandoned">已停更</string>
+    <string name="series_status_hiatus">休刊中</string>
+    <string name="book_action_mark_read">标记为已读</string>
+    <string name="book_action_mark_unread">标记为未读</string>
+    <string name="book_action_analyze">分析（管理员）</string>
+    <string name="book_action_done_read">已标记为已读</string>
+    <string name="book_action_done_unread">已标记为未读</string>
+    <string name="book_action_done_analyze">已请求分析 — 服务器正在处理</string>
+    <string name="book_action_failed">无法执行（仅限管理员，或服务器出错）</string>
+</resources>

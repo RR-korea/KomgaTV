@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_title">Pengaturan server</string>
+    <string name="settings_section_server">Koneksi server</string>
+    <string name="settings_server_url_label">URL server</string>
+    <string name="settings_server_url_placeholder">http://192.168.1.100:25600</string>
+    <string name="settings_auth_method_label">Metode masuk</string>
+    <string name="settings_auth_method_basic">Email / kata sandi</string>
+    <string name="settings_auth_method_apikey">Kunci API</string>
+    <string name="settings_username_label">Email (login Komga Anda)</string>
+    <string name="settings_username_placeholder">admin@example.com</string>
+    <string name="settings_password_label">Kata sandi</string>
+    <string name="settings_password_placeholder">Kata sandi</string>
+    <string name="settings_apikey_label">Kunci API</string>
+    <string name="settings_apikey_placeholder">Kunci API</string>
+    <string name="settings_btn_test">Uji koneksi</string>
+    <string name="settings_btn_save">Simpan dan hubungkan</string>
+    <string name="settings_status_testing">Memeriksa server…</string>
+    <string name="settings_status_success">Terhubung ke server.</string>
+    <string name="settings_error_invalid_url">Alamat server tidak valid. (mis. http://192.168.1.100:25600)</string>
+    <string name="settings_error_unreachable">Server tidak dapat dijangkau. Periksa alamat, port, dan jaringan.</string>
+    <string name="settings_error_unauthorized">Gagal masuk. Periksa email/kata sandi atau kunci API Anda. (401)</string>
+    <string name="settings_error_ssl">Sertifikat SSL server ditandatangani sendiri atau tidak tepercaya. Sertifikat yang ditandatangani sendiri belum didukung.</string>
+    <string name="settings_error_other">Tidak dapat terhubung ke server: %1$s</string>
+    <string name="settings_error_missing_fields">Masukkan URL server dan detail masuk Anda.</string>
+    <string name="settings_section_cache">Cache</string>
+    <string name="settings_btn_clear_cache">Hapus cache gambar</string>
+    <string name="settings_status_cache_cleared">Cache gambar dihapus.</string>
+    <string name="settings_saved_servers">Server tersimpan</string>
+    <string name="settings_server_active">Sedang dipakai</string>
+    <string name="settings_server_switch">Beralih</string>
+    <string name="settings_server_remove">Hapus</string>
+    <string name="settings_server_add">Tambah server lain</string>
+    <string name="settings_demo_server">Coba server demo Komga</string>
+    <string name="settings_demo_hint">Belum punya server? Jelajahi aplikasi dengan server demo resmi Komga dan buku contoh publiknya.</string>
+    <string name="settings_section_view_defaults">Tampilan bawaan</string>
+    <string name="settings_view_defaults_hint">Dipakai untuk semua seri, kecuali Anda mengubah seri tertentu di pembaca (Pengaturan tampilan di sana hanya berlaku untuk seri itu).</string>
+    <string name="about_title">Tentang</string>
+    <string name="about_app_version">TV Reader for Komga %1$s</string>
+    <string name="about_developer">Dibuat oleh %1$s · %2$s</string>
+    <string name="about_developer_bio">Bekerja di Rock Robotics, Korea, sebagai spesialis drone industri, terutama drone pertanian — berupaya menjadikan desa pertanian yang kekurangan tenaga kerja tempat yang makmur dan layak huni melalui drone dan robot.</string>
+    <string name="about_developer_wish">Saya berharap perdamaian di Semenanjung Korea — semoga perang berhenti, senjata berubah menjadi mesin pertanian yang mengusir kemiskinan, dan semua yang menderita karena perang dapat berbahagia bersama keluarganya.</string>
+    <string name="about_developer_joke">Aplikasi ini dibuat dan dipoles di TV Samsung. Versi Tizen untuk TV Samsung juga akan segera hadir. Samsung, saya menantikan dukungan murah hatimu. (Bercanda. Sebagian besar.)</string>
+    <string name="about_tribute">Dibuat dengan penuh hormat kepada proyek Komga dan Komelia. Terima kasih kepada para pembuat dan kontributornya.</string>
+    <string name="about_licenses">Sumber terbuka: Komelia (Apache-2.0, sebagian logika pembaca), komga-client (MIT), Noto Sans (SIL OFL 1.1, banner), AndroidX / Jetpack Compose, Coil, OkHttp, Ktor (Apache-2.0). TV Reader for Komga adalah aplikasi tidak resmi dan tidak berafiliasi dengan Komga maupun Komelia.</string>
+</resources>

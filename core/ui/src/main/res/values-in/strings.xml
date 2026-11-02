@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_not_connected">Tidak terhubung ke server Komga. Periksa pengaturan server.</string>
+    <string name="error_unreachable">Server tidak dapat dijangkau. Periksa alamat dan jaringan Anda.</string>
+    <string name="error_unauthorized">Server menolak login. Periksa email/kata sandi atau kunci API Anda.</string>
+    <string name="error_unknown">Terjadi kesalahan saat memuat.</string>
+    <string name="view_reader_type">Jenis pembaca</string>
+    <string name="view_reader_type_paged">Per halaman</string>
+    <string name="view_reader_type_continuous">Gulir terus</string>
+    <string name="view_layout">Tata letak halaman</string>
+    <string name="view_layout_single">Satu halaman</string>
+    <string name="view_layout_double">Dua halaman</string>
+    <string name="view_layout_double_no_cover">Dua halaman (tanpa sampul)</string>
+    <string name="view_offset">Geser halaman</string>
+    <string name="view_direction">Arah baca</string>
+    <string name="view_direction_ltr">Kiri ke kanan</string>
+    <string name="view_direction_rtl">Kanan ke kiri</string>
+    <string name="view_scale">Jenis skala</string>
+    <string name="view_scale_screen">Layar</string>
+    <string name="view_scale_fit_width">Sesuai lebar</string>
+    <string name="view_scale_fit_height">Sesuai tinggi</string>
+    <string name="view_scale_original">Asli</string>
+    <string name="view_side_padding">Jarak tepi</string>
+    <string name="view_page_spacing">Jarak antarhalaman</string>
+    <string name="view_enhancement">Peningkatan gambar</string>
+    <string name="view_enhancement_off">Mati</string>
+    <string name="view_enhancement_smooth">Perbesaran halus</string>
+    <string name="view_enhancement_sharpen">Pertajam</string>
+    <string name="view_enhancement_sharpen_strong">Pertajam lagi</string>
+    <string name="view_percent_value">%1$d%%</string>
+    <string name="view_dp_value">%1$d dp</string>
+    <string name="view_on">Aktif</string>
+    <string name="view_off">Mati</string>
+    <string name="view_zoom">Zoom</string>
+    <string name="view_transition">Transisi halaman</string>
+    <string name="view_transition_off">Mati</string>
+    <string name="view_transition_slide">Geser</string>
+    <string name="view_transition_fade">Memudar</string>
+    <string name="view_contrast">Kontras</string>
+    <string name="view_enhancement_lanczos2">Lanczos2 (cepat)</string>
+    <string name="view_enhancement_lanczos">Lanczos3</string>
+    <string name="view_enhancement_lanczos4">Lanczos4 (terbaik)</string>
+</resources>

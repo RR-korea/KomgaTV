@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_loading">Caricamento&#8230;</string>
+    <string name="home_error_title">Si è verificato un errore</string>
+    <string name="home_continue_reading">Continua a leggere</string>
+    <string name="home_libraries">Librerie</string>
+    <string name="home_book_progress">Pagina %1$d/%2$d</string>
+    <string name="home_book_completed">Completato</string>
+    <string name="home_server_settings">Impostazioni server</string>
+    <string name="home_search">Cerca</string>
+    <string name="home_on_deck">Prossimi</string>
+    <string name="home_latest_books">Libri aggiunti di recente</string>
+    <string name="home_new_series">Serie aggiunte di recente</string>
+    <string name="home_updated_series">Serie aggiornate di recente</string>
+    <plurals name="home_series_books_count">
+        <item quantity="one">%1$d libro</item>
+        <item quantity="many">%1$d libri</item>
+        <item quantity="other">%1$d libri</item>
+    </plurals>
+    <string name="library_action_scan">Scansiona libreria (admin)</string>
+    <string name="library_action_empty_trash">Svuota cestino (admin)</string>
+    <string name="library_action_hint">Dopo aver eliminato file sul server: avvia la scansione, attendi che finisca, poi svuota il cestino.</string>
+    <string name="library_action_done_scan">Scansione richiesta — il server ci sta lavorando</string>
+    <string name="library_action_done_trash">Cestino svuotato</string>
+    <string name="library_action_failed">Operazione non riuscita (solo admin o errore del server)</string>
+    <string name="reading_action_hint">Cancella l\'avanzamento di lettura sul server (su tutti i dispositivi) e toglie questa serie da «Continua a leggere» e «Prossimi». Riapparirà quando la rileggerai.</string>
+    <string name="reading_action_question">Togliere questa serie da «Continua a leggere»?</string>
+    <string name="reading_action_keep">Mantieni</string>
+    <string name="reading_action_remove">Rimuovi</string>
+</resources>

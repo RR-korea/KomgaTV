@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_loading_page">Yükleniyor…</string>
+    <string name="reader_error_prefix">Hata: %1$s</string>
+    <string name="reader_page_content_description">Sayfa %1$d / %2$d</string>
+    <string name="reader_page_range_format">Sayfa %1$s / %2$d</string>
+    <string name="reader_page_percent_format">%%%1$d</string>
+    <string name="reader_overlay_hint">OK: Görünüm ayarları · ▲▼: 10 sayfa atla · Back: Kapat</string>
+
+    <!-- 보기 설정 패널 (Komelia의 이름을 따름) -->
+    <string name="reader_settings_hint">▲▼: Seç · ◀▶/OK: Değiştir · Back: Kapat</string>
+    <string name="epub_chapter_format">Bölüm %1$d / %2$d · %3$s</string>
+    <string name="epub_overlay_hint">OK: İçindekiler · ▲▼: Yazı boyutu (%%%1$d) · ◀▶: Bölüm · Back: Kapat</string>
+    <string name="epub_chapter_number_format">Bölüm %1$d / %2$d</string>
+    <string name="epub_toc_title">İçindekiler</string>
+    <string name="epub_chapter_short">Bölüm %1$d</string>
+    <string name="reader_settings_title_series">Görünüm ayarları · bu seri</string>
+    <string name="reader_settings_series_default">Uygulama varsayılanları kullanılıyor (Sunucu ayarları → Görünüm varsayılanları). Buradaki değişiklikler yalnızca bu seriye uygulanır.</string>
+    <string name="reader_settings_series_custom">Bu serinin kendi ayarları var.</string>
+    <string name="reader_settings_reset">Uygulama varsayılanlarına sıfırla</string>
+    <string name="end_page_finished">Bitti</string>
+    <string name="end_page_next">Sonraki</string>
+    <string name="end_page_finding_next">Sonraki kitap aranıyor…</string>
+    <string name="end_page_last_book">Bu, serinin son kitabı.</string>
+    <string name="end_page_hint_next">%1$s / OK: sonraki kitaba başla · Back: kapat</string>
+    <string name="end_page_hint_last">%1$s: son sayfaya dön · Back: kapat</string>
+    <string name="reader_page_load_failed">Bu sayfa yüklenemedi.\nTekrar denemek için başka sayfaya geçip geri dönün.</string>
+    <string name="start_page_current">Bu kitap</string>
+    <string name="start_page_previous">Önceki</string>
+    <string name="start_page_finding_previous">Önceki kitap aranıyor…</string>
+    <string name="start_page_first_book">Bu, serinin ilk kitabı.</string>
+    <string name="start_page_hint_previous">%1$s / OK: önceki kitabın son sayfası · Back: kapat</string>
+    <string name="start_page_hint_first">%1$s: ilk sayfaya dön · Back: kapat</string>
+</resources>

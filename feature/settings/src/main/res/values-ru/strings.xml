@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_title">Настройки сервера</string>
+    <string name="settings_section_server">Подключение к серверу</string>
+    <string name="settings_server_url_label">URL сервера</string>
+    <string name="settings_server_url_placeholder">http://192.168.1.100:25600</string>
+    <string name="settings_auth_method_label">Способ входа</string>
+    <string name="settings_auth_method_basic">Email / пароль</string>
+    <string name="settings_auth_method_apikey">API-ключ</string>
+    <string name="settings_username_label">Email (логин Komga)</string>
+    <string name="settings_username_placeholder">admin@example.com</string>
+    <string name="settings_password_label">Пароль</string>
+    <string name="settings_password_placeholder">Пароль</string>
+    <string name="settings_apikey_label">API-ключ</string>
+    <string name="settings_apikey_placeholder">API-ключ</string>
+    <string name="settings_btn_test">Проверить подключение</string>
+    <string name="settings_btn_save">Сохранить и подключиться</string>
+    <string name="settings_status_testing">Проверка сервера&#8230;</string>
+    <string name="settings_status_success">Подключено к серверу.</string>
+    <string name="settings_error_invalid_url">Неверный адрес сервера. (например, http://192.168.1.100:25600)</string>
+    <string name="settings_error_unreachable">Не удаётся связаться с сервером. Проверьте адрес, порт и сеть.</string>
+    <string name="settings_error_unauthorized">Не удалось войти. Проверьте email/пароль или API-ключ. (401)</string>
+    <string name="settings_error_ssl">SSL-сертификат сервера самоподписанный или недоверенный. Самоподписанные сертификаты пока не поддерживаются.</string>
+    <string name="settings_error_other">Не удалось подключиться к серверу: %1$s</string>
+    <string name="settings_error_missing_fields">Введите URL сервера и данные для входа.</string>
+    <string name="settings_section_cache">Кэш</string>
+    <string name="settings_btn_clear_cache">Очистить кэш изображений</string>
+    <string name="settings_status_cache_cleared">Кэш изображений очищен.</string>
+    <string name="settings_saved_servers">Сохранённые серверы</string>
+    <string name="settings_server_active">Используется</string>
+    <string name="settings_server_switch">Переключить</string>
+    <string name="settings_server_remove">Удалить</string>
+    <string name="settings_server_add">Добавить сервер</string>
+    <string name="settings_demo_server">Попробовать демо-сервер Komga</string>
+    <string name="settings_demo_hint">Ещё нет своего сервера? Посмотрите приложение на официальном демо-сервере Komga с открытыми образцами книг.</string>
+    <string name="settings_section_view_defaults">Вид по умолчанию</string>
+    <string name="settings_view_defaults_hint">Применяется ко всем сериям, если вы не изменили серию в режиме чтения (настройки просмотра там действуют только для этой серии).</string>
+    <string name="about_title">О приложении</string>
+    <string name="about_app_version">TV Reader for Komga %1$s</string>
+    <string name="about_developer">Автор: %1$s · %2$s</string>
+    <string name="about_developer_bio">Специалист по промышленным дронам (в основном сельскохозяйственным) в компании Rock Robotics, Корея. Стремится с помощью дронов и роботов сделать сёла, где не хватает рабочих рук, благополучными и удобными для жизни.</string>
+    <string name="about_developer_wish">Желаю мира Корейскому полуострову: пусть война прекратится, оружие превратится в сельхозтехнику и поможет победить бедность, а все, кто страдал от войны, будут счастливы со своими семьями.</string>
+    <string name="about_developer_joke">Приложение создано и отлажено на телевизоре Samsung. Версия для телевизоров Samsung на Tizen тоже скоро выйдет. Samsung, жду вашей щедрой поддержки. (Шутка. Почти.)</string>
+    <string name="about_tribute">Создано с глубоким уважением к проектам Komga и Komelia. Спасибо их авторам и участникам.</string>
+    <string name="about_licenses">Открытый исходный код: Komelia (Apache-2.0, часть логики чтения), komga-client (MIT), Noto Sans (SIL OFL 1.1, баннер), AndroidX / Jetpack Compose, Coil, OkHttp, Ktor (Apache-2.0). TV Reader for Komga — неофициальное приложение, не связанное с Komga или Komelia.</string>
+</resources>

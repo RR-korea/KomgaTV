@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_loading">Đang tải…</string>
+    <string name="library_loading_more">Đang tải thêm…</string>
+    <plurals name="series_books_count">
+        <item quantity="other">%1$d cuốn</item>
+    </plurals>
+    <string name="series_detail_loading">Đang tải…</string>
+    <string name="series_detail_error_title">Đã xảy ra lỗi</string>
+    <string name="series_detail_books_header">Sách</string>
+    <string name="series_detail_status_prefix">Trạng thái: %1$s</string>
+    <string name="series_detail_publisher_prefix">Nhà xuất bản: %1$s</string>
+    <string name="series_detail_genres_prefix">Thể loại: %1$s</string>
+    <string name="series_detail_progress">Trang %1$d/%2$d</string>
+    <string name="series_detail_completed">Đã đọc xong</string>
+    <string name="series_detail_unread">Chưa đọc</string>
+    <string name="series_status_ended">Hoàn thành</string>
+    <string name="series_status_ongoing">Đang tiến hành</string>
+    <string name="series_status_abandoned">Đã ngừng</string>
+    <string name="series_status_hiatus">Tạm ngưng</string>
+    <string name="book_action_mark_read">Đánh dấu đã đọc</string>
+    <string name="book_action_mark_unread">Đánh dấu chưa đọc</string>
+    <string name="book_action_analyze">Phân tích (quản trị)</string>
+    <string name="book_action_done_read">Đã đánh dấu là đã đọc</string>
+    <string name="book_action_done_unread">Đã đánh dấu là chưa đọc</string>
+    <string name="book_action_done_analyze">Đã yêu cầu phân tích — máy chủ đang xử lý</string>
+    <string name="book_action_failed">Không thể thực hiện (chỉ dành cho quản trị viên, hoặc lỗi máy chủ)</string>
+</resources>

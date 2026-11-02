@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_title">サーバー設定</string>
+    <string name="settings_section_server">サーバー接続</string>
+    <string name="settings_server_url_label">サーバーURL</string>
+    <string name="settings_server_url_placeholder">http://192.168.1.100:25600</string>
+    <string name="settings_auth_method_label">ログイン方法</string>
+    <string name="settings_auth_method_basic">メールアドレス / パスワード</string>
+    <string name="settings_auth_method_apikey">APIキー</string>
+    <string name="settings_username_label">メールアドレス (Komgaのログイン)</string>
+    <string name="settings_username_placeholder">admin@example.com</string>
+    <string name="settings_password_label">パスワード</string>
+    <string name="settings_password_placeholder">パスワード</string>
+    <string name="settings_apikey_label">APIキー</string>
+    <string name="settings_apikey_placeholder">APIキー</string>
+    <string name="settings_btn_test">接続テスト</string>
+    <string name="settings_btn_save">保存して接続</string>
+    <string name="settings_status_testing">サーバーを確認中&#8230;</string>
+    <string name="settings_status_success">サーバーに接続しました。</string>
+    <string name="settings_error_invalid_url">サーバーアドレスが正しくありません。(例: http://192.168.1.100:25600)</string>
+    <string name="settings_error_unreachable">サーバーに接続できません。アドレス、ポート、ネットワークを確認してください。</string>
+    <string name="settings_error_unauthorized">ログインに失敗しました。メールアドレス/パスワードまたはAPIキーを確認してください。(401)</string>
+    <string name="settings_error_ssl">サーバーのSSL証明書が自己署名か、信頼されていません。自己署名証明書にはまだ対応していません。</string>
+    <string name="settings_error_other">サーバーに接続できませんでした: %1$s</string>
+    <string name="settings_error_missing_fields">サーバーURLとログイン情報を入力してください。</string>
+    <string name="settings_section_cache">キャッシュ</string>
+    <string name="settings_btn_clear_cache">画像キャッシュを削除</string>
+    <string name="settings_status_cache_cleared">画像キャッシュを削除しました。</string>
+    <string name="settings_saved_servers">保存済みサーバー</string>
+    <string name="settings_server_active">使用中</string>
+    <string name="settings_server_switch">切り替え</string>
+    <string name="settings_server_remove">削除</string>
+    <string name="settings_server_add">サーバーを追加</string>
+    <string name="settings_demo_server">Komga デモサーバーを試す</string>
+    <string name="settings_demo_hint">サーバーがまだありませんか？Komga 公式デモサーバーの公開サンプル本で試せます。</string>
+    <string name="settings_section_view_defaults">表示の既定値</string>
+    <string name="settings_view_defaults_hint">リーダーでシリーズごとに変更しない限り、すべてのシリーズに適用されます (リーダーの表示設定はそのシリーズにのみ適用されます)。</string>
+    <string name="about_title">このアプリについて</string>
+    <string name="about_app_version">TV Reader for Komga %1$s</string>
+    <string name="about_developer">制作: %1$s · %2$s</string>
+    <string name="about_developer_bio">韓国のRock Roboticsに勤める産業用ドローン (主に農業用) の専門家です。人手不足に悩む農村を、ドローンとロボットで豊かで暮らしやすい場所にするために取り組んでいます。</string>
+    <string name="about_developer_wish">朝鮮半島の平和を祈っています。戦争が止み、武器が農機具に変わって貧困がなくなり、戦争に苦しんできたすべての人が家族と幸せに暮らせることを願っています。</string>
+    <string name="about_developer_joke">このアプリはサムスンのテレビで作り、磨き上げました。サムスンテレビ向けの Tizen 版もリリース予定です。サムスンからの手厚いご支援をお待ちしています。（冗談です。たぶん。）</string>
+    <string name="about_tribute">KomgaとKomeliaの両プロジェクトに深い敬意を込めて制作しました。作者と貢献者の皆さまに感謝します。</string>
+    <string name="about_licenses">オープンソース: Komelia (Apache-2.0、リーダーロジックの一部)、komga-client (MIT)、Noto Sans (SIL OFL 1.1、バナー)、AndroidX / Jetpack Compose、Coil、OkHttp、Ktor (Apache-2.0)。TV Reader for Komgaは非公式アプリであり、Komga・Komeliaとは関係ありません。</string>
+</resources>

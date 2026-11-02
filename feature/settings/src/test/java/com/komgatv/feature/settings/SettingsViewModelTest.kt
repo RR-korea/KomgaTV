@@ -199,6 +199,17 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `데모 서버로 둘러보기는 공개 계정을 채우고 연결을 시작한다`() = runTest {
+        viewModel.useDemoServer()
+        val state = viewModel.uiState.value
+        assertEquals(SettingsViewModel.DEMO_SERVER_URL, state.serverUrl)
+        assertEquals("basic", state.authMethod)
+        assertEquals(SettingsViewModel.DEMO_USERNAME, state.username)
+        assertEquals(SettingsViewModel.DEMO_PASSWORD, state.password)
+        assertEquals(true, state.isSaving)
+    }
+
+    @Test
     fun init_loads_stored_settings() = runTest(testDispatcher) {
         val state = viewModel.uiState.value
         assertEquals("http://initial.example.com", state.serverUrl)

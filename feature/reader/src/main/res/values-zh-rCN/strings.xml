@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_loading_page">加载中…</string>
+    <string name="reader_error_prefix">错误：%1$s</string>
+    <string name="reader_page_content_description">第 %1$d 页，共 %2$d 页</string>
+    <string name="reader_page_range_format">第 %1$s 页 / 共 %2$d 页</string>
+    <string name="reader_page_percent_format">%1$d%%</string>
+    <string name="reader_overlay_hint">OK：显示设置 · ▲▼：跳转 10 页 · Back：关闭</string>
+
+    <string name="reader_settings_hint">▲▼：选择 · ◀▶/OK：更改 · Back：关闭</string>
+    <string name="epub_chapter_format">第 %1$d/%2$d 章 · %3$s</string>
+    <string name="epub_overlay_hint">OK：目录 · ▲▼：字号（%1$d%%） · ◀▶：章节 · Back：关闭</string>
+    <string name="epub_chapter_number_format">第 %1$d/%2$d 章</string>
+    <string name="epub_toc_title">目录</string>
+    <string name="epub_chapter_short">第 %1$d 章</string>
+    <string name="reader_settings_title_series">显示设置 · 此系列</string>
+    <string name="reader_settings_series_default">正在使用应用默认设置（服务器设置 → 默认显示设置）。在此处的更改仅适用于此系列。</string>
+    <string name="reader_settings_series_custom">此系列使用单独的设置。</string>
+    <string name="reader_settings_reset">恢复为应用默认设置</string>
+    <string name="end_page_finished">已读完</string>
+    <string name="end_page_next">下一本</string>
+    <string name="end_page_finding_next">正在查找下一本…</string>
+    <string name="end_page_last_book">这是本系列的最后一本。</string>
+    <string name="end_page_hint_next">%1$s / OK：开始阅读下一本 · Back：关闭</string>
+    <string name="end_page_hint_last">%1$s：返回最后一页 · Back：关闭</string>
+    <string name="reader_page_load_failed">无法加载此页。\n翻到其他页再翻回来即可重试。</string>
+    <string name="start_page_current">当前这本</string>
+    <string name="start_page_previous">上一本</string>
+    <string name="start_page_finding_previous">正在查找上一本…</string>
+    <string name="start_page_first_book">这是本系列的第一本。</string>
+    <string name="start_page_hint_previous">%1$s / OK：上一本的最后一页 · Back：关闭</string>
+    <string name="start_page_hint_first">%1$s：返回第一页 · Back：关闭</string>
+</resources>

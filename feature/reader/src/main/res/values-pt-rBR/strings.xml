@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_loading_page">Carregando…</string>
+    <string name="reader_error_prefix">Erro: %1$s</string>
+    <string name="reader_page_content_description">Página %1$d de %2$d</string>
+    <string name="reader_page_range_format">Página %1$s / %2$d</string>
+    <string name="reader_page_percent_format">%1$d%%</string>
+    <string name="reader_overlay_hint">OK: Opções de exibição · ▲▼: Pular 10 páginas · Back: Fechar</string>
+
+    <string name="reader_settings_hint">▲▼: Escolher · ◀▶/OK: Alterar · Back: Fechar</string>
+    <string name="epub_chapter_format">Capítulo %1$d / %2$d · %3$s</string>
+    <string name="epub_overlay_hint">OK: Sumário · ▲▼: Tamanho do texto (%1$d%%) · ◀▶: Capítulo · Back: Fechar</string>
+    <string name="epub_chapter_number_format">Capítulo %1$d / %2$d</string>
+    <string name="epub_toc_title">Sumário</string>
+    <string name="epub_chapter_short">Capítulo %1$d</string>
+    <string name="reader_settings_title_series">Opções de exibição · esta série</string>
+    <string name="reader_settings_series_default">Usando os padrões do app (Configurações do servidor → Padrões de exibição). As alterações aqui valem só para esta série.</string>
+    <string name="reader_settings_series_custom">Esta série tem configurações próprias.</string>
+    <string name="reader_settings_reset">Restaurar padrões do app</string>
+    <string name="end_page_finished">Concluído</string>
+    <string name="end_page_next">Próximo</string>
+    <string name="end_page_finding_next">Procurando o próximo livro…</string>
+    <string name="end_page_last_book">Este é o último livro da série.</string>
+    <string name="end_page_hint_next">%1$s / OK: começar o próximo livro · Back: fechar</string>
+    <string name="end_page_hint_last">%1$s: voltar à última página · Back: fechar</string>
+    <string name="reader_page_load_failed">Não foi possível carregar esta página.\nSaia dela e volte para tentar de novo.</string>
+    <string name="start_page_current">Este livro</string>
+    <string name="start_page_previous">Anterior</string>
+    <string name="start_page_finding_previous">Procurando o livro anterior…</string>
+    <string name="start_page_first_book">Este é o primeiro livro da série.</string>
+    <string name="start_page_hint_previous">%1$s / OK: última página do livro anterior · Back: fechar</string>
+    <string name="start_page_hint_first">%1$s: voltar à primeira página · Back: fechar</string>
+</resources>

@@ -31,3 +31,5 @@ captures/
 .externalNativeBuild/
 .cxx/
 output.json
+dist/
+__pycache__/

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_title">Cari</string>
+    <string name="search_placeholder">Judul seri atau buku</string>
+    <string name="search_voice">Suara</string>
+    <string name="search_hint">Ketik judul seri atau buku. Tekan OK pada kotak untuk membuka keyboard.</string>
+    <string name="search_loading">Mencari…</string>
+    <string name="search_empty">Tidak ada yang cocok dengan “%1$s”.</string>
+    <plurals name="search_books_count">
+        <item quantity="other">%1$d buku</item>
+    </plurals>
+    <string name="search_series_title">Seri (%1$d)</string>
+    <string name="search_books_title">Buku (%1$d)</string>
+</resources>

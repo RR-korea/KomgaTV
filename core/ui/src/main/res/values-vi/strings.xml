@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_not_connected">Chưa kết nối với máy chủ Komga. Hãy kiểm tra cài đặt máy chủ.</string>
+    <string name="error_unreachable">Không thể kết nối tới máy chủ. Hãy kiểm tra địa chỉ và mạng.</string>
+    <string name="error_unauthorized">Máy chủ từ chối đăng nhập. Hãy kiểm tra email/mật khẩu hoặc khóa API.</string>
+    <string name="error_unknown">Đã xảy ra lỗi khi tải.</string>
+    <string name="view_reader_type">Kiểu đọc</string>
+    <string name="view_reader_type_paged">Theo trang</string>
+    <string name="view_reader_type_continuous">Cuộn liên tục</string>
+    <string name="view_layout">Bố cục trang</string>
+    <string name="view_layout_single">Một trang</string>
+    <string name="view_layout_double">Hai trang</string>
+    <string name="view_layout_double_no_cover">Hai trang (không bìa)</string>
+    <string name="view_offset">Lệch trang</string>
+    <string name="view_direction">Hướng đọc</string>
+    <string name="view_direction_ltr">Trái sang phải</string>
+    <string name="view_direction_rtl">Phải sang trái</string>
+    <string name="view_scale">Kiểu tỉ lệ</string>
+    <string name="view_scale_screen">Màn hình</string>
+    <string name="view_scale_fit_width">Vừa chiều rộng</string>
+    <string name="view_scale_fit_height">Vừa chiều cao</string>
+    <string name="view_scale_original">Gốc</string>
+    <string name="view_side_padding">Lề hai bên</string>
+    <string name="view_page_spacing">Khoảng cách trang</string>
+    <string name="view_enhancement">Tăng cường hình ảnh</string>
+    <string name="view_enhancement_off">Tắt</string>
+    <string name="view_enhancement_smooth">Phóng to mượt</string>
+    <string name="view_enhancement_sharpen">Làm nét</string>
+    <string name="view_enhancement_sharpen_strong">Làm nét mạnh</string>
+    <string name="view_percent_value">%1$d%%</string>
+    <string name="view_dp_value">%1$d dp</string>
+    <string name="view_on">Bật</string>
+    <string name="view_off">Tắt</string>
+    <string name="view_zoom">Thu phóng</string>
+    <string name="view_transition">Chuyển trang</string>
+    <string name="view_transition_off">Tắt</string>
+    <string name="view_transition_slide">Trượt</string>
+    <string name="view_transition_fade">Mờ dần</string>
+    <string name="view_contrast">Độ tương phản</string>
+    <string name="view_enhancement_lanczos2">Lanczos2 (nhanh)</string>
+    <string name="view_enhancement_lanczos">Lanczos3</string>
+    <string name="view_enhancement_lanczos4">Lanczos4 (tốt nhất)</string>
+</resources>

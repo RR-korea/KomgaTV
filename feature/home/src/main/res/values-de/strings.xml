@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_loading">Wird geladen&#8230;</string>
+    <string name="home_error_title">Etwas ist schiefgelaufen</string>
+    <string name="home_continue_reading">Weiterlesen</string>
+    <string name="home_libraries">Bibliotheken</string>
+    <string name="home_book_progress">Seite %1$d/%2$d</string>
+    <string name="home_book_completed">Gelesen</string>
+    <string name="home_server_settings">Servereinstellungen</string>
+    <string name="home_search">Suche</string>
+    <string name="home_on_deck">Als Nächstes</string>
+    <string name="home_latest_books">Neue Bücher</string>
+    <string name="home_new_series">Neue Serien</string>
+    <string name="home_updated_series">Aktualisierte Serien</string>
+    <plurals name="home_series_books_count">
+        <item quantity="one">%1$d Band</item>
+        <item quantity="other">%1$d Bände</item>
+    </plurals>
+    <string name="library_action_scan">Bibliothek scannen (Admin)</string>
+    <string name="library_action_empty_trash">Papierkorb leeren (Admin)</string>
+    <string name="library_action_hint">Nach dem Löschen von Dateien auf dem Server: scannen, Abschluss abwarten, dann den Papierkorb leeren.</string>
+    <string name="library_action_done_scan">Scan angefordert — der Server arbeitet jetzt daran</string>
+    <string name="library_action_done_trash">Papierkorb geleert</string>
+    <string name="library_action_failed">Nicht möglich (nur für Admins oder Serverfehler)</string>
+    <string name="reading_action_hint">Löscht den Lesefortschritt auf dem Server (auf allen Geräten) und blendet diese Serie in „Weiterlesen“ und „Als Nächstes“ aus. Sie erscheint wieder, sobald du sie erneut liest.</string>
+    <string name="reading_action_question">Diese Serie aus „Weiterlesen“ entfernen?</string>
+    <string name="reading_action_keep">Behalten</string>
+    <string name="reading_action_remove">Entfernen</string>
+</resources>

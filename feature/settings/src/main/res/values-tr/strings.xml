@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_title">Sunucu ayarları</string>
+    <string name="settings_section_server">Sunucu bağlantısı</string>
+    <string name="settings_server_url_label">Sunucu URL\'si</string>
+    <string name="settings_server_url_placeholder">http://192.168.1.100:25600</string>
+    <string name="settings_auth_method_label">Giriş yöntemi</string>
+    <string name="settings_auth_method_basic">E-posta / şifre</string>
+    <string name="settings_auth_method_apikey">API anahtarı</string>
+    <string name="settings_username_label">E-posta (Komga giriş bilginiz)</string>
+    <string name="settings_username_placeholder">admin@example.com</string>
+    <string name="settings_password_label">Şifre</string>
+    <string name="settings_password_placeholder">Şifre</string>
+    <string name="settings_apikey_label">API anahtarı</string>
+    <string name="settings_apikey_placeholder">API anahtarı</string>
+    <string name="settings_btn_test">Bağlantıyı test et</string>
+    <string name="settings_btn_save">Kaydet ve bağlan</string>
+    <string name="settings_status_testing">Sunucu kontrol ediliyor…</string>
+    <string name="settings_status_success">Sunucuya bağlanıldı.</string>
+    <string name="settings_error_invalid_url">Sunucu adresi geçerli değil. (ör. http://192.168.1.100:25600)</string>
+    <string name="settings_error_unreachable">Sunucuya ulaşılamıyor. Adresi, portu ve ağı kontrol edin.</string>
+    <string name="settings_error_unauthorized">Giriş başarısız. E-posta/şifrenizi veya API anahtarınızı kontrol edin. (401)</string>
+    <string name="settings_error_ssl">Sunucunun SSL sertifikası kendinden imzalı veya güvenilir değil. Kendinden imzalı sertifikalar henüz desteklenmiyor.</string>
+    <string name="settings_error_other">Sunucuya bağlanılamadı: %1$s</string>
+    <string name="settings_error_missing_fields">Sunucu URL\'sini ve giriş bilgilerinizi girin.</string>
+    <string name="settings_section_cache">Önbellek</string>
+    <string name="settings_btn_clear_cache">Görüntü önbelleğini temizle</string>
+    <string name="settings_status_cache_cleared">Görüntü önbelleği temizlendi.</string>
+    <string name="settings_saved_servers">Kayıtlı sunucular</string>
+    <string name="settings_server_active">Kullanımda</string>
+    <string name="settings_server_switch">Geçiş yap</string>
+    <string name="settings_server_remove">Kaldır</string>
+    <string name="settings_server_add">Başka sunucu ekle</string>
+    <string name="settings_demo_server">Komga demo sunucusunu dene</string>
+    <string name="settings_demo_hint">Henüz sunucun yok mu? Resmî Komga demo sunucusundaki herkese açık örnek kitaplarla uygulamayı keşfet.</string>
+    <string name="settings_section_view_defaults">Görünüm varsayılanları</string>
+    <string name="settings_view_defaults_hint">Okuyucuda bir seri için değiştirmediğiniz sürece tüm serilerde kullanılır (oradaki Görünüm ayarları yalnızca o seriye uygulanır).</string>
+    <string name="about_title">Hakkında</string>
+    <string name="about_app_version">TV Reader for Komga %1$s</string>
+    <string name="about_developer">Geliştiren: %1$s · %2$s</string>
+    <string name="about_developer_bio">Kore\'deki Rock Robotics\'te endüstriyel drone uzmanı olarak, ağırlıklı olarak tarım dronlarıyla çalışıyor — iş gücü sıkıntısı çeken tarım köylerini dronlar ve robotlarla müreffeh, yaşanabilir yerlere dönüştürmek için uğraşıyor.</string>
+    <string name="about_developer_wish">Kore Yarımadası\'nda barış diliyorum — savaşın durmasını, silahların yoksulluğu kovan tarım makinelerine dönüşmesini ve savaştan acı çeken herkesin ailesiyle birlikte mutlu olmasını.</string>
+    <string name="about_developer_joke">Bu uygulama bir Samsung TV\'de geliştirildi ve cilalandı. Samsung TV\'ler için Tizen sürümü de yolda. Samsung, cömert desteğinizi bekliyorum. (Şaka. Sayılır.)</string>
+    <string name="about_tribute">Komga ve Komelia projelerine derin saygıyla yapıldı. Yazarlarına ve katkıda bulunan herkese teşekkürler.</string>
+    <string name="about_licenses">Açık kaynak: Komelia (Apache-2.0, okuyucu mantığının bir kısmı), komga-client (MIT), Noto Sans (SIL OFL 1.1, banner), AndroidX / Jetpack Compose, Coil, OkHttp, Ktor (Apache-2.0). TV Reader for Komga resmî olmayan bir uygulamadır; Komga veya Komelia ile bağlantılı değildir.</string>
+</resources>

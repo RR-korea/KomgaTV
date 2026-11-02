@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_loading">Chargement&#8230;</string>
+    <string name="home_error_title">Une erreur s\'est produite</string>
+    <string name="home_continue_reading">Continuer la lecture</string>
+    <string name="home_libraries">Bibliothèques</string>
+    <string name="home_book_progress">Page %1$d/%2$d</string>
+    <string name="home_book_completed">Terminé</string>
+    <string name="home_server_settings">Paramètres du serveur</string>
+    <string name="home_search">Rechercher</string>
+    <string name="home_on_deck">À suivre</string>
+    <string name="home_latest_books">Livres récemment ajoutés</string>
+    <string name="home_new_series">Séries récemment ajoutées</string>
+    <string name="home_updated_series">Séries récemment mises à jour</string>
+    <plurals name="home_series_books_count">
+        <item quantity="one">%1$d livre</item>
+        <item quantity="many">%1$d livres</item>
+        <item quantity="other">%1$d livres</item>
+    </plurals>
+    <string name="library_action_scan">Scanner la bibliothèque (admin)</string>
+    <string name="library_action_empty_trash">Vider la corbeille (admin)</string>
+    <string name="library_action_hint">Après avoir supprimé des fichiers sur le serveur : lancez un scan, attendez la fin, puis videz la corbeille.</string>
+    <string name="library_action_done_scan">Scan demandé — le serveur s\'en occupe</string>
+    <string name="library_action_done_trash">Corbeille vidée</string>
+    <string name="library_action_failed">Action impossible (admin uniquement ou erreur du serveur)</string>
+    <string name="reading_action_hint">Efface la progression de lecture sur le serveur (sur tous les appareils) et retire cette série de « Continuer la lecture » et « À suivre ». Elle réapparaîtra quand vous la relirez.</string>
+    <string name="reading_action_question">Retirer cette série de « Continuer la lecture » ?</string>
+    <string name="reading_action_keep">Garder</string>
+    <string name="reading_action_remove">Retirer</string>
+</resources>

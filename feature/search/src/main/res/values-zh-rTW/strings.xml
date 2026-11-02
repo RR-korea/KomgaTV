@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_title">搜尋</string>
+    <string name="search_placeholder">系列名稱或書名</string>
+    <string name="search_voice">語音</string>
+    <string name="search_hint">輸入系列名稱或書名。在輸入框上按 OK 即可開啟鍵盤。</string>
+    <string name="search_loading">搜尋中&#8230;</string>
+    <string name="search_empty">找不到符合「%1$s」的結果。</string>
+    <plurals name="search_books_count">
+        <item quantity="other">%1$d 本</item>
+    </plurals>
+    <string name="search_series_title">系列（%1$d）</string>
+    <string name="search_books_title">書籍（%1$d）</string>
+</resources>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_loading">Cargando&#8230;</string>
+    <string name="home_error_title">Algo salió mal</string>
+    <string name="home_continue_reading">Seguir leyendo</string>
+    <string name="home_libraries">Bibliotecas</string>
+    <string name="home_book_progress">Página %1$d/%2$d</string>
+    <string name="home_book_completed">Leído</string>
+    <string name="home_server_settings">Ajustes del servidor</string>
+    <string name="home_search">Buscar</string>
+    <string name="home_on_deck">A continuación</string>
+    <string name="home_latest_books">Libros recientes</string>
+    <string name="home_new_series">Series nuevas</string>
+    <string name="home_updated_series">Series actualizadas</string>
+    <plurals name="home_series_books_count">
+        <item quantity="one">%1$d tomo</item>
+        <item quantity="many">%1$d tomos</item>
+        <item quantity="other">%1$d tomos</item>
+    </plurals>
+    <string name="library_action_scan">Escanear biblioteca (admin)</string>
+    <string name="library_action_empty_trash">Vaciar papelera (admin)</string>
+    <string name="library_action_hint">Tras borrar archivos en el servidor: escanea, espera a que termine y vacía la papelera.</string>
+    <string name="library_action_done_scan">Escaneo solicitado — el servidor ya está en ello</string>
+    <string name="library_action_done_trash">Papelera vaciada</string>
+    <string name="library_action_failed">No se pudo hacer (solo admin o error del servidor)</string>
+    <string name="reading_action_hint">Borra el progreso de lectura en el servidor (en todos los dispositivos) y oculta esta serie de «Seguir leyendo» y «A continuación». Volverá a aparecer cuando la leas de nuevo.</string>
+    <string name="reading_action_question">¿Quitar esta serie de «Seguir leyendo»?</string>
+    <string name="reading_action_keep">Conservar</string>
+    <string name="reading_action_remove">Quitar</string>
+</resources>

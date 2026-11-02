@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_title">Servereinstellungen</string>
+    <string name="settings_section_server">Serververbindung</string>
+    <string name="settings_server_url_label">Server-URL</string>
+    <string name="settings_server_url_placeholder">http://192.168.1.100:25600</string>
+    <string name="settings_auth_method_label">Anmeldemethode</string>
+    <string name="settings_auth_method_basic">E-Mail / Passwort</string>
+    <string name="settings_auth_method_apikey">API-Schlüssel</string>
+    <string name="settings_username_label">E-Mail (dein Komga-Login)</string>
+    <string name="settings_username_placeholder">admin@example.com</string>
+    <string name="settings_password_label">Passwort</string>
+    <string name="settings_password_placeholder">Passwort</string>
+    <string name="settings_apikey_label">API-Schlüssel</string>
+    <string name="settings_apikey_placeholder">API-Schlüssel</string>
+    <string name="settings_btn_test">Verbindung testen</string>
+    <string name="settings_btn_save">Speichern und verbinden</string>
+    <string name="settings_status_testing">Server wird geprüft&#8230;</string>
+    <string name="settings_status_success">Mit dem Server verbunden.</string>
+    <string name="settings_error_invalid_url">Die Serveradresse ist ungültig. (z. B. http://192.168.1.100:25600)</string>
+    <string name="settings_error_unreachable">Server nicht erreichbar. Prüfe Adresse, Port und Netzwerk.</string>
+    <string name="settings_error_unauthorized">Anmeldung fehlgeschlagen. Prüfe E-Mail/Passwort oder API-Schlüssel. (401)</string>
+    <string name="settings_error_ssl">Das SSL-Zertifikat des Servers ist selbstsigniert oder nicht vertrauenswürdig. Selbstsignierte Zertifikate werden noch nicht unterstützt.</string>
+    <string name="settings_error_other">Verbindung zum Server fehlgeschlagen: %1$s</string>
+    <string name="settings_error_missing_fields">Gib die Server-URL und deine Anmeldedaten ein.</string>
+    <string name="settings_section_cache">Cache</string>
+    <string name="settings_btn_clear_cache">Bild-Cache leeren</string>
+    <string name="settings_status_cache_cleared">Bild-Cache geleert.</string>
+    <string name="settings_saved_servers">Gespeicherte Server</string>
+    <string name="settings_server_active">Aktiv</string>
+    <string name="settings_server_switch">Wechseln</string>
+    <string name="settings_server_remove">Entfernen</string>
+    <string name="settings_server_add">Weiteren Server hinzufügen</string>
+    <string name="settings_demo_server">Komga-Demoserver ausprobieren</string>
+    <string name="settings_demo_hint">Noch keinen Server? Schau dich mit dem offiziellen Komga-Demoserver und seinen öffentlichen Beispielbüchern um.</string>
+    <string name="settings_section_view_defaults">Standardansicht</string>
+    <string name="settings_view_defaults_hint">Gilt für alle Serien, außer du änderst eine Serie beim Lesen (die Ansicht dort gilt nur für diese Serie).</string>
+    <string name="about_title">Info</string>
+    <string name="about_app_version">TV Reader for Komga %1$s</string>
+    <string name="about_developer">Entwickelt von %1$s · %2$s</string>
+    <string name="about_developer_bio">Arbeitet bei Rock Robotics in Korea als Spezialist für Industriedrohnen, vor allem Agrardrohnen — mit dem Ziel, Dörfer mit Arbeitskräftemangel durch Drohnen und Roboter zu lebenswerten, wohlhabenden Orten zu machen.</string>
+    <string name="about_developer_wish">Ich wünsche mir Frieden auf der koreanischen Halbinsel: dass der Krieg endet, Waffen zu Landmaschinen werden und die Armut vertreiben und alle, die unter dem Krieg gelitten haben, mit ihren Familien glücklich sein können.</string>
+    <string name="about_developer_joke">Auf einem Samsung-Fernseher entwickelt und verfeinert. Eine Tizen-Version für Samsung-Fernseher ist ebenfalls geplant. Liebes Samsung, ich freue mich auf eure großzügige Unterstützung. (Kleiner Scherz. Größtenteils.)</string>
+    <string name="about_tribute">Mit großem Respekt vor den Projekten Komga und Komelia entwickelt. Danke an ihre Autoren und Mitwirkenden.</string>
+    <string name="about_licenses">Open Source: Komelia (Apache-2.0, Teile der Reader-Logik), komga-client (MIT), Noto Sans (SIL OFL 1.1, Banner), AndroidX / Jetpack Compose, Coil, OkHttp, Ktor (Apache-2.0). TV Reader for Komga ist eine inoffizielle App ohne Verbindung zu Komga oder Komelia.</string>
+</resources>
