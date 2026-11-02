@@ -6,6 +6,12 @@
 - **`com.komgatv.app` 그대로 쓴다** (사용자 결정, 2026-11-01 — 한때 `com.rock.komga`로 바꾸기로 했다가 취소).
 - 개발판·릴리즈판이 같은 이름이라 TV에 깔린 앱을 그대로 업데이트할 수 있다(서명 키가 같아야 함).
 
+## 심사·시험용 서버 (Komga 공식 데모, 공개 계정)
+- 주소: `https://demo.komga.org`
+- 이메일: `demo@komga.org` / 비밀번호: `komga-demo`
+- 라이브러리: Comics, eBooks (2026-11-02 로그인 확인)
+- Play Console → 앱 콘텐츠 → **앱 액세스**에 이 계정을 적어 심사자가 로그인할 수 있게 한다. 개인 서버 정보는 절대 쓰지 않는다.
+
 ## 그 밖에
 - 버전: `app/build.gradle.kts` 위쪽 `appVersionCode`·`appVersionName` (APK 이름에도 들어간다).
 - 서명: 릴리즈 키 만들기, `release` 빌드(`isMinifyEnabled = true`) 실기 확인.
