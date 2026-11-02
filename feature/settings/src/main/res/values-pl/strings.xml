@@ -40,6 +40,7 @@
     <string name="about_developer">Autor: %1$s · %2$s</string>
     <string name="about_developer_bio">Pracuje w Rock Robotics w Korei jako specjalista od dronów przemysłowych, głównie rolniczych — dąży do tego, by wsie, w których brakuje rąk do pracy, dzięki dronom i robotom stały się zamożnymi i dobrymi do życia miejscami.</string>
     <string name="about_developer_wish">Życzę pokoju na Półwyspie Koreańskim: niech wojna się skończy, broń zamieni się w maszyny rolnicze i pokona biedę, a wszyscy, którzy cierpieli z powodu wojny, będą szczęśliwi ze swoimi rodzinami.</string>
+    <string name="about_developer_joke">Aplikacja powstała i była dopracowywana na telewizorze Samsung. Wersja na Tizen dla telewizorów Samsung również jest w drodze. Samsungu, czekam na hojne wsparcie. (Żartuję. Prawie.)</string>
     <string name="about_tribute">Stworzone z głębokim szacunkiem dla projektów Komga i Komelia. Dziękujemy ich autorom i współtwórcom.</string>
     <string name="about_licenses">Open source: Komelia (Apache-2.0, część logiki czytnika), komga-client (MIT), Noto Sans (SIL OFL 1.1, baner), AndroidX / Jetpack Compose, Coil, OkHttp, Ktor (Apache-2.0). TV Reader for Komga to nieoficjalna aplikacja, niezwiązana z Komga ani Komelia.</string>
 </resources>

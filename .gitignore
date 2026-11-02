@@ -32,3 +32,4 @@ captures/
 .cxx/
 output.json
 dist/
+__pycache__/

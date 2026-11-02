@@ -40,6 +40,7 @@
     <string name="about_developer">Phát triển bởi %1$s · %2$s</string>
     <string name="about_developer_bio">Làm việc tại Rock Robotics ở Hàn Quốc với vai trò chuyên gia drone công nghiệp, chủ yếu là drone nông nghiệp — nỗ lực biến những làng quê thiếu nhân lực thành nơi trù phú, đáng sống nhờ drone và robot.</string>
     <string name="about_developer_wish">Tôi cầu mong hòa bình cho Bán đảo Triều Tiên — mong chiến tranh chấm dứt, vũ khí trở thành máy nông nghiệp đẩy lùi đói nghèo, và mọi người từng chịu khổ vì chiến tranh được hạnh phúc bên gia đình.</string>
+    <string name="about_developer_joke">Ứng dụng này được làm và trau chuốt trên TV Samsung. Phiên bản Tizen cho TV Samsung cũng sắp ra mắt. Samsung ơi, tôi đang chờ sự hỗ trợ hào phóng của bạn. (Đùa thôi. Chắc vậy.)</string>
     <string name="about_tribute">Được tạo ra với lòng kính trọng sâu sắc dành cho dự án Komga và Komelia. Xin cảm ơn các tác giả và những người đóng góp.</string>
     <string name="about_licenses">Mã nguồn mở: Komelia (Apache-2.0, một phần logic trình đọc), komga-client (MIT), Noto Sans (SIL OFL 1.1, banner), AndroidX / Jetpack Compose, Coil, OkHttp, Ktor (Apache-2.0). TV Reader for Komga là ứng dụng không chính thức, không liên kết với Komga hay Komelia.</string>
 </resources>

@@ -40,6 +40,7 @@
     <string name="about_developer">制作: %1$s · %2$s</string>
     <string name="about_developer_bio">韓国のRock Roboticsに勤める産業用ドローン (主に農業用) の専門家です。人手不足に悩む農村を、ドローンとロボットで豊かで暮らしやすい場所にするために取り組んでいます。</string>
     <string name="about_developer_wish">朝鮮半島の平和を祈っています。戦争が止み、武器が農機具に変わって貧困がなくなり、戦争に苦しんできたすべての人が家族と幸せに暮らせることを願っています。</string>
+    <string name="about_developer_joke">このアプリはサムスンのテレビで作り、磨き上げました。サムスンテレビ向けの Tizen 版もリリース予定です。サムスンからの手厚いご支援をお待ちしています。（冗談です。たぶん。）</string>
     <string name="about_tribute">KomgaとKomeliaの両プロジェクトに深い敬意を込めて制作しました。作者と貢献者の皆さまに感謝します。</string>
     <string name="about_licenses">オープンソース: Komelia (Apache-2.0、リーダーロジックの一部)、komga-client (MIT)、Noto Sans (SIL OFL 1.1、バナー)、AndroidX / Jetpack Compose、Coil、OkHttp、Ktor (Apache-2.0)。TV Reader for Komgaは非公式アプリであり、Komga・Komeliaとは関係ありません。</string>
 </resources>

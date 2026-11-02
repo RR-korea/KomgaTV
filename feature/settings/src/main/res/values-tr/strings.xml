@@ -40,6 +40,7 @@
     <string name="about_developer">Geliştiren: %1$s · %2$s</string>
     <string name="about_developer_bio">Kore\'deki Rock Robotics\'te endüstriyel drone uzmanı olarak, ağırlıklı olarak tarım dronlarıyla çalışıyor — iş gücü sıkıntısı çeken tarım köylerini dronlar ve robotlarla müreffeh, yaşanabilir yerlere dönüştürmek için uğraşıyor.</string>
     <string name="about_developer_wish">Kore Yarımadası\'nda barış diliyorum — savaşın durmasını, silahların yoksulluğu kovan tarım makinelerine dönüşmesini ve savaştan acı çeken herkesin ailesiyle birlikte mutlu olmasını.</string>
+    <string name="about_developer_joke">Bu uygulama bir Samsung TV\'de geliştirildi ve cilalandı. Samsung TV\'ler için Tizen sürümü de yolda. Samsung, cömert desteğinizi bekliyorum. (Şaka. Sayılır.)</string>
     <string name="about_tribute">Komga ve Komelia projelerine derin saygıyla yapıldı. Yazarlarına ve katkıda bulunan herkese teşekkürler.</string>
     <string name="about_licenses">Açık kaynak: Komelia (Apache-2.0, okuyucu mantığının bir kısmı), komga-client (MIT), Noto Sans (SIL OFL 1.1, banner), AndroidX / Jetpack Compose, Coil, OkHttp, Ktor (Apache-2.0). TV Reader for Komga resmî olmayan bir uygulamadır; Komga veya Komelia ile bağlantılı değildir.</string>
 </resources>
