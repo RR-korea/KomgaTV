@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_loading_page">Wczytywanie…</string>
+    <string name="reader_error_prefix">Błąd: %1$s</string>
+    <string name="reader_page_content_description">Strona %1$d z %2$d</string>
+    <string name="reader_page_range_format">Strona %1$s / %2$d</string>
+    <string name="reader_page_percent_format">%1$d%%</string>
+    <string name="reader_overlay_hint">OK: Ustawienia widoku · ▲▼: Skok o 10 stron · Back: Zamknij</string>
+
+    <string name="reader_settings_hint">▲▼: Wybierz · ◀▶/OK: Zmień · Back: Zamknij</string>
+    <string name="epub_chapter_format">Rozdział %1$d / %2$d · %3$s</string>
+    <string name="epub_overlay_hint">OK: Spis treści · ▲▼: Rozmiar tekstu (%1$d%%) · ◀▶: Rozdział · Back: Zamknij</string>
+    <string name="epub_chapter_number_format">Rozdział %1$d / %2$d</string>
+    <string name="epub_toc_title">Spis treści</string>
+    <string name="epub_chapter_short">Rozdział %1$d</string>
+    <string name="reader_settings_title_series">Ustawienia widoku · ta seria</string>
+    <string name="reader_settings_series_default">Używane są domyślne ustawienia aplikacji (Ustawienia serwera → Domyślny widok). Zmiany tutaj dotyczą tylko tej serii.</string>
+    <string name="reader_settings_series_custom">Ta seria ma własne ustawienia.</string>
+    <string name="reader_settings_reset">Przywróć domyślne ustawienia aplikacji</string>
+    <string name="end_page_finished">Przeczytane</string>
+    <string name="end_page_next">Następna</string>
+    <string name="end_page_finding_next">Szukanie następnej książki…</string>
+    <string name="end_page_last_book">To ostatnia książka w tej serii.</string>
+    <string name="end_page_hint_next">%1$s / OK: zacznij następną książkę · Back: zamknij</string>
+    <string name="end_page_hint_last">%1$s: wróć do ostatniej strony · Back: zamknij</string>
+    <string name="reader_page_load_failed">Nie udało się wczytać tej strony.\nPrzejdź na inną stronę i wróć, aby spróbować ponownie.</string>
+    <string name="start_page_current">Ta książka</string>
+    <string name="start_page_previous">Poprzednia</string>
+    <string name="start_page_finding_previous">Szukanie poprzedniej książki…</string>
+    <string name="start_page_first_book">To pierwsza książka w tej serii.</string>
+    <string name="start_page_hint_previous">%1$s / OK: ostatnia strona poprzedniej książki · Back: zamknij</string>
+    <string name="start_page_hint_first">%1$s: wróć do pierwszej strony · Back: zamknij</string>
+</resources>

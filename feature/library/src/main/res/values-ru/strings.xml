@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_loading">Загрузка&#8230;</string>
+    <string name="library_loading_more">Загружаем ещё&#8230;</string>
+    <plurals name="series_books_count">
+        <item quantity="one">%1$d том</item>
+        <item quantity="few">%1$d тома</item>
+        <item quantity="many">%1$d томов</item>
+        <item quantity="other">%1$d тома</item>
+    </plurals>
+    <string name="series_detail_loading">Загрузка&#8230;</string>
+    <string name="series_detail_error_title">Что-то пошло не так</string>
+    <string name="series_detail_books_header">Тома</string>
+    <string name="series_detail_status_prefix">Статус: %1$s</string>
+    <string name="series_detail_publisher_prefix">Издатель: %1$s</string>
+    <string name="series_detail_genres_prefix">Жанры: %1$s</string>
+    <string name="series_detail_progress">Стр. %1$d/%2$d</string>
+    <string name="series_detail_completed">Прочитано</string>
+    <string name="series_detail_unread">Не прочитано</string>
+    <string name="series_status_ended">Завершена</string>
+    <string name="series_status_ongoing">Выходит</string>
+    <string name="series_status_abandoned">Заброшена</string>
+    <string name="series_status_hiatus">На паузе</string>
+    <string name="book_action_mark_read">Отметить прочитанным</string>
+    <string name="book_action_mark_unread">Отметить непрочитанным</string>
+    <string name="book_action_analyze">Анализ (админ)</string>
+    <string name="book_action_done_read">Отмечено как прочитанное</string>
+    <string name="book_action_done_unread">Отмечено как непрочитанное</string>
+    <string name="book_action_done_analyze">Анализ запрошен — сервер уже работает</string>
+    <string name="book_action_failed">Не удалось (только для админа или ошибка сервера)</string>
+</resources>

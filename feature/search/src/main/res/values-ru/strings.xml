@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_title">Поиск</string>
+    <string name="search_placeholder">Название серии или книги</string>
+    <string name="search_voice">Голос</string>
+    <string name="search_hint">Введите название серии или книги. Нажмите OK на поле ввода, чтобы открыть клавиатуру.</string>
+    <string name="search_loading">Поиск&#8230;</string>
+    <string name="search_empty">По запросу «%1$s» ничего не найдено.</string>
+    <plurals name="search_books_count">
+        <item quantity="one">%1$d том</item>
+        <item quantity="few">%1$d тома</item>
+        <item quantity="many">%1$d томов</item>
+        <item quantity="other">%1$d тома</item>
+    </plurals>
+    <string name="search_series_title">Серии (%1$d)</string>
+    <string name="search_books_title">Книги (%1$d)</string>
+</resources>

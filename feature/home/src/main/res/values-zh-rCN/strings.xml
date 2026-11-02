@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_loading">加载中&#8230;</string>
+    <string name="home_error_title">出错了</string>
+    <string name="home_continue_reading">继续阅读</string>
+    <string name="home_libraries">书库</string>
+    <string name="home_book_progress">第 %1$d/%2$d 页</string>
+    <string name="home_book_completed">已读完</string>
+    <string name="home_server_settings">服务器设置</string>
+    <string name="home_search">搜索</string>
+    <string name="home_on_deck">下一本</string>
+    <string name="home_latest_books">最近添加的书籍</string>
+    <string name="home_new_series">最近添加的系列</string>
+    <string name="home_updated_series">最近更新的系列</string>
+    <plurals name="home_series_books_count">
+        <item quantity="other">%1$d 本</item>
+    </plurals>
+    <string name="library_action_scan">扫描书库（管理员）</string>
+    <string name="library_action_empty_trash">清空回收站（管理员）</string>
+    <string name="library_action_hint">在服务器上删除文件后：先扫描，等待扫描完成，再清空回收站。</string>
+    <string name="library_action_done_scan">已请求扫描 — 服务器正在处理</string>
+    <string name="library_action_done_trash">回收站已清空</string>
+    <string name="library_action_failed">无法执行（仅限管理员，或服务器出错）</string>
+    <string name="reading_action_hint">将清除服务器上的阅读进度（所有设备同步生效），并把此系列从“继续阅读”和“下一本”中移除。再次阅读后会重新出现。</string>
+    <string name="reading_action_question">要将此系列从“继续阅读”中移除吗？</string>
+    <string name="reading_action_keep">保留</string>
+    <string name="reading_action_remove">移除</string>
+</resources>

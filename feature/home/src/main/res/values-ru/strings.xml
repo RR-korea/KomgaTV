@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_loading">Загрузка&#8230;</string>
+    <string name="home_error_title">Что-то пошло не так</string>
+    <string name="home_continue_reading">Продолжить чтение</string>
+    <string name="home_libraries">Библиотеки</string>
+    <string name="home_book_progress">Стр. %1$d/%2$d</string>
+    <string name="home_book_completed">Прочитано</string>
+    <string name="home_server_settings">Настройки сервера</string>
+    <string name="home_search">Поиск</string>
+    <string name="home_on_deck">Следующие тома</string>
+    <string name="home_latest_books">Недавно добавленные книги</string>
+    <string name="home_new_series">Недавно добавленные серии</string>
+    <string name="home_updated_series">Недавно обновлённые серии</string>
+    <plurals name="home_series_books_count">
+        <item quantity="one">%1$d том</item>
+        <item quantity="few">%1$d тома</item>
+        <item quantity="many">%1$d томов</item>
+        <item quantity="other">%1$d тома</item>
+    </plurals>
+    <string name="library_action_scan">Сканировать библиотеку (админ)</string>
+    <string name="library_action_empty_trash">Очистить корзину (админ)</string>
+    <string name="library_action_hint">После удаления файлов на сервере: запустите сканирование, дождитесь его окончания, затем очистите корзину.</string>
+    <string name="library_action_done_scan">Сканирование запрошено — сервер уже работает</string>
+    <string name="library_action_done_trash">Корзина очищена</string>
+    <string name="library_action_failed">Не удалось (только для админа или ошибка сервера)</string>
+    <string name="reading_action_hint">Сбрасывает прогресс чтения на сервере (на всех устройствах) и убирает эту серию из «Продолжить чтение» и «Следующие тома». Она вернётся, когда вы снова начнёте её читать.</string>
+    <string name="reading_action_question">Убрать эту серию из «Продолжить чтение»?</string>
+    <string name="reading_action_keep">Оставить</string>
+    <string name="reading_action_remove">Убрать</string>
+</resources>

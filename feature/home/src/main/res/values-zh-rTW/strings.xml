@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_loading">載入中&#8230;</string>
+    <string name="home_error_title">發生錯誤</string>
+    <string name="home_continue_reading">繼續閱讀</string>
+    <string name="home_libraries">書庫</string>
+    <string name="home_book_progress">第 %1$d/%2$d 頁</string>
+    <string name="home_book_completed">已讀完</string>
+    <string name="home_server_settings">伺服器設定</string>
+    <string name="home_search">搜尋</string>
+    <string name="home_on_deck">下一本</string>
+    <string name="home_latest_books">最近新增的書籍</string>
+    <string name="home_new_series">最近新增的系列</string>
+    <string name="home_updated_series">最近更新的系列</string>
+    <plurals name="home_series_books_count">
+        <item quantity="other">%1$d 本</item>
+    </plurals>
+    <string name="library_action_scan">掃描書庫（管理員）</string>
+    <string name="library_action_empty_trash">清空垃圾桶（管理員）</string>
+    <string name="library_action_hint">在伺服器上刪除檔案後：先掃描，等待掃描完成，再清空垃圾桶。</string>
+    <string name="library_action_done_scan">已要求掃描 — 伺服器正在處理</string>
+    <string name="library_action_done_trash">垃圾桶已清空</string>
+    <string name="library_action_failed">無法執行（僅限管理員，或伺服器發生錯誤）</string>
+    <string name="reading_action_hint">將清除伺服器上的閱讀進度（所有裝置都會套用），並把此系列從「繼續閱讀」和「下一本」中移除。再次閱讀後會重新出現。</string>
+    <string name="reading_action_question">要將此系列從「繼續閱讀」中移除嗎？</string>
+    <string name="reading_action_keep">保留</string>
+    <string name="reading_action_remove">移除</string>
+</resources>

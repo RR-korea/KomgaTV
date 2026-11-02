@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_title">Tìm kiếm</string>
+    <string name="search_placeholder">Tên bộ truyện hoặc sách</string>
+    <string name="search_voice">Giọng nói</string>
+    <string name="search_hint">Nhập tên bộ truyện hoặc sách. Nhấn OK trên ô nhập để mở bàn phím.</string>
+    <string name="search_loading">Đang tìm…</string>
+    <string name="search_empty">Không có kết quả cho “%1$s”.</string>
+    <plurals name="search_books_count">
+        <item quantity="other">%1$d cuốn</item>
+    </plurals>
+    <string name="search_series_title">Bộ truyện (%1$d)</string>
+    <string name="search_books_title">Sách (%1$d)</string>
+</resources>

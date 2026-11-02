@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_loading">Yükleniyor…</string>
+    <string name="home_error_title">Bir sorun oluştu</string>
+    <string name="home_continue_reading">Okumaya devam et</string>
+    <string name="home_libraries">Kütüphaneler</string>
+    <string name="home_book_progress">Sayfa %1$d/%2$d</string>
+    <string name="home_book_completed">Bitti</string>
+    <string name="home_server_settings">Sunucu ayarları</string>
+    <string name="home_search">Ara</string>
+    <string name="home_on_deck">Sıradaki</string>
+    <string name="home_latest_books">Son eklenen kitaplar</string>
+    <string name="home_new_series">Son eklenen seriler</string>
+    <string name="home_updated_series">Son güncellenen seriler</string>
+    <plurals name="home_series_books_count">
+        <item quantity="one">%1$d kitap</item>
+        <item quantity="other">%1$d kitap</item>
+    </plurals>
+    <string name="library_action_scan">Kütüphaneyi tara (yönetici)</string>
+    <string name="library_action_empty_trash">Çöpü boşalt (yönetici)</string>
+    <string name="library_action_hint">Sunucuda dosya sildikten sonra: tarayın, bitmesini bekleyin, ardından çöpü boşaltın.</string>
+    <string name="library_action_done_scan">Tarama istendi — sunucu şu anda işliyor</string>
+    <string name="library_action_done_trash">Çöp boşaltıldı</string>
+    <string name="library_action_failed">Yapılamadı (yalnızca yönetici veya sunucu hatası)</string>
+    <string name="reading_action_hint">Sunucudaki okuma ilerlemesini (tüm cihazlarda) siler ve bu seriyi “Okumaya devam et” ile “Sıradaki” listelerinden gizler. Tekrar okuduğunuzda geri gelir.</string>
+    <string name="reading_action_question">Bu seri “Okumaya devam et” listesinden kaldırılsın mı?</string>
+    <string name="reading_action_keep">Kalsın</string>
+    <string name="reading_action_remove">Kaldır</string>
+</resources>

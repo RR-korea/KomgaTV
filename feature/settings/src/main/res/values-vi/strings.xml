@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_title">Cài đặt máy chủ</string>
+    <string name="settings_section_server">Kết nối máy chủ</string>
+    <string name="settings_server_url_label">URL máy chủ</string>
+    <string name="settings_server_url_placeholder">http://192.168.1.100:25600</string>
+    <string name="settings_auth_method_label">Phương thức đăng nhập</string>
+    <string name="settings_auth_method_basic">Email / mật khẩu</string>
+    <string name="settings_auth_method_apikey">Khóa API</string>
+    <string name="settings_username_label">Email (tài khoản Komga của bạn)</string>
+    <string name="settings_username_placeholder">admin@example.com</string>
+    <string name="settings_password_label">Mật khẩu</string>
+    <string name="settings_password_placeholder">Mật khẩu</string>
+    <string name="settings_apikey_label">Khóa API</string>
+    <string name="settings_apikey_placeholder">Khóa API</string>
+    <string name="settings_btn_test">Kiểm tra kết nối</string>
+    <string name="settings_btn_save">Lưu và kết nối</string>
+    <string name="settings_status_testing">Đang kiểm tra máy chủ…</string>
+    <string name="settings_status_success">Đã kết nối với máy chủ.</string>
+    <string name="settings_error_invalid_url">Địa chỉ máy chủ không hợp lệ. (vd. http://192.168.1.100:25600)</string>
+    <string name="settings_error_unreachable">Không thể kết nối tới máy chủ. Hãy kiểm tra địa chỉ, cổng và mạng.</string>
+    <string name="settings_error_unauthorized">Đăng nhập thất bại. Hãy kiểm tra email/mật khẩu hoặc khóa API. (401)</string>
+    <string name="settings_error_ssl">Chứng chỉ SSL của máy chủ là tự ký hoặc không đáng tin cậy. Hiện chưa hỗ trợ chứng chỉ tự ký.</string>
+    <string name="settings_error_other">Không thể kết nối tới máy chủ: %1$s</string>
+    <string name="settings_error_missing_fields">Hãy nhập URL máy chủ và thông tin đăng nhập.</string>
+    <string name="settings_section_cache">Bộ nhớ đệm</string>
+    <string name="settings_btn_clear_cache">Xóa bộ nhớ đệm hình ảnh</string>
+    <string name="settings_status_cache_cleared">Đã xóa bộ nhớ đệm hình ảnh.</string>
+    <string name="settings_saved_servers">Máy chủ đã lưu</string>
+    <string name="settings_server_active">Đang dùng</string>
+    <string name="settings_server_switch">Chuyển</string>
+    <string name="settings_server_remove">Xóa</string>
+    <string name="settings_server_add">Thêm máy chủ khác</string>
+    <string name="settings_section_view_defaults">Hiển thị mặc định</string>
+    <string name="settings_view_defaults_hint">Áp dụng cho mọi bộ truyện, trừ khi bạn thay đổi riêng một bộ trong trình đọc (Cài đặt hiển thị ở đó chỉ áp dụng cho bộ truyện đó).</string>
+    <string name="about_title">Giới thiệu</string>
+    <string name="about_app_version">TV Reader for Komga %1$s</string>
+    <string name="about_developer">Phát triển bởi %1$s · %2$s</string>
+    <string name="about_developer_bio">Làm việc tại Rock Robotics ở Hàn Quốc với vai trò chuyên gia drone công nghiệp, chủ yếu là drone nông nghiệp — nỗ lực biến những làng quê thiếu nhân lực thành nơi trù phú, đáng sống nhờ drone và robot.</string>
+    <string name="about_developer_wish">Tôi cầu mong hòa bình cho Bán đảo Triều Tiên — mong chiến tranh chấm dứt, vũ khí trở thành máy nông nghiệp đẩy lùi đói nghèo, và mọi người từng chịu khổ vì chiến tranh được hạnh phúc bên gia đình.</string>
+    <string name="about_tribute">Được tạo ra với lòng kính trọng sâu sắc dành cho dự án Komga và Komelia. Xin cảm ơn các tác giả và những người đóng góp.</string>
+    <string name="about_licenses">Mã nguồn mở: Komelia (Apache-2.0, một phần logic trình đọc), komga-client (MIT), Noto Sans (SIL OFL 1.1, banner), AndroidX / Jetpack Compose, Coil, OkHttp, Ktor (Apache-2.0). TV Reader for Komga là ứng dụng không chính thức, không liên kết với Komga hay Komelia.</string>
+</resources>

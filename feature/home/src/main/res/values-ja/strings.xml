@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_loading">読み込み中&#8230;</string>
+    <string name="home_error_title">エラーが発生しました</string>
+    <string name="home_continue_reading">読書中</string>
+    <string name="home_libraries">ライブラリ</string>
+    <string name="home_book_progress">%1$d/%2$dページ</string>
+    <string name="home_book_completed">読了</string>
+    <string name="home_server_settings">サーバー設定</string>
+    <string name="home_search">検索</string>
+    <string name="home_on_deck">次の巻</string>
+    <string name="home_latest_books">最近追加された本</string>
+    <string name="home_new_series">最近追加されたシリーズ</string>
+    <string name="home_updated_series">最近更新されたシリーズ</string>
+    <plurals name="home_series_books_count">
+        <item quantity="other">%1$d冊</item>
+    </plurals>
+    <string name="library_action_scan">ライブラリをスキャン (管理者)</string>
+    <string name="library_action_empty_trash">ゴミ箱を空にする (管理者)</string>
+    <string name="library_action_hint">サーバーでファイルを削除した後は、スキャン → 完了を待つ → ゴミ箱を空にする、の順に行ってください。</string>
+    <string name="library_action_done_scan">スキャンを要求しました — サーバーで処理中です</string>
+    <string name="library_action_done_trash">ゴミ箱を空にしました</string>
+    <string name="library_action_failed">実行できませんでした (管理者のみ、またはサーバーエラー)</string>
+    <string name="reading_action_hint">サーバー上の読書の進み具合を消去し (すべてのデバイスに反映)、このシリーズを「読書中」と「次の巻」から外します。もう一度読むと再び表示されます。</string>
+    <string name="reading_action_question">このシリーズを「読書中」から外しますか？</string>
+    <string name="reading_action_keep">残す</string>
+    <string name="reading_action_remove">外す</string>
+</resources>

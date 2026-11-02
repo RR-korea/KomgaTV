@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_loading">Carregando&#8230;</string>
+    <string name="home_error_title">Algo deu errado</string>
+    <string name="home_continue_reading">Continuar lendo</string>
+    <string name="home_libraries">Bibliotecas</string>
+    <string name="home_book_progress">Página %1$d/%2$d</string>
+    <string name="home_book_completed">Concluído</string>
+    <string name="home_server_settings">Configurações do servidor</string>
+    <string name="home_search">Buscar</string>
+    <string name="home_on_deck">A seguir</string>
+    <string name="home_latest_books">Livros adicionados recentemente</string>
+    <string name="home_new_series">Séries adicionadas recentemente</string>
+    <string name="home_updated_series">Séries atualizadas recentemente</string>
+    <plurals name="home_series_books_count">
+        <item quantity="one">%1$d livro</item>
+        <item quantity="many">%1$d livros</item>
+        <item quantity="other">%1$d livros</item>
+    </plurals>
+    <string name="library_action_scan">Escanear biblioteca (admin)</string>
+    <string name="library_action_empty_trash">Esvaziar lixeira (admin)</string>
+    <string name="library_action_hint">Depois de excluir arquivos no servidor: escaneie, aguarde terminar e então esvazie a lixeira.</string>
+    <string name="library_action_done_scan">Escaneamento solicitado — o servidor está processando agora</string>
+    <string name="library_action_done_trash">Lixeira esvaziada</string>
+    <string name="library_action_failed">Não foi possível (só admin ou erro no servidor)</string>
+    <string name="reading_action_hint">Apaga o progresso de leitura no servidor (em todos os dispositivos) e tira esta série de “Continuar lendo” e “A seguir”. Ela volta quando você a ler de novo.</string>
+    <string name="reading_action_question">Remover esta série de “Continuar lendo”?</string>
+    <string name="reading_action_keep">Manter</string>
+    <string name="reading_action_remove">Remover</string>
+</resources>

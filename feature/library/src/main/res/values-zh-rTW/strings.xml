@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_loading">載入中&#8230;</string>
+    <string name="library_loading_more">正在載入更多&#8230;</string>
+    <plurals name="series_books_count">
+        <item quantity="other">%1$d 本</item>
+    </plurals>
+    <string name="series_detail_loading">載入中&#8230;</string>
+    <string name="series_detail_error_title">發生錯誤</string>
+    <string name="series_detail_books_header">書籍</string>
+    <string name="series_detail_status_prefix">狀態：%1$s</string>
+    <string name="series_detail_publisher_prefix">出版社：%1$s</string>
+    <string name="series_detail_genres_prefix">類型：%1$s</string>
+    <string name="series_detail_progress">第 %1$d/%2$d 頁</string>
+    <string name="series_detail_completed">已讀完</string>
+    <string name="series_detail_unread">未讀</string>
+    <string name="series_status_ended">已完結</string>
+    <string name="series_status_ongoing">連載中</string>
+    <string name="series_status_abandoned">已停更</string>
+    <string name="series_status_hiatus">休刊中</string>
+    <string name="book_action_mark_read">標記為已讀</string>
+    <string name="book_action_mark_unread">標記為未讀</string>
+    <string name="book_action_analyze">分析（管理員）</string>
+    <string name="book_action_done_read">已標記為已讀</string>
+    <string name="book_action_done_unread">已標記為未讀</string>
+    <string name="book_action_done_analyze">已要求分析 — 伺服器正在處理</string>
+    <string name="book_action_failed">無法執行（僅限管理員，或伺服器發生錯誤）</string>
+</resources>

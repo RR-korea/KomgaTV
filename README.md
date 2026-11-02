@@ -187,6 +187,10 @@ MIT License — [LICENSE](LICENSE) 참조
 
 **David Hojin Kim** · sinabro@gmail.com · https://github.com/RR-korea/KomgaTV
 
+한국의 락로보틱스(Rock Robotics)에서 일하는 산업용 드론(농업용 중심) 전문가입니다. 일손 부족에 시달리는 농촌을 드론과 로봇으로 윤택하고 살 만한 곳으로 만들기 위해 노력하고 있습니다.
+
+한반도의 평화를 기원합니다. 전쟁이 멈추고 무기가 농기계로 바뀌어 빈곤을 몰아내고, 전쟁으로 고통받던 모든 이들이 가족과 함께 행복하기를 바랍니다.
+
 [Komga](https://github.com/gotson/komga)와 [Komelia](https://github.com/Snd-R/Komelia) 프로젝트에 대한 존경을 담아 만들었습니다.
 KomgaTV는 두 프로젝트와 공식 관계가 없는 독립 프로젝트입니다. 사용한 오픈소스는 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)를 보세요.
 

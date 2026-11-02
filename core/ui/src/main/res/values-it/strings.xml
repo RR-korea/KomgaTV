@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_not_connected">Non connesso a un server Komga. Controlla le impostazioni del server.</string>
+    <string name="error_unreachable">Impossibile raggiungere il server. Controlla l\'indirizzo e la rete.</string>
+    <string name="error_unauthorized">Il server ha rifiutato l\'accesso. Controlla email/password o chiave API.</string>
+    <string name="error_unknown">Si è verificato un errore durante il caricamento.</string>
+    <string name="view_reader_type">Tipo di lettore</string>
+    <string name="view_reader_type_paged">A pagine</string>
+    <string name="view_reader_type_continuous">Continuo</string>
+    <string name="view_layout">Layout pagina</string>
+    <string name="view_layout_single">Pagina singola</string>
+    <string name="view_layout_double">Pagina doppia</string>
+    <string name="view_layout_double_no_cover">Pagina doppia (senza copertina)</string>
+    <string name="view_offset">Sfalsa pagine</string>
+    <string name="view_direction">Direzione di lettura</string>
+    <string name="view_direction_ltr">Da sinistra a destra</string>
+    <string name="view_direction_rtl">Da destra a sinistra</string>
+    <string name="view_scale">Ridimensionamento</string>
+    <string name="view_scale_screen">Schermo</string>
+    <string name="view_scale_fit_width">Adatta alla larghezza</string>
+    <string name="view_scale_fit_height">Adatta all\'altezza</string>
+    <string name="view_scale_original">Originale</string>
+    <string name="view_side_padding">Margini laterali</string>
+    <string name="view_page_spacing">Spaziatura pagine</string>
+    <string name="view_enhancement">Miglioramento immagine</string>
+    <string name="view_enhancement_off">Nessuno</string>
+    <string name="view_enhancement_smooth">Ingrandimento fluido</string>
+    <string name="view_enhancement_sharpen">Nitidezza</string>
+    <string name="view_enhancement_sharpen_strong">Nitidezza elevata</string>
+    <string name="view_percent_value">%1$d%%</string>
+    <string name="view_dp_value">%1$d dp</string>
+    <string name="view_on">Attivo</string>
+    <string name="view_off">Disattivo</string>
+    <string name="view_zoom">Zoom</string>
+    <string name="view_transition">Transizione pagina</string>
+    <string name="view_transition_off">Nessuna</string>
+    <string name="view_transition_slide">Scorrimento</string>
+    <string name="view_transition_fade">Dissolvenza</string>
+    <string name="view_contrast">Contrasto</string>
+    <string name="view_enhancement_lanczos2">Lanczos2 (veloce)</string>
+    <string name="view_enhancement_lanczos">Lanczos3</string>
+    <string name="view_enhancement_lanczos4">Lanczos4 (migliore)</string>
+</resources>

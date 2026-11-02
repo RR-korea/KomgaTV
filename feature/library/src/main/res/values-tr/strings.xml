@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_loading">Yükleniyor…</string>
+    <string name="library_loading_more">Daha fazlası yükleniyor…</string>
+    <plurals name="series_books_count">
+        <item quantity="one">%1$d kitap</item>
+        <item quantity="other">%1$d kitap</item>
+    </plurals>
+    <string name="series_detail_loading">Yükleniyor…</string>
+    <string name="series_detail_error_title">Bir sorun oluştu</string>
+    <string name="series_detail_books_header">Kitaplar</string>
+    <string name="series_detail_status_prefix">Durum: %1$s</string>
+    <string name="series_detail_publisher_prefix">Yayıncı: %1$s</string>
+    <string name="series_detail_genres_prefix">Türler: %1$s</string>
+    <string name="series_detail_progress">Sayfa %1$d/%2$d</string>
+    <string name="series_detail_completed">Bitti</string>
+    <string name="series_detail_unread">Okunmadı</string>
+    <string name="series_status_ended">Sona erdi</string>
+    <string name="series_status_ongoing">Devam ediyor</string>
+    <string name="series_status_abandoned">Bırakıldı</string>
+    <string name="series_status_hiatus">Ara verildi</string>
+    <string name="book_action_mark_read">Okundu olarak işaretle</string>
+    <string name="book_action_mark_unread">Okunmadı olarak işaretle</string>
+    <string name="book_action_analyze">Analiz et (yönetici)</string>
+    <string name="book_action_done_read">Okundu olarak işaretlendi</string>
+    <string name="book_action_done_unread">Okunmadı olarak işaretlendi</string>
+    <string name="book_action_done_analyze">Analiz istendi — sunucu şu anda işliyor</string>
+    <string name="book_action_failed">Yapılamadı (yalnızca yönetici veya sunucu hatası)</string>
+</resources>

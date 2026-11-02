@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_loading">Memuat…</string>
+    <string name="library_loading_more">Memuat lagi…</string>
+    <plurals name="series_books_count">
+        <item quantity="other">%1$d buku</item>
+    </plurals>
+    <string name="series_detail_loading">Memuat…</string>
+    <string name="series_detail_error_title">Terjadi kesalahan</string>
+    <string name="series_detail_books_header">Buku</string>
+    <string name="series_detail_status_prefix">Status: %1$s</string>
+    <string name="series_detail_publisher_prefix">Penerbit: %1$s</string>
+    <string name="series_detail_genres_prefix">Genre: %1$s</string>
+    <string name="series_detail_progress">Halaman %1$d/%2$d</string>
+    <string name="series_detail_completed">Selesai</string>
+    <string name="series_detail_unread">Belum dibaca</string>
+    <string name="series_status_ended">Tamat</string>
+    <string name="series_status_ongoing">Berlanjut</string>
+    <string name="series_status_abandoned">Dihentikan</string>
+    <string name="series_status_hiatus">Hiatus</string>
+    <string name="book_action_mark_read">Tandai sudah dibaca</string>
+    <string name="book_action_mark_unread">Tandai belum dibaca</string>
+    <string name="book_action_analyze">Analisis (admin)</string>
+    <string name="book_action_done_read">Ditandai sudah dibaca</string>
+    <string name="book_action_done_unread">Ditandai belum dibaca</string>
+    <string name="book_action_done_analyze">Analisis diminta — server sedang memprosesnya</string>
+    <string name="book_action_failed">Tidak dapat dilakukan (khusus admin, atau kesalahan server)</string>
+</resources>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_not_connected">Komgaサーバーに接続されていません。サーバー設定を確認してください。</string>
+    <string name="error_unreachable">サーバーに接続できません。アドレスとネットワークを確認してください。</string>
+    <string name="error_unauthorized">サーバーにログインを拒否されました。メールアドレス/パスワードまたはAPIキーを確認してください。</string>
+    <string name="error_unknown">読み込み中にエラーが発生しました。</string>
+    <string name="view_reader_type">リーダーの種類</string>
+    <string name="view_reader_type_paged">ページめくり</string>
+    <string name="view_reader_type_continuous">縦スクロール</string>
+    <string name="view_layout">ページ配置</string>
+    <string name="view_layout_single">単ページ</string>
+    <string name="view_layout_double">見開き</string>
+    <string name="view_layout_double_no_cover">見開き (表紙なし)</string>
+    <string name="view_offset">ページをずらす</string>
+    <string name="view_direction">読む方向</string>
+    <string name="view_direction_ltr">左から右</string>
+    <string name="view_direction_rtl">右から左</string>
+    <string name="view_scale">表示サイズ</string>
+    <string name="view_scale_screen">画面に合わせる</string>
+    <string name="view_scale_fit_width">幅に合わせる</string>
+    <string name="view_scale_fit_height">高さに合わせる</string>
+    <string name="view_scale_original">原寸</string>
+    <string name="view_side_padding">左右の余白</string>
+    <string name="view_page_spacing">ページ間隔</string>
+    <string name="view_enhancement">画質補正</string>
+    <string name="view_enhancement_off">オフ</string>
+    <string name="view_enhancement_smooth">なめらか拡大</string>
+    <string name="view_enhancement_sharpen">シャープ</string>
+    <string name="view_enhancement_sharpen_strong">シャープ (強)</string>
+    <string name="view_percent_value">%1$d%%</string>
+    <string name="view_dp_value">%1$d dp</string>
+    <string name="view_on">オン</string>
+    <string name="view_off">オフ</string>
+    <string name="view_zoom">ズーム</string>
+    <string name="view_transition">ページ切り替え効果</string>
+    <string name="view_transition_off">オフ</string>
+    <string name="view_transition_slide">スライド</string>
+    <string name="view_transition_fade">フェード</string>
+    <string name="view_contrast">コントラスト</string>
+    <string name="view_enhancement_lanczos2">Lanczos2 (高速)</string>
+    <string name="view_enhancement_lanczos">Lanczos3</string>
+    <string name="view_enhancement_lanczos4">Lanczos4 (高画質)</string>
+</resources>

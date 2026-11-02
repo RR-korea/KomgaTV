@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_title">検索</string>
+    <string name="search_placeholder">シリーズ名・本のタイトル</string>
+    <string name="search_voice">音声</string>
+    <string name="search_hint">シリーズ名か本のタイトルを入力してください。入力欄でOKを押すとキーボードが開きます。</string>
+    <string name="search_loading">検索中&#8230;</string>
+    <string name="search_empty">「%1$s」に一致するものはありません。</string>
+    <plurals name="search_books_count">
+        <item quantity="other">%1$d冊</item>
+    </plurals>
+    <string name="search_series_title">シリーズ (%1$d)</string>
+    <string name="search_books_title">本 (%1$d)</string>
+</resources>

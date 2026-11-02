@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_loading_page">Caricamento…</string>
+    <string name="reader_error_prefix">Errore: %1$s</string>
+    <string name="reader_page_content_description">Pagina %1$d di %2$d</string>
+    <string name="reader_page_range_format">Pagina %1$s / %2$d</string>
+    <string name="reader_page_percent_format">%1$d%%</string>
+    <string name="reader_overlay_hint">OK: Opzioni di lettura · ▲▼: Salta 10 pagine · Back: Chiudi</string>
+
+    <!-- 보기 설정 패널 (Komelia의 이름을 따름) -->
+    <string name="reader_settings_hint">▲▼: Scegli · ◀▶/OK: Cambia · Back: Chiudi</string>
+    <string name="epub_chapter_format">Capitolo %1$d / %2$d · %3$s</string>
+    <string name="epub_overlay_hint">OK: Indice · ▲▼: Dimensione testo (%1$d%%) · ◀▶: Capitolo · Back: Chiudi</string>
+    <string name="epub_chapter_number_format">Capitolo %1$d / %2$d</string>
+    <string name="epub_toc_title">Indice</string>
+    <string name="epub_chapter_short">Capitolo %1$d</string>
+    <string name="reader_settings_title_series">Opzioni di lettura · questa serie</string>
+    <string name="reader_settings_series_default">Impostazioni predefinite dell\'app (Impostazioni server → Opzioni di lettura predefinite). Le modifiche fatte qui valgono solo per questa serie.</string>
+    <string name="reader_settings_series_custom">Questa serie ha impostazioni proprie.</string>
+    <string name="reader_settings_reset">Ripristina predefiniti dell\'app</string>
+    <string name="end_page_finished">Completato</string>
+    <string name="end_page_next">Successivo</string>
+    <string name="end_page_finding_next">Ricerca del libro successivo…</string>
+    <string name="end_page_last_book">Questo è l\'ultimo libro della serie.</string>
+    <string name="end_page_hint_next">%1$s / OK: inizia il libro successivo · Back: chiudi</string>
+    <string name="end_page_hint_last">%1$s: torna all\'ultima pagina · Back: chiudi</string>
+    <string name="reader_page_load_failed">Impossibile caricare questa pagina.\nCambia pagina e torna indietro per riprovare.</string>
+    <string name="start_page_current">Questo libro</string>
+    <string name="start_page_previous">Precedente</string>
+    <string name="start_page_finding_previous">Ricerca del libro precedente…</string>
+    <string name="start_page_first_book">Questo è il primo libro della serie.</string>
+    <string name="start_page_hint_previous">%1$s / OK: ultima pagina del libro precedente · Back: chiudi</string>
+    <string name="start_page_hint_first">%1$s: torna alla prima pagina · Back: chiudi</string>
+</resources>

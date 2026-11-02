@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_loading_page">載入中…</string>
+    <string name="reader_error_prefix">錯誤：%1$s</string>
+    <string name="reader_page_content_description">第 %1$d 頁，共 %2$d 頁</string>
+    <string name="reader_page_range_format">第 %1$s 頁 / 共 %2$d 頁</string>
+    <string name="reader_page_percent_format">%1$d%%</string>
+    <string name="reader_overlay_hint">OK：顯示設定 · ▲▼：跳 10 頁 · Back：關閉</string>
+
+    <string name="reader_settings_hint">▲▼：選擇 · ◀▶/OK：變更 · Back：關閉</string>
+    <string name="epub_chapter_format">第 %1$d/%2$d 章 · %3$s</string>
+    <string name="epub_overlay_hint">OK：目錄 · ▲▼：文字大小（%1$d%%） · ◀▶：章節 · Back：關閉</string>
+    <string name="epub_chapter_number_format">第 %1$d/%2$d 章</string>
+    <string name="epub_toc_title">目錄</string>
+    <string name="epub_chapter_short">第 %1$d 章</string>
+    <string name="reader_settings_title_series">顯示設定 · 此系列</string>
+    <string name="reader_settings_series_default">目前使用 App 預設值（伺服器設定 → 預設顯示設定）。在此變更的設定只會套用至此系列。</string>
+    <string name="reader_settings_series_custom">此系列使用專屬設定。</string>
+    <string name="reader_settings_reset">重設為 App 預設值</string>
+    <string name="end_page_finished">已讀完</string>
+    <string name="end_page_next">下一本</string>
+    <string name="end_page_finding_next">正在尋找下一本…</string>
+    <string name="end_page_last_book">這是本系列的最後一本。</string>
+    <string name="end_page_hint_next">%1$s / OK：開始閱讀下一本 · Back：關閉</string>
+    <string name="end_page_hint_last">%1$s：回到最後一頁 · Back：關閉</string>
+    <string name="reader_page_load_failed">無法載入此頁。\n翻到其他頁再翻回來即可重試。</string>
+    <string name="start_page_current">目前這本</string>
+    <string name="start_page_previous">上一本</string>
+    <string name="start_page_finding_previous">正在尋找上一本…</string>
+    <string name="start_page_first_book">這是本系列的第一本。</string>
+    <string name="start_page_hint_previous">%1$s / OK：上一本的最後一頁 · Back：關閉</string>
+    <string name="start_page_hint_first">%1$s：回到第一頁 · Back：關閉</string>
+</resources>
