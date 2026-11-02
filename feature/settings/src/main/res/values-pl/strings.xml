@@ -31,6 +31,8 @@
     <string name="settings_server_switch">Przełącz</string>
     <string name="settings_server_remove">Usuń</string>
     <string name="settings_server_add">Dodaj kolejny serwer</string>
+    <string name="settings_demo_server">Wypróbuj serwer demo Komga</string>
+    <string name="settings_demo_hint">Nie masz jeszcze serwera? Rozejrzyj się na oficjalnym serwerze demo Komga z publicznymi przykładowymi książkami.</string>
     <string name="settings_section_view_defaults">Domyślny widok</string>
     <string name="settings_view_defaults_hint">Dotyczy wszystkich serii, chyba że zmienisz ustawienia serii w czytniku (tamtejsze ustawienia widoku dotyczą tylko tej serii).</string>
     <string name="about_title">O aplikacji</string>

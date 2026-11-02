@@ -31,6 +31,8 @@
     <string name="settings_server_switch">Cambiar</string>
     <string name="settings_server_remove">Quitar</string>
     <string name="settings_server_add">Añadir otro servidor</string>
+    <string name="settings_demo_server">Probar el servidor de demostración de Komga</string>
+    <string name="settings_demo_hint">¿Aún no tienes servidor? Explora la app con el servidor de demostración oficial de Komga y sus libros de ejemplo públicos.</string>
     <string name="settings_section_view_defaults">Vista predeterminada</string>
     <string name="settings_view_defaults_hint">Se aplica a todas las series, salvo las que cambies en el lector (allí, la vista solo afecta a esa serie).</string>
     <string name="about_title">Acerca de</string>

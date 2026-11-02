@@ -89,6 +89,11 @@ class SettingsViewModel @Inject constructor(
     companion object {
         /** 서버를 바꾼 뒤 세션이 새 서버를 가리킬 때까지 기다리는 최대 시간 */
         const val SWITCH_WAIT_MILLIS = 5_000L
+
+        /** Komga 공식 데모 서버 — 공개 계정 (서버 없이 둘러보기, 스토어 심사용) */
+        const val DEMO_SERVER_URL = "https://demo.komga.org"
+        const val DEMO_USERNAME = "demo@komga.org"
+        const val DEMO_PASSWORD = "komga-demo"
     }
 
     init {
@@ -295,6 +300,20 @@ class SettingsViewModel @Inject constructor(
             connectionResult = ConnectionResult.None,
             saveSuccess = false,
         )
+    }
+
+    /** 입력칸을 데모 서버 공개 계정으로 채우고 바로 연결·저장한다 */
+    fun useDemoServer() {
+        _uiState.value = _uiState.value.copy(
+            serverUrl = DEMO_SERVER_URL,
+            authMethod = "basic",
+            username = DEMO_USERNAME,
+            password = DEMO_PASSWORD,
+            apiKey = "",
+            connectionResult = ConnectionResult.None,
+            saveSuccess = false,
+        )
+        saveSettings()
     }
 
     /**

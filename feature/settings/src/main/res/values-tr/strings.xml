@@ -31,6 +31,8 @@
     <string name="settings_server_switch">Geçiş yap</string>
     <string name="settings_server_remove">Kaldır</string>
     <string name="settings_server_add">Başka sunucu ekle</string>
+    <string name="settings_demo_server">Komga demo sunucusunu dene</string>
+    <string name="settings_demo_hint">Henüz sunucun yok mu? Resmî Komga demo sunucusundaki herkese açık örnek kitaplarla uygulamayı keşfet.</string>
     <string name="settings_section_view_defaults">Görünüm varsayılanları</string>
     <string name="settings_view_defaults_hint">Okuyucuda bir seri için değiştirmediğiniz sürece tüm serilerde kullanılır (oradaki Görünüm ayarları yalnızca o seriye uygulanır).</string>
     <string name="about_title">Hakkında</string>

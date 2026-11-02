@@ -99,6 +99,9 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         // ========== 저장된 서버 ==========
+        // 데모 서버가 아직 저장되지 않았으면 [데모 서버로 둘러보기]를 보여 준다
+        val demoSaved = savedServers.any { it.url.trimEnd('/') == SettingsViewModel.DEMO_SERVER_URL }
+        val onDemo: (() -> Unit)? = if (demoSaved) null else viewModel::useDemoServer
         if (savedServers.isNotEmpty()) {
             SavedServersSection(
                 servers = savedServers,
@@ -108,7 +111,19 @@ fun SettingsScreen(
                     viewModel.startNewServer()
                     firstFocusRequester.requestFocus()
                 },
+                onDemo = onDemo,
             )
+            Spacer(modifier = Modifier.height(32.dp))
+        } else if (onDemo != null) {
+            Text(
+                text = stringResource(R.string.settings_demo_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(onClick = onDemo) {
+                Text(stringResource(R.string.settings_demo_server))
+            }
             Spacer(modifier = Modifier.height(32.dp))
         }
 
@@ -303,6 +318,7 @@ private fun SavedServersSection(
     onSwitch: (String) -> Unit,
     onRemove: (String) -> Unit,
     onAddNew: () -> Unit,
+    onDemo: (() -> Unit)?,
 ) {
     Text(
         text = stringResource(R.string.settings_saved_servers),
@@ -349,8 +365,15 @@ private fun SavedServersSection(
                 }
             }
         }
-        OutlinedButton(onClick = onAddNew) {
-            Text(stringResource(R.string.settings_server_add))
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            OutlinedButton(onClick = onAddNew) {
+                Text(stringResource(R.string.settings_server_add))
+            }
+            if (onDemo != null) {
+                OutlinedButton(onClick = onDemo) {
+                    Text(stringResource(R.string.settings_demo_server))
+                }
+            }
         }
     }
 }

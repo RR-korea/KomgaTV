@@ -31,6 +31,8 @@
     <string name="settings_server_switch">Chuyển</string>
     <string name="settings_server_remove">Xóa</string>
     <string name="settings_server_add">Thêm máy chủ khác</string>
+    <string name="settings_demo_server">Dùng thử máy chủ demo Komga</string>
+    <string name="settings_demo_hint">Chưa có máy chủ? Hãy khám phá ứng dụng với máy chủ demo chính thức của Komga và các sách mẫu công khai.</string>
     <string name="settings_section_view_defaults">Hiển thị mặc định</string>
     <string name="settings_view_defaults_hint">Áp dụng cho mọi bộ truyện, trừ khi bạn thay đổi riêng một bộ trong trình đọc (Cài đặt hiển thị ở đó chỉ áp dụng cho bộ truyện đó).</string>
     <string name="about_title">Giới thiệu</string>

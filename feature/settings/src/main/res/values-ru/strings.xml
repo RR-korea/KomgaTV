@@ -31,6 +31,8 @@
     <string name="settings_server_switch">Переключить</string>
     <string name="settings_server_remove">Удалить</string>
     <string name="settings_server_add">Добавить сервер</string>
+    <string name="settings_demo_server">Попробовать демо-сервер Komga</string>
+    <string name="settings_demo_hint">Ещё нет своего сервера? Посмотрите приложение на официальном демо-сервере Komga с открытыми образцами книг.</string>
     <string name="settings_section_view_defaults">Вид по умолчанию</string>
     <string name="settings_view_defaults_hint">Применяется ко всем сериям, если вы не изменили серию в режиме чтения (настройки просмотра там действуют только для этой серии).</string>
     <string name="about_title">О приложении</string>

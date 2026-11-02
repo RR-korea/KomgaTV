@@ -206,6 +206,8 @@ class DefaultServerPreferences @Inject constructor(
      */
     override suspend fun saveServerUrl(url: String) {
         context.dataStore.edit { prefs ->
+            // 지금 서버를 먼저 목록에 남긴다 — 예전 버전에서 연결한 서버는 목록에 없어서, 주소를 덮어쓰면 사라졌다
+            rememberActive(prefs)
             prefs[KEY_SERVER_URL] = url.trimEnd('/')
         }
     }

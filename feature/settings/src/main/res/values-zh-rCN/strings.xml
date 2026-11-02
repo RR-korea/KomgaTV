@@ -31,6 +31,8 @@
     <string name="settings_server_switch">切换</string>
     <string name="settings_server_remove">移除</string>
     <string name="settings_server_add">添加其他服务器</string>
+    <string name="settings_demo_server">试用 Komga 演示服务器</string>
+    <string name="settings_demo_hint">还没有服务器？可以用 Komga 官方演示服务器上的公开示例书籍体验一下。</string>
     <string name="settings_section_view_defaults">默认显示设置</string>
     <string name="settings_view_defaults_hint">适用于所有系列，除非你在阅读器中单独更改某个系列（阅读器中的显示设置仅适用于该系列）。</string>
     <string name="about_title">关于</string>

@@ -31,6 +31,8 @@
     <string name="settings_server_switch">Wechseln</string>
     <string name="settings_server_remove">Entfernen</string>
     <string name="settings_server_add">Weiteren Server hinzufügen</string>
+    <string name="settings_demo_server">Komga-Demoserver ausprobieren</string>
+    <string name="settings_demo_hint">Noch keinen Server? Schau dich mit dem offiziellen Komga-Demoserver und seinen öffentlichen Beispielbüchern um.</string>
     <string name="settings_section_view_defaults">Standardansicht</string>
     <string name="settings_view_defaults_hint">Gilt für alle Serien, außer du änderst eine Serie beim Lesen (die Ansicht dort gilt nur für diese Serie).</string>
     <string name="about_title">Info</string>
