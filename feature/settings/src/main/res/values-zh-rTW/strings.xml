@@ -40,6 +40,7 @@
     <string name="about_developer">開發者：%1$s · %2$s</string>
     <string name="about_developer_bio">任職於韓國 Rock Robotics，是以農業無人機為主的工業無人機專家，致力於透過無人機與機器人，讓人力短缺的農村變得富足宜居。</string>
     <string name="about_developer_wish">祈願朝鮮半島和平。願戰爭停止，武器化為農機，驅除貧困；願所有飽受戰爭之苦的人都能與家人幸福相守。</string>
+    <string name="about_developer_joke">這個 App 是在三星電視上打造和打磨的。三星電視的 Tizen 版本也即將推出。期待三星的慷慨支持。（開個玩笑……大概吧。）</string>
     <string name="about_tribute">謹以深深的敬意獻給 Komga 與 Komelia 專案。感謝其作者與貢獻者。</string>
     <string name="about_licenses">開放原始碼元件：Komelia（Apache-2.0，部分閱讀器邏輯）、komga-client（MIT）、Noto Sans（SIL OFL 1.1，橫幅）、AndroidX / Jetpack Compose、Coil、OkHttp、Ktor（Apache-2.0）。TV Reader for Komga 為非官方 App，與 Komga 或 Komelia 無任何關聯。</string>
 </resources>

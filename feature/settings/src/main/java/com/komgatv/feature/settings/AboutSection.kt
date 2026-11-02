@@ -80,6 +80,11 @@ internal fun AboutSection() {
             style = MaterialTheme.typography.bodyMedium,
             color = colors.onSurface,
         )
+        Text(
+            text = stringResource(R.string.about_developer_joke),
+            style = MaterialTheme.typography.bodyMedium,
+            color = colors.onSurfaceVariant,
+        )
         Text(text = KOMGATV_GITHUB, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF80B9FF))
         Text(
             text = stringResource(R.string.about_tribute),
