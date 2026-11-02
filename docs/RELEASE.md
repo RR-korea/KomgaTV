@@ -16,8 +16,14 @@
 - URL: https://rr-korea.github.io/KomgaTV/privacy/ (한·영, GitHub Pages — main 브랜치 /docs, `docs/privacy/index.html`)
 - Play Console → 앱 콘텐츠 → 개인정보처리방침에 이 주소를 넣는다. 앱이 다루는 데이터가 바뀌면 이 페이지도 고친다.
 
+## 서명 (업로드 키)
+- 키 파일: `D:\Keys\komgatv-upload.jks` (별칭 `upload`, 2026-11-02 생성). 저장소 밖에 두고 백업한다 — 잃어버리면 Play Console에서 업로드 키 재설정을 요청해야 한다.
+- 비밀번호는 어디에도 저장하지 않는다. `app/build.gradle.kts`는 환경 변수(`KOMGATV_UPLOAD_STORE_FILE`, `KOMGATV_UPLOAD_STORE_PASSWORD`, 선택 `KOMGATV_UPLOAD_KEY_ALIAS`/`KOMGATV_UPLOAD_KEY_PASSWORD`)가 있을 때만 release를 서명한다.
+- 출시용 AAB: `powershell -ExecutionPolicy Bypass -File toolsuild-release.ps1` → 비밀번호를 가려서 묻고 `dist\TVReaderForKomga-v<버전>-b<빌드>-release.aab`를 만든다.
+- Play 앱 서명(Play App Signing)을 켜 둔다 — 배포용 키는 Google이 보관하고, 이 키는 업로드용이다.
+
 ## 그 밖에
 - 버전: `app/build.gradle.kts` 위쪽 `appVersionCode`·`appVersionName` (APK 이름에도 들어간다).
-- 서명: 릴리즈 키 만들기, `release` 빌드(`isMinifyEnabled = true`) 실기 확인.
+- `release` 빌드(`isMinifyEnabled = true`) 실기 확인.
 - 개발자 정보: David Hojin Kim · sinabro@gmail.com · github.com/RR-korea/KomgaTV (앱 정보 화면에 있음).
 - 오픈소스 고지: `THIRD_PARTY_NOTICES.md` (Komga 로고 MIT, Noto Sans OFL, komga-client MIT).

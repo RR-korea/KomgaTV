@@ -23,8 +23,23 @@ android {
         versionName = appVersionName
     }
 
+    // 업로드 키 — 비밀번호는 저장소에 두지 않고 환경 변수로만 받는다 (tools/build-release.ps1)
+    val uploadStore = System.getenv("KOMGATV_UPLOAD_STORE_FILE")
+    val uploadPassword = System.getenv("KOMGATV_UPLOAD_STORE_PASSWORD")
+    val uploadSigning = if (uploadStore != null && uploadPassword != null) {
+        signingConfigs.create("upload") {
+            storeFile = file(uploadStore)
+            storePassword = uploadPassword
+            keyAlias = System.getenv("KOMGATV_UPLOAD_KEY_ALIAS") ?: "upload"
+            keyPassword = System.getenv("KOMGATV_UPLOAD_KEY_PASSWORD") ?: uploadPassword
+        }
+    } else {
+        null
+    }
+
     buildTypes {
         release {
+            signingConfig = uploadSigning
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

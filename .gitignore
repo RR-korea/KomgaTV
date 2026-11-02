@@ -31,3 +31,4 @@ captures/
 .externalNativeBuild/
 .cxx/
 output.json
+dist/
