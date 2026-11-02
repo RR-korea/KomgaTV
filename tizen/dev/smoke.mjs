@@ -571,6 +571,46 @@ try {
     Array.from(document.querySelectorAll('.reader-image')).map((img) => (img.getAttribute('src') ?? '').slice(0, 5)),
   );
   results.push(`${pdfPages.length === 2 && pdfPages.every((src) => src === 'blob:') ? 'PASS' : 'FAIL'} PDF 두 쪽 보기: ${pdfPages.join(',')}`);
+  // 대비·Lanczos (Android 1.0.1~1.0.2): PDF 쪽은 JPEG라 Lanczos로 다시 맞춰 canvas에 그린다 (가짜 서버 일반 쪽은 SVG)
+  await key('Enter');
+  await key('Enter');
+  await key('ArrowDown', 7);
+  await expectFocus('패널: 확대 아래 대비', 'opt-contrast');
+  await key('ArrowLeft', 15);
+  await expectText('대비: 50%에서 멈춤', '[data-key="opt-contrast"] .view-row-value', /^‹50%›$/);
+  await key('ArrowRight', 16);
+  await expectText('대비: 5%씩 → 130%', '[data-key="opt-contrast"] .view-row-value', /130%/);
+  await key('ArrowDown');
+  await expectFocus('패널: 화질 개선', 'opt-enhance');
+  await key('ArrowRight', 3);
+  await expectText('화질 개선 → Lanczos3', '[data-key="opt-enhance"] .view-row-value', /Lanczos3/);
+  await key('Escape');
+  await key('Escape');
+  await page.waitForTimeout(3000);
+  const lanczos = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('.reader-canvas')).map((c) => ({
+      w: c.width,
+      h: c.height,
+      shown: !c.classList.contains('pending'),
+      filter: c.style.filter,
+    })),
+  );
+  results.push(
+    `${lanczos.length === 2 && lanczos.every((c) => c.shown && c.h === 1080) ? 'PASS' : 'FAIL'} Lanczos3: 두 쪽을 그릴 크기로 다시 맞춰 canvas에: ${lanczos.map((c) => `${c.w}x${c.h}`).join(',')}`,
+  );
+  results.push(`${lanczos.every((c) => /contrast\(1\.3\)/.test(c.filter)) ? 'PASS' : 'FAIL'} 대비 130%: ${lanczos[0]?.filter ?? ''}`);
+  const lanczosMode = await page.evaluate(() => document.documentElement.getAttribute('data-lanczos') ?? '');
+  results.push(`${lanczosMode.startsWith('workers-') ? 'PASS' : 'FAIL'} Lanczos 계산은 Web Worker로: ${lanczosMode}`);
+  await shot('pdf-lanczos-contrast');
+  // 넘기면 미리 처리해 둔 다음 펼침이 바로 또렷하게
+  await key('ArrowRight');
+  await page.waitForTimeout(400);
+  const flipped = await page.evaluate(
+    () => Array.from(document.querySelectorAll('.reader-layer:last-child .reader-canvas')).filter((c) => !c.classList.contains('pending')).length,
+  );
+  results.push(`${flipped === 2 ? 'PASS' : 'FAIL'} Lanczos 미리 처리: 넘기고 0.4초 안에 canvas ${flipped}장`);
+  await key('ArrowLeft');
+  await page.waitForTimeout(400);
   await shot('pdf-double');
   await key('Escape');
   await page.waitForTimeout(800);

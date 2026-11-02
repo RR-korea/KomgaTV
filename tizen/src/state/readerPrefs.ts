@@ -6,8 +6,11 @@ export type ReaderType = 'PAGED' | 'CONTINUOUS';
 export type PageLayout = 'SINGLE_PAGE' | 'DOUBLE_PAGES' | 'DOUBLE_PAGES_NO_COVER';
 export type ScaleType = 'SCREEN' | 'FIT_WIDTH' | 'FIT_HEIGHT' | 'ORIGINAL';
 export type Direction = 'LEFT_TO_RIGHT' | 'RIGHT_TO_LEFT';
-/** 화질 개선 (Android T14): 끄기 / 부드럽게 확대 / 선명하게 / 더 선명하게 */
-export type ImageEnhancement = 'OFF' | 'SMOOTH' | 'SHARPEN' | 'SHARPEN_STRONG';
+/**
+ * 화질 개선 (Android T14·1.0.1): 끄기 / 부드럽게 확대 / Lanczos2·3·4(CPU 리샘플링) / 선명하게 / 더 선명하게.
+ * Lanczos3의 저장 이름은 Android처럼 'LANCZOS'.
+ */
+export type ImageEnhancement = 'OFF' | 'SMOOTH' | 'LANCZOS2' | 'LANCZOS' | 'LANCZOS4' | 'SHARPEN' | 'SHARPEN_STRONG';
 /** 페이지 넘김 화면 전환 효과 (Android 0.2.9): 끄기 / 읽는 방향으로 밀기(0.18초) / 겹쳐 바꾸기(0.15초) */
 export type PageTransition = 'OFF' | 'SLIDE' | 'FADE';
 
@@ -29,6 +32,8 @@ export interface ReaderSettings {
    */
   zoomPercent: number;
   pageTransition: PageTransition;
+  /** 대비 % (작품별, 50~150, 5% 단위, 100 = 그대로, Android 1.0.1) — 흐린 스캔본을 진하게 */
+  contrastPercent: number;
 }
 
 export const defaultReaderSettings: ReaderSettings = {
@@ -42,13 +47,17 @@ export const defaultReaderSettings: ReaderSettings = {
   imageEnhancement: 'OFF',
   zoomPercent: 100,
   pageTransition: 'SLIDE',
+  contrastPercent: 100,
 };
 
 export const READER_TYPES: ReaderType[] = ['PAGED', 'CONTINUOUS'];
 export const PAGE_LAYOUTS: PageLayout[] = ['SINGLE_PAGE', 'DOUBLE_PAGES', 'DOUBLE_PAGES_NO_COVER'];
 export const SCALE_TYPES: ScaleType[] = ['SCREEN', 'FIT_WIDTH', 'FIT_HEIGHT', 'ORIGINAL'];
 export const DIRECTIONS: Direction[] = ['LEFT_TO_RIGHT', 'RIGHT_TO_LEFT'];
-export const ENHANCEMENTS: ImageEnhancement[] = ['OFF', 'SMOOTH', 'SHARPEN', 'SHARPEN_STRONG'];
+export const ENHANCEMENTS: ImageEnhancement[] = ['OFF', 'SMOOTH', 'LANCZOS2', 'LANCZOS', 'LANCZOS4', 'SHARPEN', 'SHARPEN_STRONG'];
+export const MIN_CONTRAST_PERCENT = 50;
+export const MAX_CONTRAST_PERCENT = 150;
+export const CONTRAST_STEP = 5;
 export const TRANSITIONS: PageTransition[] = ['OFF', 'SLIDE', 'FADE'];
 export const MIN_ZOOM_PERCENT = 100;
 export const MAX_ZOOM_PERCENT = 120;
@@ -85,6 +94,14 @@ export function parseReaderSettings(raw: unknown): ReaderSettings {
         ? Math.min(MAX_ZOOM_PERCENT, Math.max(MIN_ZOOM_PERCENT, Math.round(p.zoomPercent)))
         : d.zoomPercent,
     pageTransition: oneOf(TRANSITIONS, p.pageTransition, d.pageTransition),
+    // 범위 밖이면 끝값, 5% 단위로
+    contrastPercent:
+      typeof p.contrastPercent === 'number' && Number.isFinite(p.contrastPercent)
+        ? Math.min(
+            MAX_CONTRAST_PERCENT,
+            Math.max(MIN_CONTRAST_PERCENT, Math.round(p.contrastPercent / CONTRAST_STEP) * CONTRAST_STEP),
+          )
+        : d.contrastPercent,
   };
 }
 
@@ -139,8 +156,14 @@ export function withSeriesRules(defaults: ReaderSettings, seriesDirection: Readi
   const readerType = resolveReaderType(seriesDirection, defaults.readerType);
   const readingDirection =
     seriesDirection === 'LEFT_TO_RIGHT' || seriesDirection === 'RIGHT_TO_LEFT' ? seriesDirection : defaults.readingDirection;
-  // 확대는 작품 설정에만 있다
-  return { ...defaults, readerType, readingDirection, zoomPercent: defaultReaderSettings.zoomPercent };
+  // 확대·대비는 작품 설정에만 있다
+  return {
+    ...defaults,
+    readerType,
+    readingDirection,
+    zoomPercent: defaultReaderSettings.zoomPercent,
+    contrastPercent: defaultReaderSettings.contrastPercent,
+  };
 }
 
 /** 작품에 쓸 설정. EPUB 글자 크기는 작품과 상관없이 앱 기본값. */

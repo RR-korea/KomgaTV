@@ -20,11 +20,14 @@ describe('작품별 확대 설정 (Android 0.2.5)', () => {
   it('패널 줄 (Android 0.2.9): 크기 맞춤 → 화면 전환 → 확대, 작은 이미지 키우기 없음', () => {
     const keys = (mode: Parameters<typeof viewOptions>[1]) => viewOptions(defaultReaderSettings, mode).map((o) => o.key);
     expect(keys('reader-paged')).toEqual([
-      'opt-type', 'opt-layout', 'opt-offset', 'opt-direction', 'opt-scale', 'opt-transition', 'opt-zoom', 'opt-enhance',
+      'opt-type', 'opt-layout', 'opt-offset', 'opt-direction', 'opt-scale', 'opt-transition', 'opt-zoom', 'opt-contrast',
+      'opt-enhance',
     ]);
-    expect(keys('reader-continuous')).toEqual(['opt-type', 'opt-padding', 'opt-spacing', 'opt-enhance']);
+    // 대비는 두 모드 모두, 작품 설정에서만 (Android 1.0.2)
+    expect(keys('reader-continuous')).toEqual(['opt-type', 'opt-padding', 'opt-spacing', 'opt-contrast', 'opt-enhance']);
     expect(keys('defaults')).toContain('opt-transition');
     expect(keys('defaults')).not.toContain('opt-zoom');
+    expect(keys('defaults')).not.toContain('opt-contrast');
   });
 
   it('◀▶ 1%씩, 끝에서 돌지 않는다', () => {

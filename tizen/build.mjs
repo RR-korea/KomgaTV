@@ -10,6 +10,18 @@ mkdirSync('dist');
 // index.html, config.xml, 아이콘 등 그대로 들어가는 파일
 cpSync('static', 'dist', { recursive: true });
 
+// Lanczos Worker (화질 개선): 따로 묶어 앱에 글자로 넣는다 — file://에서 Worker 파일을 못 띄워도 Blob URL로 된다
+const worker = await esbuild.build({
+  entryPoints: ['src/image/lanczosWorker.ts'],
+  bundle: true,
+  write: false,
+  format: 'iife',
+  target: 'chrome69',
+  minify: !serve,
+  legalComments: 'none',
+});
+const workerSource = worker.outputFiles[0].text;
+
 const options = {
   entryPoints: { app: 'src/main.tsx' },
   outdir: 'dist',
@@ -22,7 +34,7 @@ const options = {
   minify: !serve,
   sourcemap: serve ? 'inline' : false,
   legalComments: 'none',
-  define: { APP_VERSION: JSON.stringify(version) },
+  define: { APP_VERSION: JSON.stringify(version), LANCZOS_WORKER_SOURCE: JSON.stringify(workerSource) },
   logLevel: 'info',
 };
 

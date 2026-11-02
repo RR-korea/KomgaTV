@@ -9,7 +9,7 @@
 //   처음 근처에서 이전 권을 찾고 마지막 두 쪽을 미리 받는다. 세로 스크롤은 1쪽 위 책 첫 카드, 맨 위에서 위 = 이전 권 끝.
 // PDF 책은 원본 쪽에서 JPEG를 꺼내 그린다(session.loadPage). 쪽이 0.25초 안에 안 뜨면 "불러오는 중…".
 import type { ComponentChildren } from 'preact';
-import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { bookDisplayTitle } from '../api/display';
 import type { KomgaBook, ReadingDirection } from '../api/types';
 import { ImagePaths, pageKey } from '../api/url';
@@ -40,6 +40,8 @@ import {
   zoomLayout,
 } from '../reader/layout';
 import { chooseTransition, RAPID_FLIP_MS, slideFrom, transitionMs } from '../reader/transition';
+import { imageFilter, lanczosWindow } from '../reader/enhance';
+import { cachedLanczos, lanczosBitmap, lanczosKey } from '../image/lanczosPool';
 import { ProgressSaver } from '../reader/progress';
 import { buildSpreads, highestPage, type PageInfo, spreadContains, spreadIndexOf } from '../reader/spreads';
 import {
@@ -103,21 +105,87 @@ interface SpreadTransition {
   outgoing: { pages: PageInfo[]; layout: SpreadLayout; position: { left: number; top: number } };
 }
 
+/**
+ * Lanczos로 화면 크기에 맞춘 그림 (Android 1.0.1). 처리가 끝날 때까지는 null — 그동안은 보통 그림을 보인다.
+ */
+function useLanczos(sourceKey: string, url: string | null, width: number, height: number, a: number | null) {
+  const w = Math.round(width);
+  const h = Math.round(height);
+  const key = a && url && w > 0 && h > 0 ? lanczosKey(sourceKey, w, h, a) : null;
+  const [result, setResult] = useState<{ key: string; bitmap: ImageBitmap } | null>(null);
+  useEffect(() => {
+    if (!key || !url || !a) return undefined;
+    const hit = cachedLanczos(key);
+    if (hit) {
+      setResult({ key, bitmap: hit });
+      return undefined;
+    }
+    let alive = true;
+    lanczosBitmap(key, url, w, h, a, true).then(
+      (bitmap) => alive && setResult({ key, bitmap }),
+      () => undefined, // 못 하면 보통 그림 그대로
+    );
+    return () => {
+      alive = false;
+    };
+  }, [key]);
+  return result && result.key === key ? result.bitmap : null;
+}
+
+function LanczosCanvas({ bitmap, filter }: { bitmap: ImageBitmap; filter?: string }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const [drawn, setDrawn] = useState(false);
+  // 그리기 전에 화면에 나오지 않게 (빈 칸이 한 번 비치지 않게) 레이아웃 단계에서 그린다
+  useLayoutEffect(() => {
+    const canvas = ref.current;
+    const context = canvas?.getContext('2d');
+    if (!canvas || !context) return;
+    try {
+      context.drawImage(bitmap, 0, 0);
+      setDrawn(true);
+    } catch {
+      setDrawn(false); // 캐시에서 빠져 닫힌 그림 — 보통 그림 그대로
+    }
+  }, [bitmap]);
+  return (
+    <canvas
+      ref={ref}
+      class={`reader-image reader-canvas${drawn ? '' : ' pending'}`}
+      width={bitmap.width}
+      height={bitmap.height}
+      style={filter ? { filter } : undefined}
+    />
+  );
+}
+
 function ReaderPage({
   bookId,
   pdf,
   page,
   style,
+  width,
+  height,
+  lanczos,
+  filter,
   onNaturalSize,
 }: {
   bookId: string;
   pdf: boolean;
   page: PageInfo;
   style: Record<string, string>;
+  /** 그릴 크기 (px) — Lanczos가 이 크기로 맞춘다 */
+  width: number;
+  height: number;
+  /** Lanczos 창 크기, 아니면 null */
+  lanczos: number | null;
+  /** 선명하게·대비 CSS filter */
+  filter?: string;
   onNaturalSize: (pageNumber: number, size: Size) => void;
 }) {
   const currentSession = useStore(sessionStore);
-  const image = useCachedImage(currentSession?.pages, pageKey(bookId, page.number, pdf));
+  const key = pageKey(bookId, page.number, pdf);
+  const image = useCachedImage(currentSession?.pages, key);
+  const resampled = useLanczos(key, image.url, width, height, lanczos);
   // 0.25초 안에 안 뜨면 스피너 + "불러오는 중…"
   const [slow, setSlow] = useState(false);
   useEffect(() => {
@@ -129,15 +197,19 @@ function ReaderPage({
     // Preact 11은 숫자 스타일 값에 px를 붙이지 않는다 — 단위를 직접 쓴다
     <div class="reader-page" style={style}>
       {image.url ? (
-        <img
-          class="reader-image"
-          src={image.url}
-          alt=""
-          onLoad={(event) => {
-            const img = event.currentTarget as HTMLImageElement;
-            onNaturalSize(page.number, { width: img.naturalWidth, height: img.naturalHeight });
-          }}
-        />
+        <>
+          <img
+            class="reader-image"
+            src={image.url}
+            alt=""
+            style={filter ? { filter } : undefined}
+            onLoad={(event) => {
+              const img = event.currentTarget as HTMLImageElement;
+              onNaturalSize(page.number, { width: img.naturalWidth, height: img.naturalHeight });
+            }}
+          />
+          {resampled && <LanczosCanvas bitmap={resampled} filter={filter} />}
+        </>
       ) : image.failed ? (
         <div class="reader-page-status failed">{t.readerPageLoadFailed}</div>
       ) : slow ? (
@@ -358,6 +430,9 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
   const keyOf = (page: number) => pageKey(bookId, page, isPdf);
 
   const isContinuous = readerType === 'CONTINUOUS';
+  /** 화질 개선 Lanczos 창 크기와 쪽 그림 filter (선명하게·대비) */
+  const lanczosA = lanczosWindow(settings.imageEnhancement);
+  const pageFilter = imageFilter(settings.imageEnhancement, settings.contrastPercent);
   /** 정보 표시·진행 저장에 쓰는 "보이는 쪽 중 가장 큰 번호" */
   const shownHighest = isContinuous ? pages[visible.last]?.number ?? 1 : highestPage(spread);
 
@@ -393,6 +468,37 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
     cache.retainPrefetches(keys);
     keys.forEach((key) => cache.prefetch(key));
   }, [isContinuous, index, spreads, visible.first, visible.last, bookId, nextBook, previousBook]);
+
+  // Lanczos 미리 처리 (Android: 미리 받는 쪽에서 미리 처리): 앞·뒤 펼침을 그릴 크기로 — 넘기면 바로 또렷하게
+  useEffect(() => {
+    const cache = sessionStore.get()?.pages;
+    if (!lanczosA || !cache || !data || data.epub || isContinuous) return undefined;
+    let alive = true;
+    [1, -1].forEach((d) => {
+      const neighbour = spreads[index + d];
+      if (!neighbour) return;
+      const layout = zoomLayout(layoutSpread(neighbour.map(sizeOf), settings.scaleType, SCREEN), settings.zoomPercent);
+      neighbour.forEach((page, i) => {
+        const key = keyOf(page.number);
+        const size = layout.pages[i];
+        if (!size || cachedLanczos(lanczosKey(key, size.width, size.height, lanczosA))) return;
+        cache.acquire(key).then(
+          (url) => {
+            const done = () => cache.release(key);
+            if (!alive) return done();
+            lanczosBitmap(lanczosKey(key, size.width, size.height, lanczosA), url, size.width, size.height, lanczosA, false).then(
+              done,
+              done,
+            );
+          },
+          () => undefined,
+        );
+      });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [lanczosA, isContinuous, index, spreads, bookId, settings.scaleType, settings.zoomPercent]);
 
   // 끝이 가까우면 다음 권을 찾고 첫 쪽들을 미리 받는다
   const nearEnd = isContinuous ? visible.last >= totalPages - 1 - NEXT_BOOK_LOOKAHEAD : index >= spreads.length - 1 - NEXT_BOOK_LOOKAHEAD;
@@ -792,6 +898,10 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
               bookId={bookId}
               pdf={isPdf}
               page={pages[i]}
+              width={placement.width}
+              height={placement.height}
+              lanczos={lanczosA}
+              filter={pageFilter}
               style={{
                 position: 'absolute',
                 top: px(placement.top),
@@ -832,6 +942,10 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
               bookId={bookId}
               pdf={isPdf}
               page={page}
+              width={shownSizes[i]?.width ?? 0}
+              height={shownSizes[i]?.height ?? 0}
+              lanczos={lanczosA}
+              filter={pageFilter}
               style={{ width: px(shownSizes[i]?.width ?? 0), height: px(shownSizes[i]?.height ?? 0) }}
               onNaturalSize={onNaturalSize}
             />

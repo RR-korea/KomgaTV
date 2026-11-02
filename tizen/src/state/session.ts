@@ -4,6 +4,7 @@ import { type Auth, connect, KomgaClient } from '../api/client';
 import { ConnectionError, HttpError } from '../api/errors';
 import type { KomgaUser } from '../api/types';
 import { ImagePaths, normalizeServerUrl } from '../api/url';
+import { clearLanczos } from '../image/lanczosPool';
 import { extractSingleJpeg } from '../pdf/pdfJpeg';
 import { ImageCache } from '../image/ImageCache';
 import { Store } from './store';
@@ -119,11 +120,17 @@ export const session = new Store<Session | null>(null);
 /**
  * 리더 쪽 그림 받기. "pdf:책:쪽"이면 원본 PDF를 받아 JPEG를 꺼내고(0.2초), 모양이 맞지 않으면 Komga가 그린 그림(쪽당 2~6초).
  */
-async function loadPage(client: KomgaClient, key: string, signal: AbortSignal): Promise<Blob> {
+export async function loadPage(client: KomgaClient, key: string, signal: AbortSignal): Promise<Blob> {
   if (!key.startsWith('pdf:')) return client.fetchImage(key, signal);
   const [, bookId, page] = key.split(':');
-  const raw = await client.fetchRawPage(bookId, Number(page), signal);
-  const jpeg = extractSingleJpeg(raw);
+  let raw: Uint8Array | null = null;
+  try {
+    raw = await client.fetchRawPage(bookId, Number(page), signal);
+  } catch (error) {
+    // 서버가 원본 쪽을 못 주면(파일을 옮겼거나 분석 중 등) 서버가 그린 일반 쪽으로 (Android 1.0.1). 취소는 그대로
+    if (signal.aborted) throw error;
+  }
+  const jpeg = raw ? extractSingleJpeg(raw) : null;
   if (jpeg) return new Blob([jpeg.slice()], { type: 'image/jpeg' });
   return client.fetchImage(ImagePaths.bookPage(bookId, Number(page)), signal);
 }
@@ -132,6 +139,7 @@ function setSession(client: KomgaClient, user: KomgaUser | null): Session {
   const previous = session.get();
   previous?.thumbnails.clear();
   previous?.pages.clear();
+  clearLanczos();
   const next: Session = {
     client,
     user,

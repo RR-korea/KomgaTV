@@ -3,8 +3,11 @@
 import { fmt, t } from '../i18n';
 import { FOCUSABLE_CLASS } from '../platform/focus';
 import {
+  CONTRAST_STEP,
   DIRECTIONS,
   ENHANCEMENTS,
+  MAX_CONTRAST_PERCENT,
+  MIN_CONTRAST_PERCENT,
   MAX_ZOOM_PERCENT,
   MIN_ZOOM_PERCENT,
   PADDING_STEPS,
@@ -16,6 +19,8 @@ import {
   TRANSITIONS,
 } from '../state/readerPrefs';
 
+const CONTRAST_STEPS: number[] = [];
+for (let percent = MIN_CONTRAST_PERCENT; percent <= MAX_CONTRAST_PERCENT; percent += CONTRAST_STEP) CONTRAST_STEPS.push(percent);
 const ZOOM_STEPS: number[] = [];
 for (let percent = MIN_ZOOM_PERCENT; percent <= MAX_ZOOM_PERCENT; percent++) ZOOM_STEPS.push(percent);
 
@@ -29,7 +34,8 @@ export type ViewKey =
   | 'opt-spacing'
   | 'opt-enhance'
   | 'opt-zoom'
-  | 'opt-transition';
+  | 'opt-transition'
+  | 'opt-contrast';
 
 export interface ViewOption {
   key: ViewKey;
@@ -120,7 +126,15 @@ export function viewOptions(
     key: 'opt-enhance',
     label: t.viewEnhancement,
     values: ENHANCEMENTS,
-    labels: [t.viewEnhancementOff, t.viewEnhancementSmooth, t.viewEnhancementSharpen, t.viewEnhancementSharpenStrong],
+    labels: [
+      t.viewEnhancementOff,
+      t.viewEnhancementSmooth,
+      t.viewEnhancementLanczos2,
+      t.viewEnhancementLanczos,
+      t.viewEnhancementLanczos4,
+      t.viewEnhancementSharpen,
+      t.viewEnhancementSharpenStrong,
+    ],
     value: s.imageEnhancement,
     enabled: true,
   };
@@ -134,11 +148,21 @@ export function viewOptions(
     enabled: true,
     clamp: true,
   };
+  // 대비는 페이지 넘김·세로 스크롤 모두, 작품 설정(리더)에서만 (Android 1.0.2)
+  const contrast: ViewOption = {
+    key: 'opt-contrast',
+    label: t.viewContrast,
+    values: CONTRAST_STEPS,
+    labels: CONTRAST_STEPS.map((v) => fmt(t.viewPercent, v)),
+    value: s.contrastPercent,
+    enabled: true,
+    clamp: true,
+  };
   switch (mode) {
     case 'reader-paged':
-      return [type, layout, offsetRow, direction, scale, transition, zoom, enhance];
+      return [type, layout, offsetRow, direction, scale, transition, zoom, contrast, enhance];
     case 'reader-continuous':
-      return [type, padding, spacing, enhance];
+      return [type, padding, spacing, contrast, enhance];
     default:
       return [type, layout, direction, scale, transition, padding, spacing, enhance];
   }
@@ -159,6 +183,8 @@ export function applyViewOption(s: ReaderSettings, key: ViewKey, value: unknown)
       return { ...s, continuousPadding: value as number };
     case 'opt-spacing':
       return { ...s, continuousPageSpacing: value as number };
+    case 'opt-contrast':
+      return { ...s, contrastPercent: value as number };
     case 'opt-transition':
       return { ...s, pageTransition: value as ReaderSettings['pageTransition'] };
     case 'opt-enhance':

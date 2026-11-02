@@ -170,6 +170,19 @@ MVP는 앱 전용 `localStorage`(Tizen 앱마다 격리). 스토어 전에 Tizen
 - **에뮬레이터·실제 서버**: 데스노트 OK 길게(1.2초) → 묻는 창이 뜨고 손을 떼도 그대로 → [유지] → 닫히고 그대로. [제거]는 가짜 서버 스모크로만.
 - 1.0.0 / b15 (Android와 같은 번호). 스모크 132항목, 단위 테스트 118.
 
+### Android 1.0.1~1.0.2 이식: 대비, Lanczos2/3/4, PDF 원본 실패 시 일반 쪽 (2026-11-02)
+- 대비(작품별): 50~150%, 5%씩, 끝에서 돌지 않음. 페이지 넘김·세로 스크롤 패널 모두(확대 아래), 앱 기본값에는 없음.
+  CSS `contrast()` — (v − 0.5) × c + 0.5 로 Android 색 행렬과 같은 식, GPU. 선명하게(SVG 필터)와 함께 쪽 그림마다 inline filter.
+- 화질 개선에 Lanczos2(빠름) / Lanczos3 / Lanczos4(고품질): 받은 쪽을 그릴 크기로 CPU 리샘플링해 canvas에 1:1로 (`src/image/lanczos.ts`, Android Lanczos.kt와 같은 식).
+  Web Worker 여러 개(코어 수, 최대 4)가 출력 줄을 나눠 계산하고 Worker마다 필요한 원본 줄만 넘긴다. Worker는 build.mjs가 따로 묶어 글자로 넣고 Blob URL로 띄운다(file://에서도).
+  처리 전에는 보통 그림, 끝나면 canvas가 위에 덮인다. 앞·뒤 펼침은 미리 처리(넘기면 바로 또렷). 결과 ImageBitmap 8장 캐시. 저장 이름은 Android처럼 Lanczos3 = 'LANCZOS'.
+  Worker를 못 쓰면 메인 스레드. 어느 쪽인지 `<html data-lanczos>`와 console.info로 남긴다.
+- PDF 원본 쪽(/raw) 요청이 실패하면(취소 말고) 서버가 그린 일반 쪽으로.
+- **에뮬레이터·실제 서버 (괴수 8호)**: 대비 130% + Lanczos4 → Worker 4개, 1500×2168 → 755×1080 한 쪽 153ms(PC 에뮬레이터 기준 — 실제 TV ARM은 더 느릴 것). 시험 뒤 작품 설정 앱 기본값으로, 진행 19쪽 그대로.
+  (임시 화면 진단 표시로 확인하고 지웠다. 에뮬레이터 dlog는 권한 때문에 못 읽음)
+- 1.0.2 / b17. 스모크 141항목(대비 50% 멈춤·130%, Lanczos3 canvas 두 쪽·Worker·미리 처리), 단위 테스트 127.
+- Android translate 브랜치(ML Kit 만화 번역 시험판)는 main에 없고 Android 전용이라 옮기지 않음.
+
 ## Android와 다른 점
 - 리더: 정보가 열린 상태에서 OK = 보기 설정 열기, 정보 닫기는 Back. (Android는 OK가 정보 토글, 설정은 정보의 버튼) TV 웹앱에서 숨은 버튼으로 포커스를 옮기는 단계를 줄였다.
 - 리더: 채널 위/아래 = 10쪽 이동 (정보를 열지 않고).

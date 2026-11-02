@@ -841,12 +841,20 @@ body {
   overflow: hidden;
 }
 
-.reader.enhance-sharpen .reader-image {
-  filter: url(#ktv-sharpen);
+/* 선명하게·대비는 쪽 그림마다 inline filter (reader/enhance.ts) */
+
+/* Lanczos (Android 1.0.1): 화면 크기로 맞춘 그림을 보통 그림 위에 1:1로 */
+.reader-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
 }
 
-.reader.enhance-sharpen_strong .reader-image {
-  filter: url(#ktv-sharpen-strong);
+/* 못 그렸으면 아래 보통 그림이 보이게 */
+.reader-canvas.pending {
+  visibility: hidden;
 }
 
 /* ---------- 책 끝 화면 (다음 권으로 이어 읽기) ---------- */
