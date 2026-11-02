@@ -1,0 +1,13 @@
+export { de } from './de';
+export { es } from './es';
+export { fr } from './fr';
+export { id } from './id';
+export { it } from './it';
+export { ja } from './ja';
+export { pl } from './pl';
+export { ptBR } from './pt-BR';
+export { ru } from './ru';
+export { tr } from './tr';
+export { vi } from './vi';
+export { zhCN } from './zh-CN';
+export { zhTW } from './zh-TW';

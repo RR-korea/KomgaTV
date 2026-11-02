@@ -55,7 +55,7 @@ function getWorkers(): Worker[] | null {
   }
   // 시험·진단용: 어느 쪽으로 계산하는지 (smoke·에뮬레이터에서 확인)
   document.documentElement.setAttribute('data-lanczos', workers ? `workers-${workers.length}` : 'main');
-  console.info(`[KomgaTV] lanczos: ${workers ? `workers-${workers.length}` : 'main thread'}`);
+  console.info(`[TV Reader] lanczos: ${workers ? `workers-${workers.length}` : 'main thread'}`);
   return workers;
 }
 
@@ -122,7 +122,7 @@ async function process(url: string, width: number, height: number, a: number): P
   const out = await resample(pixels, width, height, a);
   const bitmap = await createImageBitmap(new ImageData(out as Uint8ClampedArray<ArrayBuffer>, width, height));
   // 진단용: TV에서 쪽마다 얼마나 걸리는지
-  console.info(`[KomgaTV] lanczos${a} ${pixels.width}x${pixels.height} → ${width}x${height}: ${Date.now() - started}ms`);
+  console.info(`[TV Reader] lanczos${a} ${pixels.width}x${pixels.height} → ${width}x${height}: ${Date.now() - started}ms`);
   return bitmap;
 }
 

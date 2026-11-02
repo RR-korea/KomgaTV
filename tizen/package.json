@@ -1,8 +1,8 @@
 {
   "name": "komgatv-tizen",
-  "version": "1.0.2",
+  "version": "1.0.6",
   "private": true,
-  "description": "KomgaTV — 삼성 Tizen TV용 Komga 클라이언트",
+  "description": "TV Reader for Komga — 삼성 Tizen TV용 Komga 비공식 클라이언트 (옛 이름 KomgaTV)",
   "license": "MIT",
   "type": "module",
   "browserslist": [
@@ -33,5 +33,5 @@
     "typescript-eslint": "^8.72.1",
     "vitest": "^5.0.5"
   },
-  "build": 17
+  "build": 21
 }

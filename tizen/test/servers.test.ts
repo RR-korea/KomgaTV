@@ -38,3 +38,28 @@ describe('저장된 서버 목록 (Android T11)', () => {
     expect(parseServerList(JSON.stringify([good, { url: 'x' }, { url: 'y', auth: { kind: 'apiKey' } }]))).toEqual([good]);
   });
 });
+
+describe('새 서버를 저장해도 지금 서버가 남는다 (Android 1.0.5)', () => {
+  it('목록이 생기기 전 버전에서 연결한 서버(목록에 없음)도 남는다', async () => {
+    const store = new Map<string, string>();
+    const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      value: {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: (k: string, v: string) => void store.set(k, v),
+        removeItem: (k: string) => void store.delete(k),
+      },
+    });
+    try {
+      const { saveServer, loadServerList } = await import('../src/state/session');
+      const old = basic('https://old/komga', 'a@b.c');
+      store.set('komgatv.server', JSON.stringify(old)); // 예전 버전: 지금 서버만 있고 목록은 없다
+      saveServer(basic('https://new/komga', 'x@y.z'));
+      expect(loadServerList().map((server) => server.url)).toEqual(['https://old/komga', 'https://new/komga']);
+    } finally {
+      if (original) Object.defineProperty(globalThis, 'localStorage', original);
+      else delete (globalThis as { localStorage?: unknown }).localStorage;
+    }
+  });
+});

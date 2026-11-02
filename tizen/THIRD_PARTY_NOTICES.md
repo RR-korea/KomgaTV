@@ -1,4 +1,4 @@
-# Third-party notices (KomgaTV for Tizen)
+# Third-party notices (TV Reader for Komga, Tizen)
 
 ## Komelia — Apache License 2.0
 
@@ -24,17 +24,13 @@ distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, e
 
 Copyright (c) 2015-present Jason Miller — bundled into `app.js`.
 
-## Komga logo — MIT
-
-`static/icon.png` (the Android TV banner artwork redrawn at 512x423, `docs/branding/make_banner.py`: white background, Komga logo + "KomgaTV") shows the Komga logo
-from https://github.com/gotson/komga (`komga-webui/src/assets/logo.svg`). Copyright (c) 2019 Gauthier Roebroeck. MIT License.
-
 ## Noto Sans — SIL Open Font License 1.1
 
-The "KomgaTV" wordmark in `static/icon.png` is drawn with Noto Sans Bold.
+The "TV Reader for Komga" text in `static/icon.png` (the Android TV banner redrawn at 512x423, Android `docs/branding/make_banner.py`) is rendered from Noto Sans.
+The TV-and-book mark is drawn by the project itself; the Komga logo is not used.
 Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic). Licensed under the SIL Open Font License, Version 1.1.
 
 ## Thanks
 
-KomgaTV is made with deep respect for [Komga](https://github.com/gotson/komga) and [Komelia](https://github.com/Snd-R/Komelia).
-It is not affiliated with either project.
+TV Reader for Komga (formerly KomgaTV) is made with deep respect for [Komga](https://github.com/gotson/komga) and [Komelia](https://github.com/Snd-R/Komelia).
+It is an independent, unofficial project and is not affiliated with either.

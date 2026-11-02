@@ -3,9 +3,10 @@ import { useRef, useState } from 'preact/hooks';
 import { type Auth, connect } from '../api/client';
 import { ConnectionError } from '../api/errors';
 import { normalizeServerUrl } from '../api/url';
-import { fmt, getLanguageChoice, setLanguageChoice, t } from '../i18n';
+import { fmt, getLanguageChoice, LANGUAGES, setLanguageChoice, t } from '../i18n';
 import { type RouteEntry, reset } from '../platform/router';
 import {
+  DEMO_SERVER,
   loadSavedServer,
   loadServerList,
   openSession,
@@ -83,9 +84,10 @@ export function SettingsScreen({ entry, active }: { entry: RouteEntry; active: b
     return apiKey.trim() ? { kind, apiKey: apiKey.trim() } : null;
   };
 
-  const run = async (save: boolean) => {
+  const run = async (save: boolean, demo = false) => {
     if (status.kind === 'busy') return;
-    const auth = buildAuth();
+    const target = demo ? DEMO_SERVER.url : url;
+    const auth = demo ? DEMO_SERVER.auth : buildAuth();
     if (!auth) {
       setStatus({ kind: 'error', text: t.settingsErrorMissing });
       return;
@@ -93,8 +95,8 @@ export function SettingsScreen({ entry, active }: { entry: RouteEntry; active: b
     setStatus({ kind: 'busy', text: t.settingsTesting });
     try {
       if (save) {
-        await openSession({ url, auth });
-        saveServer({ url: normalizeServerUrl(url) ?? url.trim(), auth });
+        await openSession({ url: target, auth });
+        saveServer({ url: normalizeServerUrl(target) ?? target.trim(), auth });
         reset({ name: 'home' });
       } else {
         await connect(url, auth);
@@ -125,6 +127,18 @@ export function SettingsScreen({ entry, active }: { entry: RouteEntry; active: b
     setStatus({ kind: 'idle' });
     if (root.current) focusKeyOrFirst(root.current, 'url');
   };
+
+  // Komga 데모 서버로 둘러보기: 입력칸을 공개 계정으로 채우고 바로 연결·저장 (데모 서버가 저장되기 전까지 보인다)
+  const demoSaved = servers.some((server) => (normalizeServerUrl(server.url) ?? server.url).replace(/\/+$/, '') === DEMO_SERVER.url);
+  const useDemo = () => {
+    if (DEMO_SERVER.auth.kind !== 'basic') return;
+    setUrl(DEMO_SERVER.url);
+    setKind('basic');
+    setEmail(DEMO_SERVER.auth.email);
+    setPassword(DEMO_SERVER.auth.password);
+    void run(true, true);
+  };
+  const firstRun = entry.route.name === 'settings' && entry.route.first;
 
   const clearCache = () => {
     const current = session.get();
@@ -167,6 +181,23 @@ export function SettingsScreen({ entry, active }: { entry: RouteEntry; active: b
           <div class="button-row">
             <Button focusKey="server-add" onClick={addServer}>
               {t.settingsServerAdd}
+            </Button>
+            {!demoSaved && (
+              <Button focusKey="demo" onClick={useDemo}>
+                {t.settingsDemoServer}
+              </Button>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* 처음 실행(또는 저장된 서버가 없을 때): 서버가 없어도 둘러볼 수 있게 */}
+      {!demoSaved && (firstRun || servers.length === 0) && (
+        <>
+          <div class="field-label standalone">{t.settingsDemoHint}</div>
+          <div class="button-row">
+            <Button focusKey="demo" onClick={useDemo}>
+              {t.settingsDemoServer}
             </Button>
           </div>
         </>
@@ -237,23 +268,30 @@ export function SettingsScreen({ entry, active }: { entry: RouteEntry; active: b
 
       <h2 class="section-title">{t.settingsSectionApp}</h2>
       <div class="field-label standalone">{t.settingsLanguage}</div>
-      <div class="choice-row" data-section="language" data-last-key={`lang-${language}`}>
+      <div class="choice-row wrap" data-section="language" data-last-key={`lang-${language}`}>
         <Button focusKey="lang-system" selected={language === 'system'} onClick={() => setLanguageChoice('system')}>
           {t.settingsLanguageSystem}
         </Button>
-        {/* 언어 이름은 그 언어로 쓴다 */}
-        <Button focusKey="lang-ko" selected={language === 'ko'} onClick={() => setLanguageChoice('ko')}>
-          한국어
-        </Button>
-        <Button focusKey="lang-en" selected={language === 'en'} onClick={() => setLanguageChoice('en')}>
-          English
-        </Button>
+        {/* 언어 이름은 그 언어로 쓴다 (Android와 같은 15개) */}
+        {LANGUAGES.map((option) => (
+          <Button
+            key={option.code}
+            focusKey={`lang-${option.code}`}
+            selected={language === option.code}
+            onClick={() => setLanguageChoice(option.code)}
+          >
+            {option.name}
+          </Button>
+        ))}
       </div>
       {/* 앱 정보 (Android와 같은 내용). 글뿐이지만 리모컨으로 내려와 볼 수 있게 상자가 포커스를 받는다 */}
       <h2 class="section-title">{t.aboutTitle}</h2>
       <div class="focusable about-box" tabIndex={-1} data-key="about">
         <div class="about-line strong">{fmt(t.aboutAppVersion, APP_VERSION)}</div>
         <div class="about-line">{fmt(t.aboutDeveloper, 'David Hojin Kim', 'sinabro@gmail.com')}</div>
+        <div class="about-line">{t.aboutDeveloperBio}</div>
+        <div class="about-line">{t.aboutDeveloperWish}</div>
+        <div class="about-line">{t.aboutDeveloperJoke}</div>
         <div class="about-line">github.com/RR-korea/KomgaTV</div>
         <div class="about-line">{t.aboutTribute}</div>
         <div class="about-line">Komga — github.com/gotson/komga · Komelia — github.com/Snd-R/Komelia</div>

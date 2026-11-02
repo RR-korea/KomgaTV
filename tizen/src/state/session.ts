@@ -98,9 +98,17 @@ function writeServerList(list: SavedServer[]): void {
 
 /** 지금 연결로 정하고 목록에도 넣는다 */
 export function saveServer(server: SavedServer): void {
+  // 지금 서버를 먼저 목록에 남긴다 — 목록이 생기기 전 버전에서 연결한 서버는 목록에 없어서, 덮어쓰면 사라졌다 (Android 1.0.5)
+  const list = upsertServer(loadServerList(), server);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(server));
-  writeServerList(upsertServer(loadServerList(), server));
+  writeServerList(list);
 }
+
+/** Komga 공식 데모 서버 — 공개 계정 (서버 없이 둘러보기, 스토어 심사용, Android 1.0.5) */
+export const DEMO_SERVER: SavedServer = {
+  url: 'https://demo.komga.org',
+  auth: { kind: 'basic', email: 'demo@komga.org', password: 'komga-demo' },
+};
 
 export function removeSavedServer(id: string): SavedServer[] {
   const next = removeServerFrom(loadServerList(), id);

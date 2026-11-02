@@ -1,0 +1,48 @@
+[title]
+TV Reader for Komga
+
+[short_description]
+Read comics, manga and books from your own Komga server on your Samsung TV.
+
+[full_description]
+TV Reader for Komga is a comic and book reader for Samsung Smart TVs (Tizen, 2020 models and later), built for the remote control. It connects to your own Komga server so you can browse your libraries and read comics, manga, PDFs and EPUB books on the big screen.
+
+This app does not include any books. You need your own Komga server (komga.org). Don't have one yet? Select "Try the Komga demo server" in the server settings to look around with the official demo and its public sample books.
+
+WHY TV READER FOR KOMGA
+• No ads. Not now, not later.
+• Fast: upcoming pages are loaded ahead and cached, so page turns feel instant, even for large PDFs.
+• Private: no analytics, no tracking, no account with us. The app collects no personal data. Your sign-in details stay in the app's own storage on your TV and are sent only to your own server.
+• Made for the remote: every screen works with the D-pad, no touch or mouse needed.
+• Open source.
+
+HOME
+• Continue reading, On deck, recently added books and series, and recently updated series
+• Long-press a book to remove it from Continue reading
+
+COMICS AND MANGA
+• Single page or double pages (with or without a separate cover), with page offset
+• Right-to-left or left-to-right reading, and the next and previous volumes follow the same direction
+• Paged or continuous (webtoon-style) reading
+• Scale to screen, width, height or original size
+• Slide or fade page transitions
+• Up/down to jump 10 pages, and a progress bar
+
+PER-SERIES VIEW SETTINGS
+• Every series keeps its own settings: direction, layout, scale, zoom (100–120%), contrast (50–150%)
+• Image enhancement for large TVs: Lanczos2/3/4 upscaling, smooth upscaling and sharpening
+
+BOOKS
+• PDF and EPUB support
+• Reading progress is saved to your Komga server, so you can continue on any device
+
+MORE
+• Search series and books by title
+• Several servers, each signed in with email and password or an API key
+• Available in 15 languages
+• Also available for Google TV and Android TV
+
+TV Reader for Komga is an unofficial app and is not affiliated with Komga or its developers. Source code: github.com/RR-korea/KomgaTV
+
+[release_notes]
+First release.

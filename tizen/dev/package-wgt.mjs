@@ -35,8 +35,8 @@ if (!wgt) {
   console.error('no .wgt produced');
   process.exit(1);
 }
-// 파일 이름에 버전과 빌드 번호 (Android APK와 같게: KomgaTV-v0.2.2-b4.wgt)
+// 파일 이름에 버전과 빌드 번호 (Android APK와 같게: TVReaderForKomga-v1.0.6-b21.wgt)
 const { version, build } = JSON.parse(readFileSync('package.json', 'utf8'));
-const named = `KomgaTV-v${version}-b${build}.wgt`;
+const named = `TVReaderForKomga-v${version}-b${build}.wgt`;
 renameSync(join(dist, wgt), join(dist, named));
 console.log(join(dist, named));

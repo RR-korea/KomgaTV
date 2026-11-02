@@ -1,7 +1,9 @@
-// UI 문자열. Android(values/strings.xml, values-ko)와 같은 문구를 쓴다. 기본 영어, TV 언어가 한국어면 한국어.
+// UI 문자열. Android(values*/strings.xml)와 같은 문구를 쓴다 — 한국어·영어는 여기, 나머지 13개 언어는 src/locales/
+// (dev/gen-locales.py가 Android 번역에서 만든다). 기본은 TV 언어, 없으면 영어.
+import { de, es, fr, id, it, ja, pl, ptBR, ru, tr, vi, zhCN, zhTW } from './locales';
 
-const ko = {
-  appName: 'KomgaTV',
+export const ko = {
+  appName: 'TV Reader for Komga',
   loading: '불러오는 중…',
   loadingMore: '더 불러오는 중…',
   errorTitle: '문제가 생겼습니다',
@@ -41,10 +43,15 @@ const ko = {
   settingsCacheCleared: '이미지 캐시를 비웠습니다.',
   settingsSectionApp: '앱',
   aboutTitle: '앱 정보',
-  aboutAppVersion: 'KomgaTV {0}',
+  aboutAppVersion: 'TV Reader for Komga {0}',
   aboutDeveloper: '만든 사람: {0} · {1}',
   aboutTribute: 'Komga와 Komelia 프로젝트에 대한 존경을 담아 만들었습니다. 두 프로젝트의 제작자와 기여자들께 감사드립니다.',
-  aboutLicenses: '오픈소스: Komelia(Apache-2.0, 리더 로직 일부), Preact(MIT), Noto Sans(SIL OFL 1.1, 로고). KomgaTV는 Komga·Komelia와 공식 관계가 없습니다.',
+  aboutLicenses: '오픈소스: Komelia(Apache-2.0, 리더 로직 일부), Preact(MIT), Noto Sans(SIL OFL 1.1, 아이콘). TV Reader for Komga는 Komga·Komelia와 공식 관계가 없는 비공식 앱입니다.',
+  aboutDeveloperBio: '한국의 락로보틱스에서 일하는 산업용 드론(농업용 중심) 전문가입니다. 일손 부족에 시달리는 농촌을 드론과 로봇으로 윤택하고 살 만한 곳으로 만들기 위해 노력하고 있습니다.',
+  aboutDeveloperWish: '한반도의 평화를 기원합니다. 전쟁이 멈추고 무기가 농기계로 바뀌어 빈곤을 몰아내고, 전쟁으로 고통받던 모든 이들이 가족과 함께 행복하기를 바랍니다.',
+  aboutDeveloperJoke: '이 앱은 삼성 TV에서 만들고 다듬었습니다. 구글 TV용 버전도 있습니다. 삼성의 아낌없는 지원을 기대하고 있습니다. (농담입니다. 아마도요.)',
+  settingsDemoServer: 'Komga 데모 서버로 둘러보기',
+  settingsDemoHint: '아직 서버가 없나요? Komga 공식 데모 서버의 공개 예시 책으로 둘러볼 수 있습니다.',
   settingsLanguage: '언어',
   settingsLanguageSystem: 'TV 설정 따름',
 
@@ -168,8 +175,8 @@ const ko = {
 
 export type Strings = typeof ko;
 
-const en: Strings = {
-  appName: 'KomgaTV',
+export const en: Strings = {
+  appName: 'TV Reader for Komga',
   loading: 'Loading…',
   loadingMore: 'Loading more…',
   errorTitle: 'Something went wrong',
@@ -209,10 +216,15 @@ const en: Strings = {
   settingsCacheCleared: 'Image cache cleared.',
   settingsSectionApp: 'App',
   aboutTitle: 'About',
-  aboutAppVersion: 'KomgaTV {0}',
+  aboutAppVersion: 'TV Reader for Komga {0}',
   aboutDeveloper: 'Made by {0} · {1}',
   aboutTribute: 'Made with deep respect for the Komga and Komelia projects. Thank you to their authors and contributors.',
-  aboutLicenses: 'Open source: Komelia (Apache-2.0, parts of the reader logic), Preact (MIT), Noto Sans (SIL OFL 1.1, logo). KomgaTV is not affiliated with Komga or Komelia.',
+  aboutLicenses: 'Open source: Komelia (Apache-2.0, parts of the reader logic), Preact (MIT), Noto Sans (SIL OFL 1.1, icon). TV Reader for Komga is an unofficial app, not affiliated with Komga or Komelia.',
+  aboutDeveloperBio: 'Works at Rock Robotics in Korea as an industrial drone specialist, mainly agricultural drones — working to make farming villages short of hands prosperous, livable places through drones and robots.',
+  aboutDeveloperWish: 'I wish for peace on the Korean Peninsula — that the war will stop, that weapons will become farm machines that drive out poverty, and that everyone who suffered through war can be happy with their families.',
+  aboutDeveloperJoke: "I built and polished this app on a Samsung TV. There is a Google TV version, too. Samsung, I'm ready for your generous support. (Just kidding. Mostly.)",
+  settingsDemoServer: 'Try the Komga demo server',
+  settingsDemoHint: 'No server yet? Look around with the official Komga demo server and its public sample books.',
   settingsLanguage: 'Language',
   settingsLanguageSystem: 'Same as TV',
 
@@ -334,16 +346,38 @@ const en: Strings = {
   readerHelpContinuous: 'Info closed: Up/Down scroll a screen  ·  Left/Right: page  ·  Up/Down (info): jump 10 pages',
 };
 
-const tables: Record<string, Strings> = { ko, en };
+/** 고를 수 있는 언어 — 이름은 그 언어로 (Android와 같은 15개) */
+export const LANGUAGES = [
+  { code: 'ko', name: '한국어', strings: ko },
+  { code: 'en', name: 'English', strings: en },
+  { code: 'ja', name: '日本語', strings: ja },
+  { code: 'zh-CN', name: '简体中文', strings: zhCN },
+  { code: 'zh-TW', name: '繁體中文', strings: zhTW },
+  { code: 'de', name: 'Deutsch', strings: de },
+  { code: 'fr', name: 'Français', strings: fr },
+  { code: 'es', name: 'Español', strings: es },
+  { code: 'it', name: 'Italiano', strings: it },
+  { code: 'pt-BR', name: 'Português (Brasil)', strings: ptBR },
+  { code: 'ru', name: 'Русский', strings: ru },
+  { code: 'pl', name: 'Polski', strings: pl },
+  { code: 'tr', name: 'Türkçe', strings: tr },
+  { code: 'id', name: 'Bahasa Indonesia', strings: id },
+  { code: 'vi', name: 'Tiếng Việt', strings: vi },
+] as const;
 
 // 앱 언어: 기본은 TV 언어를 따르고, 설정에서 고를 수 있다 (TV 언어를 바꿀 수 없는 에뮬레이터·호텔 TV 등).
-export type LanguageChoice = 'system' | 'ko' | 'en';
+export type LanguageChoice = 'system' | (typeof LANGUAGES)[number]['code'];
 const LANGUAGE_KEY = 'komgatv.language';
+
+function byCode(code: string): Strings | undefined {
+  for (const language of LANGUAGES) if (language.code === code) return language.strings;
+  return undefined;
+}
 
 export function getLanguageChoice(): LanguageChoice {
   try {
     const value = localStorage.getItem(LANGUAGE_KEY);
-    return value === 'ko' || value === 'en' ? value : 'system';
+    return value && byCode(value) ? (value as LanguageChoice) : 'system';
   } catch {
     return 'system';
   }
@@ -360,11 +394,20 @@ export function setLanguageChoice(choice: LanguageChoice): void {
   location.reload();
 }
 
+/** TV 언어 태그 → 앱 언어 (zh-Hant·zh-HK는 번체, pt는 브라질, in은 인도네시아어) */
+export function languageFor(tag: string): Strings {
+  const lower = tag.toLowerCase();
+  const [base] = lower.split('-');
+  if (base === 'zh') return /hant|tw|hk|mo/.test(lower) ? zhTW : zhCN;
+  if (base === 'pt') return ptBR;
+  if (base === 'in') return id;
+  return byCode(base) ?? en;
+}
+
 function pickLanguage(): Strings {
   const choice = getLanguageChoice();
-  if (choice !== 'system') return tables[choice];
-  const lang = (navigator.language || 'en').toLowerCase();
-  return tables[lang.split('-')[0]] ?? en;
+  if (choice !== 'system') return byCode(choice) ?? en;
+  return languageFor(navigator.language || 'en');
 }
 
 export const t: Strings = pickLanguage();

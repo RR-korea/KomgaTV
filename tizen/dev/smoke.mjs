@@ -73,6 +73,9 @@ try {
 
   // 1. 첫 실행 → 설정, URL 칸 포커스
   await expectFocus('첫 실행 URL 칸', 'url');
+  // 서버가 없어도 둘러볼 수 있게 (Android 1.0.5) — 실제 데모 서버(demo.komga.org)에는 연결하지 않는다
+  await expectText('첫 실행: 데모 서버 안내', '.settings', /Komga 공식 데모 서버/);
+  results.push(`${(await page.evaluate(() => !!document.querySelector('[data-key="demo"]'))) ? 'PASS' : 'FAIL'} 첫 실행: 데모 서버 버튼`);
   await typeInto(`http://localhost:${port}/komga/`);
   await key('ArrowDown');
   await expectFocus('인증 방식 행은 선택된 항목으로', 'auth-basic');
@@ -432,6 +435,18 @@ try {
   results.push(`${saved.length === 2 ? 'PASS' : 'FAIL'} 저장된 서버 2개: ${saved.join(' / ')}`);
   const defaultRows = await page.evaluate(() => document.querySelectorAll('.settings .view-row').length);
   results.push(`${defaultRows === 8 ? 'PASS' : 'FAIL'} 서버 설정 "보기 기본값" 8줄 (Android T14): ${defaultRows}`);
+  // 앱 이름·15개 언어·만든 사람 소개 (Android 1.0.3~1.0.6)
+  const app = await page.evaluate(() => ({
+    langs: document.querySelectorAll('[data-section="language"] .button').length,
+    about: document.querySelector('.about-box')?.textContent ?? '',
+    demo: !!document.querySelector('[data-key="demo"]'),
+    title: document.title,
+  }));
+  results.push(`${app.langs === 16 ? 'PASS' : 'FAIL'} 언어 고르기: TV 설정 따름 + 15개 언어 = ${app.langs}`);
+  results.push(
+    `${/TV Reader for Komga/.test(app.about) && /락로보틱스/.test(app.about) && /한반도의 평화/.test(app.about) && /구글 TV용 버전/.test(app.about) ? 'PASS' : 'FAIL'} 앱 정보: 새 이름·소개·평화·농담`,
+  );
+  results.push(`${app.demo && app.title === 'TV Reader for Komga' ? 'PASS' : 'FAIL'} 데모 서버 버튼(저장 전까지), 창 제목 "${app.title}"`);
   await expectFocus('목록 맨 위 = 다른 서버의 바꾸기', 'server-switch-0');
   await shot('saved-servers');
   await key('Enter');

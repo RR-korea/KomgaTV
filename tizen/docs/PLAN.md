@@ -183,6 +183,22 @@ MVP는 앱 전용 `localStorage`(Tizen 앱마다 격리). 스토어 전에 Tizen
 - 1.0.2 / b17. 스모크 141항목(대비 50% 멈춤·130%, Lanczos3 canvas 두 쪽·Worker·미리 처리), 단위 테스트 127.
 - Android translate 브랜치(ML Kit 만화 번역 시험판)는 main에 없고 Android 전용이라 옮기지 않음.
 
+### Android 1.0.3~1.0.6 이식 + 삼성 스토어 준비: TV Reader for Komga, 15개 언어, 데모 서버 (2026-11-03)
+- 이름: **TV Reader for Komga** (옛 KomgaTV, 비공식 앱임을 앱 정보·고지에 밝힘). config.xml `<name>`, 창 제목, 앱 정보, wgt 이름 `TVReaderForKomga-v<버전>-b<빌드>.wgt`.
+  앱 ID `KomgaTVtz0.KomgaTV`·저장 키 `komgatv.*`·저장소 주소는 그대로 (덮어 설치·설정 유지).
+- 아이콘: Android가 직접 그린 TV·책 표시 + "TV Reader / for Komga" 배너를 512×423으로 (`dev/make-icon.py`). Komga 로고 고지 삭제.
+- 15개 언어(한·영·일·중 간체/번체·독·프·스·이·포(브라질)·러·폴·터·인니·베): 13개 언어는 `dev/gen-locales.py`가 Android strings.xml 번역에서 `src/locales/`를 만든다
+  (같은 영어·한국어 문구를 찾아 그 번역을 쓰고, 복수형은 other 꼴). 타이젠에만 있는 15개 문구는 `dev/locales-manual.json`에 직접 번역.
+  언어 고르기는 "TV 설정 따름 + 15개"(여러 줄), TV 언어 태그는 zh-Hant/HK→번체, pt→브라질, in→인니.
+- 서버 설정: [Komga 데모 서버로 둘러보기] (demo.komga.org 공개 계정, 데모가 저장되기 전까지, 첫 실행엔 안내 글과 함께).
+  고침(Android 1.0.5와 같은 문제): 목록이 생기기 전 버전에서 연결한 서버가 새 서버 저장 때 목록에서 사라지던 것 — 지금 서버를 먼저 목록에 남긴다.
+- 앱 정보: 만든 사람 소개·평화 기원·농담(타이젠판은 "구글 TV용 버전도 있습니다").
+- 삼성 스토어 자료 `store/`: README(Seller Office 체크리스트), 등록 문구 en-US·ko-KR(Android 문구에서 암호화·음성 검색·플랫폼 문구를 타이젠에 맞게),
+  타이젠용 개인정보처리방침(아직 웹에 안 올림 — main `docs/privacy/tizen/`에 넣어야 함), 데모 서버로 찍은 1920×1080 스크린샷 en·ko 8장씩(`dev/store-shots.mjs`).
+- **에뮬레이터**: 데모 서버 버튼 → 데모 연결·홈, 저장 뒤 버튼 사라짐·NAS 서버 목록에 남음, 일본어 화면(홈·설정), 앱 목록에 새 아이콘·이름.
+  시험 뒤 NAS 서버·한국어로 되돌리고 데모 서버는 목록에서 뺐다. 괴수 8호 01 = 19쪽 그대로.
+- 1.0.6 / b21 (Android와 같은 번호). 스모크 146항목, 단위 테스트 132. **실제 2020년형 TV 미확인.**
+
 ## Android와 다른 점
 - 리더: 정보가 열린 상태에서 OK = 보기 설정 열기, 정보 닫기는 Back. (Android는 OK가 정보 토글, 설정은 정보의 버튼) TV 웹앱에서 숨은 버튼으로 포커스를 옮기는 단계를 줄였다.
 - 리더: 채널 위/아래 = 10쪽 이동 (정보를 열지 않고).

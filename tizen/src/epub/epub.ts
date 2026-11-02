@@ -79,7 +79,7 @@ export function stepZoom(zoom: number, direction: 1 | -1): number {
 export function toProgression(chapters: Chapter[], position: EpubPosition, now: Date): R2Progression {
   return {
     modified: now.toISOString(),
-    device: { id: 'komgatv-tizen', name: 'KomgaTV (Tizen)' },
+    device: { id: 'komgatv-tizen', name: 'TV Reader for Komga (Tizen)' },
     locator: {
       href: resourcePath(chapters[position.chapter]?.href ?? ''),
       type: 'application/xhtml+xml',

@@ -1144,3 +1144,12 @@ body {
 .confirm-buttons .confirm-button:last-child {
   margin-right: 0;
 }
+
+/* 언어 고르기: 15개 언어라 여러 줄로 */
+.choice-row.wrap {
+  flex-wrap: wrap;
+}
+
+.choice-row.wrap .button {
+  margin-bottom: 16px;
+}
