@@ -1,11 +1,12 @@
-"""TV 배너·앱 아이콘 만들기 — Google Play 배너처럼 밝은 바탕에 왼쪽 Komga 로고, 오른쪽 'KomgaTV' (글자 비율 그대로).
+"""TV 배너·앱 아이콘 만들기 — "TV Reader for Komga".
 
-입력: Komga 로고(MIT, github.com/gotson/komga komga-webui/src/assets/logo.svg)를 1024px PNG로 그린 것,
-      Noto Sans Bold(OFL).
-출력: app/src/main/res/drawable-*/tv_banner.png (320x180dp), drawable-*/ic_launcher_foreground.png (108dp, 로고),
-      drawable-*/ic_launcher_monochrome.png (테마 아이콘)
+직접 그린 표시(파란 둥근 사각형 안에 흰 TV 화면, 그 안에 펼친 책)와 글자 "TV Reader" / "for Komga".
+Komga 로고는 쓰지 않는다 (다른 프로젝트의 상표로 보이지 않게).
 
-    python docs/branding/make_banner.py <logo-1024.png> <NotoSans-Bold.ttf>
+    python docs/branding/make_banner.py <NotoSans-Bold.ttf> <NotoSans-Regular.ttf> [오른쪽 위 표시, 예: ML]
+
+출력: app/src/main/res/drawable-*/tv_banner.png (320x180dp), drawable-*/ic_launcher_foreground.png,
+      drawable-*/ic_launcher_monochrome.png (108dp), docs/branding/*.png (미리보기·스토어용 512px 아이콘)
 """
 import sys
 from pathlib import Path
@@ -13,103 +14,145 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 W, H = 1280, 720
-# Google Play 타일처럼 흰 바탕에 아주 옅은 회색으로
 BG_TOP, BG_BOTTOM = (255, 255, 255), (241, 243, 244)
-INK = (60, 64, 67)  # 'Komga' — Google 글자 회색
-BLUE = (0, 94, 211)  # 'TV' — Komga 로고의 파랑
-STRETCH_Y = 1.0  # 글자 비율 그대로 (세로로 늘리면 보기 싫다 — 사용자 의견)
-FONT_SIZE = 400
-TRACKING = -12  # 자간 (글자 크기 400 기준, 음수면 좁힌다 — 사용자 의견)
+INK = (60, 64, 67)
+BLUE = (0, 94, 211)
+BLUE_DARK = (0, 66, 160)
+BADGE = (232, 64, 52)
 
 DENSITIES = {"mdpi": 1.0, "hdpi": 1.5, "xhdpi": 2.0, "xxhdpi": 3.0, "xxxhdpi": 4.0}
+# 적응형 아이콘: 108dp 캔버스, 런처가 잘라도 온전한 안쪽에 그림을 둔다
+ICON_DP, ICON_SAFE_DP = 108, 66
+SS = 4  # 4배로 그린 뒤 줄여 가장자리를 부드럽게
 
-# 적응형 아이콘: 108dp 캔버스, 로고 원은 지름 72dp (런처가 원·둥근 사각으로 잘라도 로고가 온전하게)
-ICON_DP, ICON_LOGO_DP = 108, 72
 
-
-def gradient() -> Image.Image:
-    img = Image.new("RGB", (W, H))
+def gradient(w: int, h: int, top, bottom) -> Image.Image:
+    img = Image.new("RGB", (w, h))
     draw = ImageDraw.Draw(img)
-    for y in range(H):
-        t = y / (H - 1)
-        draw.line([(0, y), (W, y)], fill=tuple(round(a + (b - a) * t) for a, b in zip(BG_TOP, BG_BOTTOM)))
+    for y in range(h):
+        t = y / max(h - 1, 1)
+        draw.line([(0, y), (w, y)], fill=tuple(round(a + (b - a) * t) for a, b in zip(top, bottom)))
     return img
 
 
-def wordmark(font_path: str, height: int) -> Image.Image:
-    """'Komga'(회색) + 'TV'(파랑)을 그린다 (STRETCH_Y가 1이 아니면 세로로 늘린다)"""
-    font = ImageFont.truetype(font_path, FONT_SIZE)
-    # 한 글자씩 그리며 자간을 [TRACKING]만큼 좁힌다
-    letters = [(ch, INK) for ch in "Komga"] + [(ch, BLUE) for ch in "TV"]
-    top = min(font.getbbox(ch)[1] for ch, _ in letters)
-    bottom = max(font.getbbox(ch)[3] for ch, _ in letters)
-    left = font.getbbox(letters[0][0])[0]
-    advances = [font.getlength(ch) + TRACKING for ch, _ in letters]
-    width = round(sum(advances[:-1]) + font.getbbox(letters[-1][0])[2] - left)
-    canvas = Image.new("RGBA", (width, bottom - top), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(canvas)
-    x = -left
-    for (ch, color), advance in zip(letters, advances):
-        draw.text((x, -top), ch, font=font, fill=color)
-        x += advance
-    stretched = canvas.resize((canvas.width, round(canvas.height * STRETCH_Y)), Image.LANCZOS)
-    scale = height / stretched.height
-    return stretched.resize((round(stretched.width * scale), height), Image.LANCZOS)
+def tv_book(size: int, color, screen_fill=None) -> Image.Image:
+    """TV(둥근 화면 + 받침) 안에 펼친 책 — [size] 정사각 캔버스, 투명 바탕.
+    [screen_fill]이 있으면 화면 안을 그 색으로 칠하고 책의 글줄·접힘을 그 색으로 비운다(없으면 투명)."""
+    s = size * SS
+    img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    stroke = round(s * 0.055)
+    left, top, right, bottom = s * 0.10, s * 0.14, s * 0.90, s * 0.74
+    if screen_fill:
+        d.rounded_rectangle((left, top, right, bottom), radius=s * 0.09, fill=screen_fill)
+    d.rounded_rectangle((left, top, right, bottom), radius=s * 0.09, outline=color, width=stroke)
+    # 받침
+    d.line((s * 0.50, bottom, s * 0.50, s * 0.83), fill=color, width=stroke)
+    d.rounded_rectangle((s * 0.32, s * 0.81, s * 0.68, s * 0.81 + stroke * 1.2), radius=stroke * 0.6, fill=color)
+    # 펼친 책
+    cx, cy = s * 0.50, s * 0.445
+    bw, bh = s * 0.25, s * 0.30
+    for side in (-1, 1):
+        d.polygon(
+            [(cx, cy - bh * 0.40), (cx + side * bw, cy - bh * 0.55), (cx + side * bw, cy + bh * 0.42), (cx, cy + bh * 0.55)],
+            fill=color,
+        )
+    gap = screen_fill or (0, 0, 0, 0)
+    line_w = round(s * 0.02)
+    for side in (-1, 1):
+        for i in range(3):
+            y0 = cy - bh * 0.20 + i * bh * 0.24
+            d.line(
+                (cx + side * bw * 0.20, y0 + bh * 0.04, cx + side * bw * 0.78, y0 - bh * 0.04),
+                fill=gap, width=line_w,
+            )
+    d.line((cx, cy - bh * 0.40, cx, cy + bh * 0.55), fill=gap, width=round(s * 0.016))
+    return img.resize((size, size), Image.LANCZOS)
 
 
-def banner(logo: Image.Image, font_path: str) -> Image.Image:
-    out = gradient().convert("RGBA")
-    logo_size = 420
-    left = 56
-    out.alpha_composite(logo.resize((logo_size, logo_size), Image.LANCZOS), (left, (H - logo_size) // 2))
+def mark(size: int) -> Image.Image:
+    """파란 둥근 사각형 + 흰 TV·책 (배너·스토어 아이콘용)"""
+    s = size * SS
+    grad = gradient(s, s, BLUE, BLUE_DARK).convert("RGBA")
+    mask = Image.new("L", (s, s), 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, s - 1, s - 1), radius=s * 0.22, fill=255)
+    base = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    base.paste(grad, (0, 0), mask)
+    base = base.resize((size, size), Image.LANCZOS)
+    inner = tv_book(round(size * 0.80), (255, 255, 255, 255), screen_fill=BLUE + (255,))
+    base.alpha_composite(inner, ((size - inner.width) // 2, (size - inner.height) // 2 + round(size * 0.03)))
+    return base
 
-    text_left = left + logo_size + 44
-    max_width = W - text_left - 50
-    text = wordmark(font_path, 300)
-    if text.width > max_width:
-        text = text.resize((max_width, round(text.height * max_width / text.width)), Image.LANCZOS)
-    out.alpha_composite(text, (text_left, (H - text.height) // 2))
+
+def text(font_path: str, txt: str, px: int, color) -> Image.Image:
+    font = ImageFont.truetype(font_path, px)
+    l, t, r, b = font.getbbox(txt)
+    img = Image.new("RGBA", (r - l, b - t), (0, 0, 0, 0))
+    ImageDraw.Draw(img).text((-l, -t), txt, font=font, fill=color)
+    return img
+
+
+def fit(img: Image.Image, max_w: int) -> Image.Image:
+    return img if img.width <= max_w else img.resize((max_w, round(img.height * max_w / img.width)), Image.LANCZOS)
+
+
+def banner(bold: str, regular: str) -> Image.Image:
+    out = gradient(W, H, BG_TOP, BG_BOTTOM).convert("RGBA")
+    m = mark(400)
+    left = 72
+    out.alpha_composite(m, (left, (H - m.height) // 2))
+    x = left + m.width + 60
+    max_w = W - x - 56
+    title = fit(text(bold, "TV Reader", 210, INK), max_w)
+    sub = fit(text(regular, "for Komga", 112, BLUE), max_w)
+    gap = 48
+    y = (H - (title.height + gap + sub.height)) // 2
+    out.alpha_composite(title, (x, y))
+    out.alpha_composite(sub, (x + 4, y + title.height + gap))
     return out.convert("RGB")
 
 
-def icon_foreground(logo: Image.Image, px: int) -> Image.Image:
-    """108dp 캔버스 가운데 로고 (바탕은 ic_launcher_background — 흰색)"""
+def add_badge(art: Image.Image, font_path: str, label: str) -> Image.Image:
+    """오른쪽 위 둥근 표시 (시험판 구별용)"""
+    out = art.convert("RGBA")
+    font = ImageFont.truetype(font_path, 120)
+    l, t, r, b = font.getbbox(label)
+    pad_x, pad_y, margin = 44, 26, 34
+    bw, bh = (r - l) + pad_x * 2, (b - t) + pad_y * 2
+    x0, y0 = W - margin - bw, margin
+    d = ImageDraw.Draw(out)
+    d.rounded_rectangle((x0, y0, x0 + bw, y0 + bh), radius=bh // 2, fill=BADGE)
+    d.text((x0 + pad_x - l, y0 + pad_y - t), label, font=font, fill=(255, 255, 255))
+    return out.convert("RGB")
+
+
+def icon_layer(px: int, screen_fill) -> Image.Image:
     canvas = Image.new("RGBA", (px, px), (0, 0, 0, 0))
-    size = round(px * ICON_LOGO_DP / ICON_DP)
-    canvas.alpha_composite(logo.resize((size, size), Image.LANCZOS), ((px - size) // 2, (px - size) // 2))
+    size = round(px * ICON_SAFE_DP / ICON_DP)
+    glyph = tv_book(size, (255, 255, 255, 255), screen_fill=screen_fill)
+    canvas.alpha_composite(glyph, ((px - size) // 2, (px - size) // 2))
     return canvas
 
 
-def icon_monochrome(logo: Image.Image, px: int) -> Image.Image:
-    """테마 아이콘(한 색)용 — 로고의 별과 K만 남긴 실루엣 (파란 원은 비운다)"""
-    size = round(px * ICON_LOGO_DP / ICON_DP)
-    small = logo.resize((size, size), Image.LANCZOS)
-    mask = small.getchannel("R").point(lambda r: 255 if r > 150 else 0)
-    mask = Image.composite(mask, Image.new("L", small.size, 0), small.getchannel("A"))
-    shape = Image.new("RGBA", small.size, (255, 255, 255, 0))
-    shape.putalpha(mask)
-    canvas = Image.new("RGBA", (px, px), (0, 0, 0, 0))
-    canvas.alpha_composite(shape, ((px - size) // 2, (px - size) // 2))
-    return canvas
-
-
-def main(logo_path: str, font_path: str) -> None:
-    logo = Image.open(logo_path).convert("RGBA")
-    res = Path(__file__).resolve().parents[2] / "app/src/main/res"
-    art = banner(logo, font_path)
+def main(bold: str, regular: str, badge: str | None = None) -> None:
+    here = Path(__file__).resolve().parent
+    res = here.parents[1] / "app/src/main/res"
+    art = banner(bold, regular)
+    if badge:
+        art = add_badge(art, bold, badge)
     for name, factor in DENSITIES.items():
-        size = (round(320 * factor), round(180 * factor))
-        art.resize(size, Image.LANCZOS).save(res / f"drawable-{name}/tv_banner.png", optimize=True)
-        icon_foreground(logo, round(ICON_DP * factor)).save(
-            res / f"drawable-{name}/ic_launcher_foreground.png", optimize=True,
+        art.resize((round(320 * factor), round(180 * factor)), Image.LANCZOS).save(
+            res / f"drawable-{name}/tv_banner.png", optimize=True,
         )
-        icon_monochrome(logo, round(ICON_DP * factor)).save(
-            res / f"drawable-{name}/ic_launcher_monochrome.png", optimize=True,
-        )
-    art.save(Path(__file__).with_name("tv_banner_1280.png"))
-    icon_foreground(logo, 432).save(Path(__file__).with_name("ic_launcher_432.png"))
-    icon_monochrome(logo, 432).save(Path(__file__).with_name("ic_launcher_monochrome_432.png"))
+        px = round(ICON_DP * factor)
+        # 앞면: 흰 TV·책 (바탕 ic_launcher_background가 파랑), 테마 아이콘: 실루엣
+        icon_layer(px, BLUE + (255,)).save(res / f"drawable-{name}/ic_launcher_foreground.png", optimize=True)
+        icon_layer(px, None).save(res / f"drawable-{name}/ic_launcher_monochrome.png", optimize=True)
+    art.save(here / "tv_banner_1280.png")
+    mark(512).save(here / "store_icon_512.png")
+    for old in ("ic_launcher_432.png", "ic_launcher_monochrome_432.png"):
+        (here / old).unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2])
+    main(sys.argv[1], sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None)

@@ -1,4 +1,6 @@
-# 📺 KomgaTV
+# 📺 TV Reader for Komga
+
+> Komga 서버용 비공식 Android TV 리더 (예전 이름: KomgaTV). Komga·Komelia와 공식 관계가 없습니다.
 
 > **[Komga](https://komga.org/) 서버를 위한 Android TV 전용 클라이언트**
 
