@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_loading_page">Cargando…</string>
+    <string name="reader_error_prefix">Error: %1$s</string>
+    <string name="reader_page_content_description">Página %1$d de %2$d</string>
+    <string name="reader_page_range_format">Página %1$s / %2$d</string>
+    <string name="reader_page_percent_format">%1$d%%</string>
+    <string name="reader_overlay_hint">OK: Vista · ▲▼: Saltar 10 páginas · Back: Cerrar</string>
+
+    <!-- 보기 설정 패널 (Komelia의 이름을 따름) -->
+    <string name="reader_settings_hint">▲▼: Elegir · ◀▶/OK: Cambiar · Back: Cerrar</string>
+    <string name="epub_chapter_format">Capítulo %1$d / %2$d · %3$s</string>
+    <string name="epub_overlay_hint">OK: Índice · ▲▼: Tamaño de texto (%1$d%%) · ◀▶: Capítulo · Back: Cerrar</string>
+    <string name="epub_chapter_number_format">Capítulo %1$d / %2$d</string>
+    <string name="epub_toc_title">Índice</string>
+    <string name="epub_chapter_short">Capítulo %1$d</string>
+    <string name="reader_settings_title_series">Vista · esta serie</string>
+    <string name="reader_settings_series_default">Usando los valores de la app (Ajustes del servidor → Vista predeterminada). Los cambios aquí solo se aplican a esta serie.</string>
+    <string name="reader_settings_series_custom">Esta serie tiene sus propios ajustes.</string>
+    <string name="reader_settings_reset">Restablecer valores de la app</string>
+    <string name="end_page_finished">Terminado</string>
+    <string name="end_page_next">Siguiente tomo</string>
+    <string name="end_page_finding_next">Buscando el siguiente tomo…</string>
+    <string name="end_page_last_book">Este es el último tomo de la serie.</string>
+    <string name="end_page_hint_next">%1$s / OK: empezar el siguiente tomo · Back: cerrar</string>
+    <string name="end_page_hint_last">%1$s: volver a la última página · Back: cerrar</string>
+    <string name="reader_page_load_failed">No se pudo cargar esta página.\nPasa a otra y vuelve para reintentarlo.</string>
+    <string name="start_page_current">Este tomo</string>
+    <string name="start_page_previous">Tomo anterior</string>
+    <string name="start_page_finding_previous">Buscando el tomo anterior…</string>
+    <string name="start_page_first_book">Este es el primer tomo de la serie.</string>
+    <string name="start_page_hint_previous">%1$s / OK: última página del tomo anterior · Back: cerrar</string>
+    <string name="start_page_hint_first">%1$s: volver a la primera página · Back: cerrar</string>
+</resources>

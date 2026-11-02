@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_title">Impostazioni server</string>
+    <string name="settings_section_server">Connessione al server</string>
+    <string name="settings_server_url_label">URL del server</string>
+    <string name="settings_server_url_placeholder">http://192.168.1.100:25600</string>
+    <string name="settings_auth_method_label">Metodo di accesso</string>
+    <string name="settings_auth_method_basic">Email / password</string>
+    <string name="settings_auth_method_apikey">Chiave API</string>
+    <string name="settings_username_label">Email (accesso Komga)</string>
+    <string name="settings_username_placeholder">admin@example.com</string>
+    <string name="settings_password_label">Password</string>
+    <string name="settings_password_placeholder">Password</string>
+    <string name="settings_apikey_label">Chiave API</string>
+    <string name="settings_apikey_placeholder">Chiave API</string>
+    <string name="settings_btn_test">Prova connessione</string>
+    <string name="settings_btn_save">Salva e connetti</string>
+    <string name="settings_status_testing">Verifica del server&#8230;</string>
+    <string name="settings_status_success">Connesso al server.</string>
+    <string name="settings_error_invalid_url">L\'indirizzo del server non è valido. (es. http://192.168.1.100:25600)</string>
+    <string name="settings_error_unreachable">Impossibile raggiungere il server. Controlla indirizzo, porta e rete.</string>
+    <string name="settings_error_unauthorized">Accesso non riuscito. Controlla email/password o chiave API. (401)</string>
+    <string name="settings_error_ssl">Il certificato SSL del server è autofirmato o non attendibile. I certificati autofirmati non sono ancora supportati.</string>
+    <string name="settings_error_other">Impossibile connettersi al server: %1$s</string>
+    <string name="settings_error_missing_fields">Inserisci l\'URL del server e i dati di accesso.</string>
+    <string name="settings_section_cache">Cache</string>
+    <string name="settings_btn_clear_cache">Svuota cache immagini</string>
+    <string name="settings_status_cache_cleared">Cache immagini svuotata.</string>
+    <string name="settings_saved_servers">Server salvati</string>
+    <string name="settings_server_active">In uso</string>
+    <string name="settings_server_switch">Usa</string>
+    <string name="settings_server_remove">Rimuovi</string>
+    <string name="settings_server_add">Aggiungi un altro server</string>
+    <string name="settings_section_view_defaults">Opzioni di lettura predefinite</string>
+    <string name="settings_view_defaults_hint">Valgono per tutte le serie, a meno che tu non modifichi una serie nel lettore (lì le Opzioni di lettura valgono solo per quella serie).</string>
+    <string name="about_title">Informazioni</string>
+    <string name="about_app_version">TV Reader for Komga %1$s</string>
+    <string name="about_developer">Creato da %1$s · %2$s</string>
+    <string name="about_developer_bio">Lavora in Rock Robotics, in Corea, come specialista di droni industriali, soprattutto agricoli — per rendere i villaggi agricoli a corto di manodopera luoghi prosperi e vivibili grazie a droni e robot.</string>
+    <string name="about_developer_wish">Auguro la pace alla penisola coreana: che la guerra finisca, che le armi diventino macchine agricole per sconfiggere la povertà e che tutti coloro che hanno sofferto per la guerra siano felici con le loro famiglie.</string>
+    <string name="about_tribute">Realizzata con profondo rispetto per i progetti Komga e Komelia. Grazie ai loro autori e collaboratori.</string>
+    <string name="about_licenses">Open source: Komelia (Apache-2.0, parte della logica del lettore), komga-client (MIT), Noto Sans (SIL OFL 1.1, banner), AndroidX / Jetpack Compose, Coil, OkHttp, Ktor (Apache-2.0). TV Reader for Komga è un\'app non ufficiale, non affiliata a Komga né a Komelia.</string>
+</resources>

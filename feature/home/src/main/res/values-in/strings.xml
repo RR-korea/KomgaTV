@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_loading">Memuat…</string>
+    <string name="home_error_title">Terjadi kesalahan</string>
+    <string name="home_continue_reading">Lanjutkan membaca</string>
+    <string name="home_libraries">Perpustakaan</string>
+    <string name="home_book_progress">Halaman %1$d/%2$d</string>
+    <string name="home_book_completed">Selesai</string>
+    <string name="home_server_settings">Pengaturan server</string>
+    <string name="home_search">Cari</string>
+    <string name="home_on_deck">Baca berikutnya</string>
+    <string name="home_latest_books">Buku yang baru ditambahkan</string>
+    <string name="home_new_series">Seri yang baru ditambahkan</string>
+    <string name="home_updated_series">Seri yang baru diperbarui</string>
+    <plurals name="home_series_books_count">
+        <item quantity="other">%1$d buku</item>
+    </plurals>
+    <string name="library_action_scan">Pindai perpustakaan (admin)</string>
+    <string name="library_action_empty_trash">Kosongkan sampah (admin)</string>
+    <string name="library_action_hint">Setelah menghapus file di server: pindai, tunggu hingga selesai, lalu kosongkan sampah.</string>
+    <string name="library_action_done_scan">Pemindaian diminta — server sedang memprosesnya</string>
+    <string name="library_action_done_trash">Sampah dikosongkan</string>
+    <string name="library_action_failed">Tidak dapat dilakukan (khusus admin, atau kesalahan server)</string>
+    <string name="reading_action_hint">Menghapus progres membaca di server (di semua perangkat) dan menyembunyikan seri ini dari “Lanjutkan membaca” dan “Baca berikutnya”. Seri akan muncul lagi saat Anda membacanya kembali.</string>
+    <string name="reading_action_question">Hapus seri ini dari “Lanjutkan membaca”?</string>
+    <string name="reading_action_keep">Biarkan</string>
+    <string name="reading_action_remove">Hapus</string>
+</resources>

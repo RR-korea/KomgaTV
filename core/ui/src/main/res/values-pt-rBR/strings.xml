@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_not_connected">Sem conexão com um servidor Komga. Verifique as configurações do servidor.</string>
+    <string name="error_unreachable">Não foi possível acessar o servidor. Verifique o endereço e a rede.</string>
+    <string name="error_unauthorized">O servidor recusou o login. Verifique seu e-mail/senha ou a chave de API.</string>
+    <string name="error_unknown">Ocorreu um erro ao carregar.</string>
+    <string name="view_reader_type">Tipo de leitor</string>
+    <string name="view_reader_type_paged">Paginado</string>
+    <string name="view_reader_type_continuous">Contínuo</string>
+    <string name="view_layout">Layout da página</string>
+    <string name="view_layout_single">Página única</string>
+    <string name="view_layout_double">Páginas duplas</string>
+    <string name="view_layout_double_no_cover">Páginas duplas (sem capa)</string>
+    <string name="view_offset">Deslocar páginas</string>
+    <string name="view_direction">Direção de leitura</string>
+    <string name="view_direction_ltr">Esquerda para a direita</string>
+    <string name="view_direction_rtl">Direita para a esquerda</string>
+    <string name="view_scale">Tipo de escala</string>
+    <string name="view_scale_screen">Tela</string>
+    <string name="view_scale_fit_width">Ajustar à largura</string>
+    <string name="view_scale_fit_height">Ajustar à altura</string>
+    <string name="view_scale_original">Original</string>
+    <string name="view_side_padding">Margem lateral</string>
+    <string name="view_page_spacing">Espaçamento entre páginas</string>
+    <string name="view_enhancement">Melhoria de imagem</string>
+    <string name="view_enhancement_off">Desativada</string>
+    <string name="view_enhancement_smooth">Ampliação suave</string>
+    <string name="view_enhancement_sharpen">Nitidez</string>
+    <string name="view_enhancement_sharpen_strong">Mais nitidez</string>
+    <string name="view_percent_value">%1$d%%</string>
+    <string name="view_dp_value">%1$d dp</string>
+    <string name="view_on">Ativado</string>
+    <string name="view_off">Desativado</string>
+    <string name="view_zoom">Zoom</string>
+    <string name="view_transition">Transição de página</string>
+    <string name="view_transition_off">Desativada</string>
+    <string name="view_transition_slide">Deslizar</string>
+    <string name="view_transition_fade">Esmaecer</string>
+    <string name="view_contrast">Contraste</string>
+    <string name="view_enhancement_lanczos2">Lanczos2 (rápido)</string>
+    <string name="view_enhancement_lanczos">Lanczos3</string>
+    <string name="view_enhancement_lanczos4">Lanczos4 (melhor)</string>
+</resources>

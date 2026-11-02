@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_loading">Đang tải…</string>
+    <string name="home_error_title">Đã xảy ra lỗi</string>
+    <string name="home_continue_reading">Đọc tiếp</string>
+    <string name="home_libraries">Thư viện</string>
+    <string name="home_book_progress">Trang %1$d/%2$d</string>
+    <string name="home_book_completed">Đã đọc xong</string>
+    <string name="home_server_settings">Cài đặt máy chủ</string>
+    <string name="home_search">Tìm kiếm</string>
+    <string name="home_on_deck">Cuốn tiếp theo</string>
+    <string name="home_latest_books">Sách mới thêm</string>
+    <string name="home_new_series">Bộ truyện mới thêm</string>
+    <string name="home_updated_series">Bộ truyện mới cập nhật</string>
+    <plurals name="home_series_books_count">
+        <item quantity="other">%1$d cuốn</item>
+    </plurals>
+    <string name="library_action_scan">Quét thư viện (quản trị)</string>
+    <string name="library_action_empty_trash">Dọn thùng rác (quản trị)</string>
+    <string name="library_action_hint">Sau khi xóa tệp trên máy chủ: quét, chờ quét xong, rồi dọn thùng rác.</string>
+    <string name="library_action_done_scan">Đã yêu cầu quét — máy chủ đang xử lý</string>
+    <string name="library_action_done_trash">Đã dọn thùng rác</string>
+    <string name="library_action_failed">Không thể thực hiện (chỉ dành cho quản trị viên, hoặc lỗi máy chủ)</string>
+    <string name="reading_action_hint">Xóa tiến độ đọc trên máy chủ (trên mọi thiết bị) và ẩn bộ truyện này khỏi “Đọc tiếp” và “Cuốn tiếp theo”. Bộ truyện sẽ xuất hiện lại khi bạn đọc lại.</string>
+    <string name="reading_action_question">Xóa bộ truyện này khỏi “Đọc tiếp”?</string>
+    <string name="reading_action_keep">Giữ lại</string>
+    <string name="reading_action_remove">Xóa</string>
+</resources>

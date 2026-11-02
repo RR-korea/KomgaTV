@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_not_connected">Komga sunucusuna bağlı değil. Sunucu ayarlarını kontrol edin.</string>
+    <string name="error_unreachable">Sunucuya ulaşılamıyor. Adresi ve ağınızı kontrol edin.</string>
+    <string name="error_unauthorized">Sunucu girişi reddetti. E-posta/şifrenizi veya API anahtarınızı kontrol edin.</string>
+    <string name="error_unknown">Yüklenirken bir sorun oluştu.</string>
+    <string name="view_reader_type">Okuyucu türü</string>
+    <string name="view_reader_type_paged">Sayfalı</string>
+    <string name="view_reader_type_continuous">Kesintisiz</string>
+    <string name="view_layout">Sayfa düzeni</string>
+    <string name="view_layout_single">Tek sayfa</string>
+    <string name="view_layout_double">Çift sayfa</string>
+    <string name="view_layout_double_no_cover">Çift sayfa (kapaksız)</string>
+    <string name="view_offset">Sayfaları kaydır</string>
+    <string name="view_direction">Okuma yönü</string>
+    <string name="view_direction_ltr">Soldan sağa</string>
+    <string name="view_direction_rtl">Sağdan sola</string>
+    <string name="view_scale">Ölçekleme türü</string>
+    <string name="view_scale_screen">Ekran</string>
+    <string name="view_scale_fit_width">Genişliğe sığdır</string>
+    <string name="view_scale_fit_height">Yüksekliğe sığdır</string>
+    <string name="view_scale_original">Orijinal</string>
+    <string name="view_side_padding">Kenar boşluğu</string>
+    <string name="view_page_spacing">Sayfa aralığı</string>
+    <string name="view_enhancement">Görüntü iyileştirme</string>
+    <string name="view_enhancement_off">Kapalı</string>
+    <string name="view_enhancement_smooth">Yumuşak büyütme</string>
+    <string name="view_enhancement_sharpen">Keskinleştir</string>
+    <string name="view_enhancement_sharpen_strong">Daha keskin</string>
+    <string name="view_percent_value">%%%1$d</string>
+    <string name="view_dp_value">%1$d dp</string>
+    <string name="view_on">Açık</string>
+    <string name="view_off">Kapalı</string>
+    <string name="view_zoom">Yakınlaştırma</string>
+    <string name="view_transition">Sayfa geçişi</string>
+    <string name="view_transition_off">Kapalı</string>
+    <string name="view_transition_slide">Kaydırma</string>
+    <string name="view_transition_fade">Solma</string>
+    <string name="view_contrast">Kontrast</string>
+    <string name="view_enhancement_lanczos2">Lanczos2 (hızlı)</string>
+    <string name="view_enhancement_lanczos">Lanczos3</string>
+    <string name="view_enhancement_lanczos4">Lanczos4 (en iyi)</string>
+</resources>

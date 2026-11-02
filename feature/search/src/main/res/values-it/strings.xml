@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_title">Cerca</string>
+    <string name="search_placeholder">Titolo di serie o libro</string>
+    <string name="search_voice">Voce</string>
+    <string name="search_hint">Digita il titolo di una serie o di un libro. Premi OK sulla casella per aprire la tastiera.</string>
+    <string name="search_loading">Ricerca in corso&#8230;</string>
+    <string name="search_empty">Nessun risultato per «%1$s».</string>
+    <plurals name="search_books_count">
+        <item quantity="one">%1$d libro</item>
+        <item quantity="many">%1$d libri</item>
+        <item quantity="other">%1$d libri</item>
+    </plurals>
+    <string name="search_series_title">Serie (%1$d)</string>
+    <string name="search_books_title">Libri (%1$d)</string>
+</resources>

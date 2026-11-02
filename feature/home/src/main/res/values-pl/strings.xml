@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_loading">Wczytywanie&#8230;</string>
+    <string name="home_error_title">Coś poszło nie tak</string>
+    <string name="home_continue_reading">Czytaj dalej</string>
+    <string name="home_libraries">Biblioteki</string>
+    <string name="home_book_progress">Strona %1$d/%2$d</string>
+    <string name="home_book_completed">Przeczytane</string>
+    <string name="home_server_settings">Ustawienia serwera</string>
+    <string name="home_search">Szukaj</string>
+    <string name="home_on_deck">Następne</string>
+    <string name="home_latest_books">Ostatnio dodane książki</string>
+    <string name="home_new_series">Ostatnio dodane serie</string>
+    <string name="home_updated_series">Ostatnio zaktualizowane serie</string>
+    <plurals name="home_series_books_count">
+        <item quantity="one">%1$d książka</item>
+        <item quantity="few">%1$d książki</item>
+        <item quantity="many">%1$d książek</item>
+        <item quantity="other">%1$d książki</item>
+    </plurals>
+    <string name="library_action_scan">Skanuj bibliotekę (admin)</string>
+    <string name="library_action_empty_trash">Opróżnij kosz (admin)</string>
+    <string name="library_action_hint">Po usunięciu plików na serwerze: zeskanuj, poczekaj na zakończenie, a potem opróżnij kosz.</string>
+    <string name="library_action_done_scan">Zlecono skanowanie — serwer właśnie nad tym pracuje</string>
+    <string name="library_action_done_trash">Kosz opróżniony</string>
+    <string name="library_action_failed">Nie udało się (tylko admin lub błąd serwera)</string>
+    <string name="reading_action_hint">Czyści postęp czytania na serwerze (na wszystkich urządzeniach) i ukrywa tę serię w „Czytaj dalej” i „Następne”. Wróci, gdy znów zaczniesz ją czytać.</string>
+    <string name="reading_action_question">Usunąć tę serię z „Czytaj dalej”?</string>
+    <string name="reading_action_keep">Zostaw</string>
+    <string name="reading_action_remove">Usuń</string>
+</resources>

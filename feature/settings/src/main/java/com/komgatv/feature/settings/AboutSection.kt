@@ -69,6 +69,17 @@ internal fun AboutSection() {
             style = MaterialTheme.typography.bodyMedium,
             color = colors.onSurface,
         )
+        // 만든 사람 소개
+        Text(
+            text = stringResource(R.string.about_developer_bio),
+            style = MaterialTheme.typography.bodyMedium,
+            color = colors.onSurface,
+        )
+        Text(
+            text = stringResource(R.string.about_developer_wish),
+            style = MaterialTheme.typography.bodyMedium,
+            color = colors.onSurface,
+        )
         Text(text = KOMGATV_GITHUB, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF80B9FF))
         Text(
             text = stringResource(R.string.about_tribute),

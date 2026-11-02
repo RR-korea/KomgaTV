@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_title">搜索</string>
+    <string name="search_placeholder">系列名或书名</string>
+    <string name="search_voice">语音</string>
+    <string name="search_hint">输入系列名或书名。在输入框上按 OK 打开键盘。</string>
+    <string name="search_loading">正在搜索&#8230;</string>
+    <string name="search_empty">没有与“%1$s”匹配的结果。</string>
+    <plurals name="search_books_count">
+        <item quantity="other">%1$d 本</item>
+    </plurals>
+    <string name="search_series_title">系列（%1$d）</string>
+    <string name="search_books_title">书籍（%1$d）</string>
+</resources>

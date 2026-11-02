@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_title">服务器设置</string>
+    <string name="settings_section_server">服务器连接</string>
+    <string name="settings_server_url_label">服务器 URL</string>
+    <string name="settings_server_url_placeholder">http://192.168.1.100:25600</string>
+    <string name="settings_auth_method_label">登录方式</string>
+    <string name="settings_auth_method_basic">邮箱 / 密码</string>
+    <string name="settings_auth_method_apikey">API 密钥</string>
+    <string name="settings_username_label">邮箱（Komga 登录账号）</string>
+    <string name="settings_username_placeholder">admin@example.com</string>
+    <string name="settings_password_label">密码</string>
+    <string name="settings_password_placeholder">密码</string>
+    <string name="settings_apikey_label">API 密钥</string>
+    <string name="settings_apikey_placeholder">API 密钥</string>
+    <string name="settings_btn_test">测试连接</string>
+    <string name="settings_btn_save">保存并连接</string>
+    <string name="settings_status_testing">正在检查服务器&#8230;</string>
+    <string name="settings_status_success">已连接到服务器。</string>
+    <string name="settings_error_invalid_url">服务器地址无效。（例如 http://192.168.1.100:25600）</string>
+    <string name="settings_error_unreachable">无法连接服务器。请检查地址、端口和网络。</string>
+    <string name="settings_error_unauthorized">登录失败。请检查邮箱/密码或 API 密钥。（401）</string>
+    <string name="settings_error_ssl">服务器的 SSL 证书为自签名证书或不受信任。暂不支持自签名证书。</string>
+    <string name="settings_error_other">无法连接服务器：%1$s</string>
+    <string name="settings_error_missing_fields">请输入服务器 URL 和登录信息。</string>
+    <string name="settings_section_cache">缓存</string>
+    <string name="settings_btn_clear_cache">清除图片缓存</string>
+    <string name="settings_status_cache_cleared">图片缓存已清除。</string>
+    <string name="settings_saved_servers">已保存的服务器</string>
+    <string name="settings_server_active">使用中</string>
+    <string name="settings_server_switch">切换</string>
+    <string name="settings_server_remove">移除</string>
+    <string name="settings_server_add">添加其他服务器</string>
+    <string name="settings_section_view_defaults">默认显示设置</string>
+    <string name="settings_view_defaults_hint">适用于所有系列，除非你在阅读器中单独更改某个系列（阅读器中的显示设置仅适用于该系列）。</string>
+    <string name="about_title">关于</string>
+    <string name="about_app_version">TV Reader for Komga %1$s</string>
+    <string name="about_developer">开发者：%1$s · %2$s</string>
+    <string name="about_developer_bio">就职于韩国 Rock Robotics，是一名以农业无人机为主的工业无人机专家，致力于用无人机和机器人让人手短缺的农村变得富足宜居。</string>
+    <string name="about_developer_wish">祈愿朝鲜半岛和平。愿战争停止，武器化为农机，驱除贫困；愿所有饱受战争之苦的人都能与家人幸福相守。</string>
+    <string name="about_tribute">谨以深深的敬意献给 Komga 和 Komelia 项目。感谢它们的作者和贡献者。</string>
+    <string name="about_licenses">开源组件：Komelia（Apache-2.0，部分阅读器逻辑）、komga-client（MIT）、Noto Sans（SIL OFL 1.1，横幅）、AndroidX / Jetpack Compose、Coil、OkHttp、Ktor（Apache-2.0）。TV Reader for Komga 是非官方应用，与 Komga 或 Komelia 无任何关联。</string>
+</resources>

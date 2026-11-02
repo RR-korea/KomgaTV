@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_loading">Wczytywanie&#8230;</string>
+    <string name="library_loading_more">Wczytywanie kolejnych&#8230;</string>
+    <plurals name="series_books_count">
+        <item quantity="one">%1$d książka</item>
+        <item quantity="few">%1$d książki</item>
+        <item quantity="many">%1$d książek</item>
+        <item quantity="other">%1$d książki</item>
+    </plurals>
+    <string name="series_detail_loading">Wczytywanie&#8230;</string>
+    <string name="series_detail_error_title">Coś poszło nie tak</string>
+    <string name="series_detail_books_header">Książki</string>
+    <string name="series_detail_status_prefix">Status: %1$s</string>
+    <string name="series_detail_publisher_prefix">Wydawca: %1$s</string>
+    <string name="series_detail_genres_prefix">Gatunki: %1$s</string>
+    <string name="series_detail_progress">Strona %1$d/%2$d</string>
+    <string name="series_detail_completed">Przeczytane</string>
+    <string name="series_detail_unread">Nieprzeczytane</string>
+    <string name="series_status_ended">Zakończona</string>
+    <string name="series_status_ongoing">W trakcie</string>
+    <string name="series_status_abandoned">Porzucona</string>
+    <string name="series_status_hiatus">Zawieszona</string>
+    <string name="book_action_mark_read">Oznacz jako przeczytane</string>
+    <string name="book_action_mark_unread">Oznacz jako nieprzeczytane</string>
+    <string name="book_action_analyze">Analizuj (admin)</string>
+    <string name="book_action_done_read">Oznaczono jako przeczytane</string>
+    <string name="book_action_done_unread">Oznaczono jako nieprzeczytane</string>
+    <string name="book_action_done_analyze">Zlecono analizę — serwer właśnie nad tym pracuje</string>
+    <string name="book_action_failed">Nie udało się (tylko admin lub błąd serwera)</string>
+</resources>
