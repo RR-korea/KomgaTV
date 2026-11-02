@@ -31,6 +31,8 @@
     <string name="settings_server_switch">Beralih</string>
     <string name="settings_server_remove">Hapus</string>
     <string name="settings_server_add">Tambah server lain</string>
+    <string name="settings_demo_server">Coba server demo Komga</string>
+    <string name="settings_demo_hint">Belum punya server? Jelajahi aplikasi dengan server demo resmi Komga dan buku contoh publiknya.</string>
     <string name="settings_section_view_defaults">Tampilan bawaan</string>
     <string name="settings_view_defaults_hint">Dipakai untuk semua seri, kecuali Anda mengubah seri tertentu di pembaca (Pengaturan tampilan di sana hanya berlaku untuk seri itu).</string>
     <string name="about_title">Tentang</string>

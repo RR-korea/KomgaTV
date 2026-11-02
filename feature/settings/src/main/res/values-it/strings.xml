@@ -31,6 +31,8 @@
     <string name="settings_server_switch">Usa</string>
     <string name="settings_server_remove">Rimuovi</string>
     <string name="settings_server_add">Aggiungi un altro server</string>
+    <string name="settings_demo_server">Prova il server demo di Komga</string>
+    <string name="settings_demo_hint">Non hai ancora un server? Esplora l\'app con il server demo ufficiale di Komga e i suoi libri di esempio pubblici.</string>
     <string name="settings_section_view_defaults">Opzioni di lettura predefinite</string>
     <string name="settings_view_defaults_hint">Valgono per tutte le serie, a meno che tu non modifichi una serie nel lettore (lì le Opzioni di lettura valgono solo per quella serie).</string>
     <string name="about_title">Informazioni</string>
