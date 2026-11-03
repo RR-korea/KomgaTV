@@ -23,11 +23,12 @@ import {
   anchorOf,
   type ContinuousLayout,
   layoutContinuous,
-  withCards,
+  maxScroll,
   scrollByScreen,
   scrollOf,
   stepPage,
   visiblePages,
+  withCards,
 } from '../reader/continuous';
 import { type BoundaryLayout, boundaryLayout } from '../reader/boundary';
 import {
@@ -65,8 +66,9 @@ const JUMP_PAGES = 10;
 /** 끝까지 이만큼 펼침이 남으면 다음 권을 찾고 미리 받는다 */
 const NEXT_BOOK_LOOKAHEAD = 3;
 /** 세로 스크롤 맨 아래 책 끝 카드·맨 위 책 첫 카드 높이 */
-const END_CARD_HEIGHT = 720;
-const START_CARD_HEIGHT = 720;
+/** 세로 스크롤의 책 첫·끝 카드 높이 = 한 화면 (Android ContinuousPages와 같음) */
+const END_CARD_HEIGHT = 1080;
+const START_CARD_HEIGHT = 1080;
 /** 쪽이 이만큼 안에 안 뜨면 로딩 표시 (Android와 같음) */
 const SPINNER_DELAY_MS = 250;
 
@@ -348,6 +350,12 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
   const moved = useRef(false);
   /** 마지막으로 펼침을 넘긴 때 (빠른 연타면 효과 없이) */
   const lastFlip = useRef(0);
+  /** 책이 바뀔 때마다 +1 — 늦게 도착한 옛 책의 다음·이전 권 찾기 결과를 버린다 (Android: bookId 비교) */
+  const generation = useRef(0);
+  /** 다음·이전 권으로 바꾸는 중: 새 책이 뜰 때까지 넘김 키를 무시한다 (두 번 열기·옛 책 진행 되감기 방지) */
+  const switching = useRef(false);
+  /** 이전 권을 세로 스크롤로 열 때: 책 끝이 화면 아래에 오게 (Android bottomScreenTileIndex) */
+  const openAtEnd = useRef(false);
   /** 지금 진행 중인 화면 전환: 나가는 펼침 그대로와 들어오는 펼침 번호 */
   const [transition, setTransition] = useState<SpreadTransition | null>(null);
   const exiting = useRef(false);
@@ -356,8 +364,10 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
   /** 책을 읽는다. 다음 권으로 넘어갈 때는 지금 화면을 둔 채 바꾼다(로딩 화면 없이). */
   const load = (id: string, startAt: 'progress' | 'last' = 'progress') => {
     setError(null);
+    generation.current++;
     loadBook(id).then(
       (loaded) => {
+        switching.current = false;
         setBookId(id);
         setOffset(false);
         setAtEnd(false);
@@ -365,8 +375,7 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
         setAtStart(false);
         setPreviousBook(undefined);
         setNaturalSizes({});
-        setOverlay(false);
-        setPanel(false);
+        // 정보 표시는 그대로 둔다 — 정보를 열어 둔 채 넘겨 다음 권으로 가면 새 책 정보가 보인다 (Android와 같음)
         moved.current = false;
         if (loaded.epub) {
           saver.current = null;
@@ -376,6 +385,7 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
         const progress = loaded.book.readProgress;
         // 이전 권으로 넘어가면 그 책의 마지막 쪽에서
         const first = startAt === 'last' ? Math.max(1, loaded.pages.length) : startPage(progress);
+        openAtEnd.current = startAt === 'last';
         setSeriesSettings(loadSeriesSettings(loaded.book.seriesId));
         setAnchorPage(first);
         setAnchor({ index: Math.min(loaded.pages.length - 1, first - 1), offset: 0 });
@@ -385,7 +395,10 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
         );
         setData(loaded);
       },
-      (failure: unknown) => setError(toLoadError(failure)),
+      (failure: unknown) => {
+        switching.current = false;
+        setError(toLoadError(failure));
+      },
     );
   };
 
@@ -426,6 +439,11 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
   const visible = visiblePages(continuous, continuousScroll, SCREEN.height);
   const continuousAtBottom = continuousScroll >= continuous.total - SCREEN.height - 1;
   const continuousAtTop = continuousScroll <= 0;
+  useEffect(() => {
+    if (!openAtEnd.current || !data || data.epub) return;
+    openAtEnd.current = false;
+    if (isContinuous) setAnchor(anchorOf(continuous, Math.max(0, continuous.total - END_CARD_HEIGHT - SCREEN.height)));
+  }, [data]);
   const isPdf = !!data && isPdfBook(data.book);
   const keyOf = (page: number) => pageKey(bookId, page, isPdf);
 
@@ -505,9 +523,11 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
   useEffect(() => {
     if (!data || data.epub || !nearEnd || nextBook !== undefined) return;
     setNextBook('loading');
+    const gen = generation.current;
     const { client } = requireSession();
     client.getNextBook(data.book.id).then(
       (next) => {
+        if (gen !== generation.current) return; // 그새 다른 책으로 바뀌었다
         setNextBook(next);
         if (!next) return;
         if (next.media.mediaProfile !== 'EPUB') {
@@ -515,7 +535,7 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
         }
         sessionStore.get()?.thumbnails.prefetch(ImagePaths.bookThumbnail(next.id));
       },
-      () => setNextBook(null),
+      () => gen === generation.current && setNextBook(null),
     );
   }, [nearEnd, data]);
 
@@ -524,10 +544,12 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
   useEffect(() => {
     if (!data || data.epub || !nearStart || previousBook !== undefined) return;
     setPreviousBook('loading');
+    const gen = generation.current;
     requireSession()
       .client.getPreviousBook(data.book.id)
       .then(
         (previous) => {
+          if (gen !== generation.current) return; // 그새 다른 책으로 바뀌었다
           setPreviousBook(previous);
           if (!previous) return;
           if (previous.media.mediaProfile !== 'EPUB') {
@@ -538,7 +560,7 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
           }
           sessionStore.get()?.thumbnails.prefetch(ImagePaths.bookThumbnail(previous.id));
         },
-        () => setPreviousBook(null),
+        () => gen === generation.current && setPreviousBook(null),
       );
   }, [nearStart, data]);
 
@@ -559,7 +581,8 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
 
   /** 다음 권으로: 지금 책 완독을 보낸 뒤 같은 화면에서 바꾼다 */
   const openNextBook = () => {
-    if (!nextBook || nextBook === 'loading') return;
+    if (!nextBook || nextBook === 'loading' || switching.current) return;
+    switching.current = true;
     const target = nextBook;
     const done = saver.current?.flush() ?? Promise.resolve();
     void done.then(() => load(target.id));
@@ -567,7 +590,8 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
 
   /** 이전 권 마지막 쪽으로 (지금 책 진행은 그대로) */
   const openPreviousBook = () => {
-    if (!previousBook || previousBook === 'loading') return;
+    if (!previousBook || previousBook === 'loading' || switching.current) return;
+    switching.current = true;
     const target = previousBook;
     const done = saver.current?.flush() ?? Promise.resolve();
     void done.then(() => load(target.id, 'last'));
@@ -669,6 +693,15 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
         goToAnchor({ index: 0, offset: -START_CARD_HEIGHT });
         return;
       }
+      // 책 첫 카드에서 다음 = 1쪽 맨 위, 마지막 쪽에서 다음 = 맨 아래 책 끝 카드 (한 번 더 = 다음 권) — Android와 같음
+      if (sign > 0 && anchor.index === 0 && anchor.offset < 0) {
+        goToAnchor({ index: 0, offset: 0 });
+        return;
+      }
+      if (sign > 0 && anchor.index >= totalPages - 1) {
+        goToAnchor(anchorOf(continuous, maxScroll(continuous, SCREEN.height)));
+        return;
+      }
       goToAnchor(stepPage(anchor, totalPages, sign));
       return;
     }
@@ -747,6 +780,8 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
       }
       return false; // 오류 화면의 다시 시도 버튼은 기본 처리로
     }
+    // 다음·이전 권을 여는 중: 새 책이 뜰 때까지 넘김·OK는 무시 (Back은 나가기)
+    if (switching.current && key !== 'back') return true;
     if (panel) {
       const focusedKey = current()?.dataset.key;
       switch (key) {
@@ -826,6 +861,8 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
         break;
       case 'enter':
         if (overlay) setPanel(true);
+        else if (isContinuous && continuousAtBottom) openNextBook(); // 맨 아래 책 끝 카드
+        else if (isContinuous && continuousAtTop) openPreviousBook(); // 맨 위 책 첫 카드
         else setOverlay(true);
         break;
       case 'up':

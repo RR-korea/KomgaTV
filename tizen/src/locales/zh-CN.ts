@@ -49,6 +49,7 @@ export const zhCN: Strings = {
   aboutDeveloperWish: '祈愿朝鲜半岛和平。愿战争停止，武器化为农机，驱除贫困；愿所有饱受战争之苦的人都能与家人幸福相守。',
   aboutDeveloperJoke: '这个应用是在三星电视上打造和打磨的。也有 Google TV 版本。期待三星的慷慨支持。（开个玩笑……大概吧。）',
   settingsDemoServer: '试用 Komga 演示服务器',
+  settingsDemoBuiltIn: '内置 · Komga 官方演示服务器（公开示例书）',
   settingsDemoHint: '还没有服务器？可以用 Komga 官方演示服务器上的公开示例书籍体验一下。',
   settingsLanguage: '语言',
   settingsLanguageSystem: '跟随电视',

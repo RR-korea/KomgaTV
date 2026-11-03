@@ -49,6 +49,7 @@ export const zhTW: Strings = {
   aboutDeveloperWish: '祈願朝鮮半島和平。願戰爭停止，武器化為農機，驅除貧困；願所有飽受戰爭之苦的人都能與家人幸福相守。',
   aboutDeveloperJoke: '這個應用程式是在三星電視上打造與打磨的。也有 Google TV 版本。期待三星的慷慨支持。（開玩笑的……大概吧。）',
   settingsDemoServer: '試用 Komga 示範伺服器',
+  settingsDemoBuiltIn: '內建 · Komga 官方示範伺服器（公開範例書）',
   settingsDemoHint: '還沒有伺服器？可以用 Komga 官方示範伺服器上的公開範例書籍體驗一下。',
   settingsLanguage: '語言',
   settingsLanguageSystem: '跟隨電視',

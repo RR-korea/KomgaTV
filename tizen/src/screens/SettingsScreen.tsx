@@ -7,6 +7,7 @@ import { fmt, getLanguageChoice, LANGUAGES, setLanguageChoice, t } from '../i18n
 import { type RouteEntry, reset } from '../platform/router';
 import {
   DEMO_SERVER,
+  isDemoServer,
   loadSavedServer,
   loadServerList,
   openSession,
@@ -128,8 +129,7 @@ export function SettingsScreen({ entry, active }: { entry: RouteEntry; active: b
     if (root.current) focusKeyOrFirst(root.current, 'url');
   };
 
-  // Komga 데모 서버로 둘러보기: 입력칸을 공개 계정으로 채우고 바로 연결·저장 (데모 서버가 저장되기 전까지 보인다)
-  const demoSaved = servers.some((server) => (normalizeServerUrl(server.url) ?? server.url).replace(/\/+$/, '') === DEMO_SERVER.url);
+  // 내장 데모 서버로 바꾸기: 공개 계정으로 연결을 확인하고 지금 서버로 (목록에는 저장하지 않는다)
   const useDemo = () => {
     if (DEMO_SERVER.auth.kind !== 'basic') return;
     setUrl(DEMO_SERVER.url);
@@ -139,6 +139,7 @@ export function SettingsScreen({ entry, active }: { entry: RouteEntry; active: b
     void run(true, true);
   };
   const firstRun = entry.route.name === 'settings' && entry.route.first;
+  const demoActive = !!saved && isDemoServer(saved);
 
   const clearCache = () => {
     const current = session.get();
@@ -151,57 +152,56 @@ export function SettingsScreen({ entry, active }: { entry: RouteEntry; active: b
     <div ref={root} class="settings" data-scroll="y" data-scroll-margin="120">
       <h1 class="screen-title">{t.settingsTitle}</h1>
 
-      {servers.length > 0 && !(entry.route.name === 'settings' && entry.route.first) && (
-        <>
-          <h2 class="section-title">{t.settingsSavedServers}</h2>
-          {servers.map((server, i) => {
-            const id = serverId(server);
-            const account = server.auth.kind === 'basic' ? server.auth.email : t.settingsAuthApiKey;
-            return (
-              <div key={id} class="saved-server" data-section={`saved-${i}`}>
-                <div class="saved-server-text">
-                  <div class="saved-server-url">{normalizeServerUrl(server.url) ?? server.url}</div>
-                  <div class="saved-server-account">{account}</div>
-                </div>
-                {id === currentId ? (
-                  <div class="saved-server-active">{t.settingsServerActive}</div>
-                ) : (
-                  <div class="button-row saved-server-actions">
-                    <Button focusKey={`server-switch-${i}`} onClick={() => switchTo(server)}>
-                      {t.settingsServerSwitch}
-                    </Button>
-                    <Button focusKey={`server-remove-${i}`} onClick={() => removeServer(server)}>
-                      {t.settingsServerRemove}
-                    </Button>
-                  </div>
-                )}
+      {/* 저장된 서버 + 내장 데모 서버 (첫 실행에도 데모로 둘러볼 수 있게) */}
+      <h2 class="section-title">{t.settingsSavedServers}</h2>
+      {!firstRun &&
+        servers.map((server, i) => {
+          const id = serverId(server);
+          const account = server.auth.kind === 'basic' ? server.auth.email : t.settingsAuthApiKey;
+          return (
+            <div key={id} class="saved-server" data-section={`saved-${i}`}>
+              <div class="saved-server-text">
+                <div class="saved-server-url">{normalizeServerUrl(server.url) ?? server.url}</div>
+                <div class="saved-server-account">{account}</div>
               </div>
-            );
-          })}
-          <div class="button-row">
-            <Button focusKey="server-add" onClick={addServer}>
-              {t.settingsServerAdd}
-            </Button>
-            {!demoSaved && (
-              <Button focusKey="demo" onClick={useDemo}>
-                {t.settingsDemoServer}
-              </Button>
-            )}
-          </div>
-        </>
+              {id === currentId ? (
+                <div class="saved-server-active">{t.settingsServerActive}</div>
+              ) : (
+                <div class="button-row saved-server-actions">
+                  <Button focusKey={`server-switch-${i}`} onClick={() => switchTo(server)}>
+                    {t.settingsServerSwitch}
+                  </Button>
+                  <Button focusKey={`server-remove-${i}`} onClick={() => removeServer(server)}>
+                    {t.settingsServerRemove}
+                  </Button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      {!firstRun && (
+        <div class="button-row">
+          <Button focusKey="server-add" onClick={addServer}>
+            {t.settingsServerAdd}
+          </Button>
+        </div>
       )}
-
-      {/* 처음 실행(또는 저장된 서버가 없을 때): 서버가 없어도 둘러볼 수 있게 */}
-      {!demoSaved && (firstRun || servers.length === 0) && (
-        <>
-          <div class="field-label standalone">{t.settingsDemoHint}</div>
-          <div class="button-row">
-            <Button focusKey="demo" onClick={useDemo}>
+      {(firstRun || servers.length === 0) && <div class="field-label standalone">{t.settingsDemoHint}</div>}
+      <div class="saved-server builtin" data-section="saved-demo">
+        <div class="saved-server-text">
+          <div class="saved-server-url">{DEMO_SERVER.url}</div>
+          <div class="saved-server-account">{t.settingsDemoBuiltIn}</div>
+        </div>
+        {demoActive ? (
+          <div class="saved-server-active">{t.settingsServerActive}</div>
+        ) : (
+          <div class="button-row saved-server-actions">
+            <Button focusKey="server-demo" onClick={useDemo}>
               {t.settingsDemoServer}
             </Button>
           </div>
-        </>
-      )}
+        )}
+      </div>
 
       <h2 class="section-title">{t.settingsSectionServer}</h2>
       <TextField

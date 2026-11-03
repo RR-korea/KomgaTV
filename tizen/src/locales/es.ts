@@ -49,6 +49,7 @@ export const es: Strings = {
   aboutDeveloperWish: 'Deseo la paz para la península de Corea: que la guerra termine, que las armas se conviertan en maquinaria agrícola para acabar con la pobreza y que todos los que sufrieron la guerra sean felices junto a sus familias.',
   aboutDeveloperJoke: 'Creé y pulí esta app en un televisor Samsung. También hay una versión para Google TV. Samsung, espero vuestro generoso apoyo. (Es broma. Casi.)',
   settingsDemoServer: 'Probar el servidor de demostración de Komga',
+  settingsDemoBuiltIn: 'Integrado · servidor de demostración oficial de Komga (libros de ejemplo públicos)',
   settingsDemoHint: '¿Aún no tienes servidor? Explora la app con el servidor de demostración oficial de Komga y sus libros de ejemplo públicos.',
   settingsLanguage: 'Idioma',
   settingsLanguageSystem: 'Igual que la TV',

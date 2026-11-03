@@ -49,6 +49,7 @@ export const tr: Strings = {
   aboutDeveloperWish: 'Kore Yarımadası\'nda barış diliyorum — savaşın durmasını, silahların yoksulluğu kovan tarım makinelerine dönüşmesini ve savaştan acı çeken herkesin ailesiyle birlikte mutlu olmasını.',
   aboutDeveloperJoke: 'Bu uygulamayı bir Samsung TV\'de yaptım ve geliştirdim. Google TV sürümü de var. Samsung, cömert desteğinizi bekliyorum. (Şaka. Çoğunlukla.)',
   settingsDemoServer: 'Komga demo sunucusunu dene',
+  settingsDemoBuiltIn: 'Yerleşik · resmi Komga demo sunucusu (herkese açık örnek kitaplar)',
   settingsDemoHint: 'Henüz sunucun yok mu? Resmî Komga demo sunucusundaki herkese açık örnek kitaplarla uygulamayı keşfet.',
   settingsLanguage: 'Dil',
   settingsLanguageSystem: 'TV ile aynı',

@@ -63,3 +63,36 @@ describe('새 서버를 저장해도 지금 서버가 남는다 (Android 1.0.5)'
     }
   });
 });
+
+describe('내장 데모 서버 (목록에 저장하지 않고 지울 수 없다)', () => {
+  it('데모로 바꿔도 목록에 들어가지 않고, 예전에 저장된 데모 항목은 걸러진다', async () => {
+    const store = new Map<string, string>();
+    const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      value: {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: (k: string, v: string) => void store.set(k, v),
+        removeItem: (k: string) => void store.delete(k),
+      },
+    });
+    try {
+      const { DEMO_SERVER, isDemoServer, saveServer, loadServerList, loadSavedServer } = await import('../src/state/session');
+      expect(isDemoServer({ ...DEMO_SERVER, url: 'https://demo.komga.org/' })).toBe(true);
+      expect(isDemoServer(basic('https://h/komga', 'a@b.c'))).toBe(false);
+      const mine = basic('https://mine/komga', 'a@b.c');
+      // 1.0.6에서는 데모가 목록에 저장됐다
+      store.set('komgatv.servers', JSON.stringify([mine, DEMO_SERVER]));
+      store.set('komgatv.server', JSON.stringify(mine));
+      expect(loadServerList().map((s) => s.url)).toEqual(['https://mine/komga']);
+      saveServer(DEMO_SERVER);
+      expect(loadSavedServer()?.url).toBe(DEMO_SERVER.url);
+      expect(loadServerList().map((s) => s.url)).toEqual(['https://mine/komga']);
+      saveServer(mine);
+      expect(loadServerList().map((s) => s.url)).toEqual(['https://mine/komga']);
+    } finally {
+      if (original) Object.defineProperty(globalThis, 'localStorage', original);
+      else delete (globalThis as { localStorage?: unknown }).localStorage;
+    }
+  });
+});

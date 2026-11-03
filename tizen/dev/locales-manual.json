@@ -13,7 +13,8 @@
   "readerPageLoadFailed": "Diese Seite konnte nicht geladen werden. Blättere weg und wieder zurück, um es erneut zu versuchen.",
   "readerHelp": "OK: Info  ·  Hoch/Runter: 10 Seiten springen  ·  Back: Beenden",
   "readerHelpContinuous": "Info geschlossen: Hoch/Runter scrollt einen Bildschirm  ·  Links/Rechts: Seite  ·  Hoch/Runter (Info): 10 Seiten springen",
-  "aboutDeveloperJoke": "Auf einem Samsung-Fernseher entwickelt und verfeinert. Es gibt auch eine Version für Google TV. Liebes Samsung, ich freue mich auf eure großzügige Unterstützung. (Kleiner Scherz. Größtenteils.)"
+  "aboutDeveloperJoke": "Auf einem Samsung-Fernseher entwickelt und verfeinert. Es gibt auch eine Version für Google TV. Liebes Samsung, ich freue mich auf eure großzügige Unterstützung. (Kleiner Scherz. Größtenteils.)",
+  "settingsDemoBuiltIn": "Integriert · offizieller Komga-Demoserver (öffentliche Beispielbücher)"
  },
  "es": {
   "retry": "Reintentar",
@@ -29,7 +30,8 @@
   "readerPageLoadFailed": "No se pudo cargar esta página. Pasa a otra y vuelve para reintentarlo.",
   "readerHelp": "OK: información  ·  Arriba/Abajo: saltar 10 páginas  ·  Back: salir",
   "readerHelpContinuous": "Con la información cerrada: Arriba/Abajo desplaza una pantalla  ·  Izquierda/Derecha: página  ·  Arriba/Abajo (información): saltar 10 páginas",
-  "aboutDeveloperJoke": "Creé y pulí esta app en un televisor Samsung. También hay una versión para Google TV. Samsung, espero vuestro generoso apoyo. (Es broma. Casi.)"
+  "aboutDeveloperJoke": "Creé y pulí esta app en un televisor Samsung. También hay una versión para Google TV. Samsung, espero vuestro generoso apoyo. (Es broma. Casi.)",
+  "settingsDemoBuiltIn": "Integrado · servidor de demostración oficial de Komga (libros de ejemplo públicos)"
  },
  "fr": {
   "retry": "Réessayer",
@@ -45,7 +47,8 @@
   "readerPageLoadFailed": "Impossible de charger cette page. Changez de page puis revenez pour réessayer.",
   "readerHelp": "OK : infos  ·  Haut/Bas : sauter 10 pages  ·  Back : quitter",
   "readerHelpContinuous": "Infos fermées : Haut/Bas fait défiler d’un écran  ·  Gauche/Droite : page  ·  Haut/Bas (infos) : sauter 10 pages",
-  "aboutDeveloperJoke": "J’ai créé et peaufiné cette application sur un téléviseur Samsung. Il existe aussi une version pour Google TV. Samsung, j’attends votre généreux soutien. (Je plaisante. Enfin, presque.)"
+  "aboutDeveloperJoke": "J’ai créé et peaufiné cette application sur un téléviseur Samsung. Il existe aussi une version pour Google TV. Samsung, j’attends votre généreux soutien. (Je plaisante. Enfin, presque.)",
+  "settingsDemoBuiltIn": "Intégré · serveur de démonstration officiel de Komga (livres d’exemple publics)"
  },
  "id": {
   "retry": "Coba lagi",
@@ -61,7 +64,8 @@
   "readerPageLoadFailed": "Halaman ini tidak dapat dimuat. Pindah ke halaman lain lalu kembali untuk mencoba lagi.",
   "readerHelp": "OK: info  ·  Atas/Bawah: lompat 10 halaman  ·  Back: keluar",
   "readerHelpContinuous": "Saat info ditutup: Atas/Bawah menggulir satu layar  ·  Kiri/Kanan: halaman  ·  Atas/Bawah (info): lompat 10 halaman",
-  "aboutDeveloperJoke": "Aplikasi ini saya buat dan sempurnakan di TV Samsung. Versi untuk Google TV juga ada. Samsung, saya menantikan dukungan murah hati Anda. (Bercanda. Kurang lebih.)"
+  "aboutDeveloperJoke": "Aplikasi ini saya buat dan sempurnakan di TV Samsung. Versi untuk Google TV juga ada. Samsung, saya menantikan dukungan murah hati Anda. (Bercanda. Kurang lebih.)",
+  "settingsDemoBuiltIn": "Bawaan · server demo resmi Komga (buku contoh publik)"
  },
  "it": {
   "retry": "Riprova",
@@ -77,7 +81,8 @@
   "readerPageLoadFailed": "Impossibile caricare questa pagina. Vai a un'altra pagina e torna indietro per riprovare.",
   "readerHelp": "OK: info  ·  Su/Giù: salta 10 pagine  ·  Back: esci",
   "readerHelpContinuous": "Con le info chiuse: Su/Giù scorre di una schermata  ·  Sinistra/Destra: pagina  ·  Su/Giù (info): salta 10 pagine",
-  "aboutDeveloperJoke": "Ho creato e rifinito questa app su una TV Samsung. Esiste anche una versione per Google TV. Samsung, aspetto il vostro generoso supporto. (Scherzo. Più o meno.)"
+  "aboutDeveloperJoke": "Ho creato e rifinito questa app su una TV Samsung. Esiste anche una versione per Google TV. Samsung, aspetto il vostro generoso supporto. (Scherzo. Più o meno.)",
+  "settingsDemoBuiltIn": "Integrato · server demo ufficiale di Komga (libri di esempio pubblici)"
  },
  "ja": {
   "retry": "再試行",
@@ -93,7 +98,8 @@
   "readerPageLoadFailed": "このページを読み込めませんでした。別のページに移ってから戻ると、もう一度読み込みます。",
   "readerHelp": "OK: 情報  ·  上/下: 10ページ移動  ·  Back: 終了",
   "readerHelpContinuous": "情報を閉じているとき 上/下: 1画面ずつ  ·  左/右: ページ移動  ·  上/下（情報）: 10ページ移動",
-  "aboutDeveloperJoke": "このアプリはサムスンのテレビで作り、磨き上げました。Google TV 版もあります。サムスンからの手厚いご支援をお待ちしています。（冗談です。たぶん。）"
+  "aboutDeveloperJoke": "このアプリはサムスンのテレビで作り、磨き上げました。Google TV 版もあります。サムスンからの手厚いご支援をお待ちしています。（冗談です。たぶん。）",
+  "settingsDemoBuiltIn": "内蔵 · Komga 公式デモサーバー（公開サンプル本）"
  },
  "pl": {
   "retry": "Spróbuj ponownie",
@@ -109,7 +115,8 @@
   "readerPageLoadFailed": "Nie udało się wczytać tej strony. Przejdź na inną stronę i wróć, aby spróbować ponownie.",
   "readerHelp": "OK: informacje  ·  Góra/Dół: przeskocz 10 stron  ·  Back: wyjdź",
   "readerHelpContinuous": "Gdy informacje są zamknięte: Góra/Dół przewija o ekran  ·  Lewo/Prawo: strona  ·  Góra/Dół (informacje): przeskocz 10 stron",
-  "aboutDeveloperJoke": "Zbudowałem i dopracowałem tę aplikację na telewizorze Samsung. Jest też wersja na Google TV. Samsungu, czekam na Wasze hojne wsparcie. (Żartuję. Przeważnie.)"
+  "aboutDeveloperJoke": "Zbudowałem i dopracowałem tę aplikację na telewizorze Samsung. Jest też wersja na Google TV. Samsungu, czekam na Wasze hojne wsparcie. (Żartuję. Przeważnie.)",
+  "settingsDemoBuiltIn": "Wbudowany · oficjalny serwer demonstracyjny Komga (publiczne przykładowe książki)"
  },
  "pt-BR": {
   "retry": "Tentar novamente",
@@ -125,7 +132,8 @@
   "readerPageLoadFailed": "Não foi possível carregar esta página. Vá para outra página e volte para tentar de novo.",
   "readerHelp": "OK: informações  ·  Cima/Baixo: pular 10 páginas  ·  Back: sair",
   "readerHelpContinuous": "Com as informações fechadas: Cima/Baixo rola uma tela  ·  Esquerda/Direita: página  ·  Cima/Baixo (informações): pular 10 páginas",
-  "aboutDeveloperJoke": "Criei e aperfeiçoei este app em uma TV Samsung. Também existe uma versão para Google TV. Samsung, conto com o seu generoso apoio. (Brincadeira. Quase.)"
+  "aboutDeveloperJoke": "Criei e aperfeiçoei este app em uma TV Samsung. Também existe uma versão para Google TV. Samsung, conto com o seu generoso apoio. (Brincadeira. Quase.)",
+  "settingsDemoBuiltIn": "Integrado · servidor de demonstração oficial do Komga (livros de exemplo públicos)"
  },
  "ru": {
   "retry": "Повторить",
@@ -141,7 +149,8 @@
   "readerPageLoadFailed": "Не удалось загрузить эту страницу. Перейдите на другую страницу и вернитесь, чтобы повторить.",
   "readerHelp": "OK: информация  ·  Вверх/Вниз: на 10 страниц  ·  Back: выход",
   "readerHelpContinuous": "Когда информация закрыта: Вверх/Вниз — на экран  ·  Влево/Вправо: страница  ·  Вверх/Вниз (информация): на 10 страниц",
-  "aboutDeveloperJoke": "Я создал и отшлифовал это приложение на телевизоре Samsung. Есть и версия для Google TV. Samsung, жду вашей щедрой поддержки. (Шучу. Почти.)"
+  "aboutDeveloperJoke": "Я создал и отшлифовал это приложение на телевизоре Samsung. Есть и версия для Google TV. Samsung, жду вашей щедрой поддержки. (Шучу. Почти.)",
+  "settingsDemoBuiltIn": "Встроенный · официальный демосервер Komga (общедоступные примеры книг)"
  },
  "tr": {
   "retry": "Tekrar dene",
@@ -157,7 +166,8 @@
   "readerPageLoadFailed": "Bu sayfa yüklenemedi. Başka bir sayfaya gidip geri dönerek tekrar deneyin.",
   "readerHelp": "OK: bilgi  ·  Yukarı/Aşağı: 10 sayfa atla  ·  Back: çık",
   "readerHelpContinuous": "Bilgi kapalıyken: Yukarı/Aşağı bir ekran kaydırır  ·  Sol/Sağ: sayfa  ·  Yukarı/Aşağı (bilgi): 10 sayfa atla",
-  "aboutDeveloperJoke": "Bu uygulamayı bir Samsung TV'de yaptım ve geliştirdim. Google TV sürümü de var. Samsung, cömert desteğinizi bekliyorum. (Şaka. Çoğunlukla.)"
+  "aboutDeveloperJoke": "Bu uygulamayı bir Samsung TV'de yaptım ve geliştirdim. Google TV sürümü de var. Samsung, cömert desteğinizi bekliyorum. (Şaka. Çoğunlukla.)",
+  "settingsDemoBuiltIn": "Yerleşik · resmi Komga demo sunucusu (herkese açık örnek kitaplar)"
  },
  "vi": {
   "retry": "Thử lại",
@@ -173,7 +183,8 @@
   "readerPageLoadFailed": "Không tải được trang này. Chuyển sang trang khác rồi quay lại để thử lại.",
   "readerHelp": "OK: thông tin  ·  Lên/Xuống: nhảy 10 trang  ·  Back: thoát",
   "readerHelpContinuous": "Khi đóng thông tin: Lên/Xuống cuộn một màn hình  ·  Trái/Phải: trang  ·  Lên/Xuống (thông tin): nhảy 10 trang",
-  "aboutDeveloperJoke": "Tôi đã làm và trau chuốt ứng dụng này trên TV Samsung. Cũng có phiên bản cho Google TV. Samsung ơi, tôi mong chờ sự hỗ trợ hào phóng của các bạn. (Đùa thôi. Phần lớn là vậy.)"
+  "aboutDeveloperJoke": "Tôi đã làm và trau chuốt ứng dụng này trên TV Samsung. Cũng có phiên bản cho Google TV. Samsung ơi, tôi mong chờ sự hỗ trợ hào phóng của các bạn. (Đùa thôi. Phần lớn là vậy.)",
+  "settingsDemoBuiltIn": "Tích hợp sẵn · máy chủ demo chính thức của Komga (sách mẫu công khai)"
  },
  "zh-CN": {
   "retry": "重试",
@@ -189,7 +200,8 @@
   "readerPageLoadFailed": "无法加载此页。翻到其他页再回来即可重试。",
   "readerHelp": "OK：信息  ·  上/下：跳 10 页  ·  Back：退出",
   "readerHelpContinuous": "关闭信息时 上/下：滚动一屏  ·  左/右：翻页  ·  上/下（信息）：跳 10 页",
-  "aboutDeveloperJoke": "这个应用是在三星电视上打造和打磨的。也有 Google TV 版本。期待三星的慷慨支持。（开个玩笑……大概吧。）"
+  "aboutDeveloperJoke": "这个应用是在三星电视上打造和打磨的。也有 Google TV 版本。期待三星的慷慨支持。（开个玩笑……大概吧。）",
+  "settingsDemoBuiltIn": "内置 · Komga 官方演示服务器（公开示例书）"
  },
  "zh-TW": {
   "retry": "重試",
@@ -205,6 +217,7 @@
   "readerPageLoadFailed": "無法載入此頁。翻到其他頁再回來即可重試。",
   "readerHelp": "OK：資訊  ·  上/下：跳 10 頁  ·  Back：離開",
   "readerHelpContinuous": "關閉資訊時 上/下：捲動一個畫面  ·  左/右：翻頁  ·  上/下（資訊）：跳 10 頁",
-  "aboutDeveloperJoke": "這個應用程式是在三星電視上打造與打磨的。也有 Google TV 版本。期待三星的慷慨支持。（開玩笑的……大概吧。）"
+  "aboutDeveloperJoke": "這個應用程式是在三星電視上打造與打磨的。也有 Google TV 版本。期待三星的慷慨支持。（開玩笑的……大概吧。）",
+  "settingsDemoBuiltIn": "內建 · Komga 官方示範伺服器（公開範例書）"
  }
 }

@@ -49,6 +49,7 @@ export const id: Strings = {
   aboutDeveloperWish: 'Saya berharap perdamaian di Semenanjung Korea — semoga perang berhenti, senjata berubah menjadi mesin pertanian yang mengusir kemiskinan, dan semua yang menderita karena perang dapat berbahagia bersama keluarganya.',
   aboutDeveloperJoke: 'Aplikasi ini saya buat dan sempurnakan di TV Samsung. Versi untuk Google TV juga ada. Samsung, saya menantikan dukungan murah hati Anda. (Bercanda. Kurang lebih.)',
   settingsDemoServer: 'Coba server demo Komga',
+  settingsDemoBuiltIn: 'Bawaan · server demo resmi Komga (buku contoh publik)',
   settingsDemoHint: 'Belum punya server? Jelajahi aplikasi dengan server demo resmi Komga dan buku contoh publiknya.',
   settingsLanguage: 'Bahasa',
   settingsLanguageSystem: 'Sama seperti TV',

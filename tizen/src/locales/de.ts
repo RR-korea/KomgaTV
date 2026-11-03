@@ -49,6 +49,7 @@ export const de: Strings = {
   aboutDeveloperWish: 'Ich wünsche mir Frieden auf der koreanischen Halbinsel: dass der Krieg endet, Waffen zu Landmaschinen werden und die Armut vertreiben und alle, die unter dem Krieg gelitten haben, mit ihren Familien glücklich sein können.',
   aboutDeveloperJoke: 'Auf einem Samsung-Fernseher entwickelt und verfeinert. Es gibt auch eine Version für Google TV. Liebes Samsung, ich freue mich auf eure großzügige Unterstützung. (Kleiner Scherz. Größtenteils.)',
   settingsDemoServer: 'Komga-Demoserver ausprobieren',
+  settingsDemoBuiltIn: 'Integriert · offizieller Komga-Demoserver (öffentliche Beispielbücher)',
   settingsDemoHint: 'Noch keinen Server? Schau dich mit dem offiziellen Komga-Demoserver und seinen öffentlichen Beispielbüchern um.',
   settingsLanguage: 'Sprache',
   settingsLanguageSystem: 'Wie der Fernseher',

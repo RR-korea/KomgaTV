@@ -49,6 +49,7 @@ export const vi: Strings = {
   aboutDeveloperWish: 'Tôi cầu mong hòa bình cho Bán đảo Triều Tiên — mong chiến tranh chấm dứt, vũ khí trở thành máy nông nghiệp đẩy lùi đói nghèo, và mọi người từng chịu khổ vì chiến tranh được hạnh phúc bên gia đình.',
   aboutDeveloperJoke: 'Tôi đã làm và trau chuốt ứng dụng này trên TV Samsung. Cũng có phiên bản cho Google TV. Samsung ơi, tôi mong chờ sự hỗ trợ hào phóng của các bạn. (Đùa thôi. Phần lớn là vậy.)',
   settingsDemoServer: 'Dùng thử máy chủ demo Komga',
+  settingsDemoBuiltIn: 'Tích hợp sẵn · máy chủ demo chính thức của Komga (sách mẫu công khai)',
   settingsDemoHint: 'Chưa có máy chủ? Hãy khám phá ứng dụng với máy chủ demo chính thức của Komga và các sách mẫu công khai.',
   settingsLanguage: 'Ngôn ngữ',
   settingsLanguageSystem: 'Giống TV',

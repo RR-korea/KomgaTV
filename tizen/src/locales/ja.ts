@@ -49,6 +49,7 @@ export const ja: Strings = {
   aboutDeveloperWish: '朝鮮半島の平和を祈っています。戦争が止み、武器が農機具に変わって貧困がなくなり、戦争に苦しんできたすべての人が家族と幸せに暮らせることを願っています。',
   aboutDeveloperJoke: 'このアプリはサムスンのテレビで作り、磨き上げました。Google TV 版もあります。サムスンからの手厚いご支援をお待ちしています。（冗談です。たぶん。）',
   settingsDemoServer: 'Komga デモサーバーを試す',
+  settingsDemoBuiltIn: '内蔵 · Komga 公式デモサーバー（公開サンプル本）',
   settingsDemoHint: 'サーバーがまだありませんか？Komga 公式デモサーバーの公開サンプル本で試せます。',
   settingsLanguage: '言語',
   settingsLanguageSystem: 'テレビの設定に従う',

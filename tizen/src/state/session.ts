@@ -80,7 +80,10 @@ export function loadSavedServer(): SavedServer | null {
   }
 }
 
-/** 저장된 서버 목록. 목록이 생기기 전 버전에서 연결한 서버도 들어 있게 한다. */
+/**
+ * 사용자가 저장한 서버 목록 (내장 데모 서버는 빼고). 목록이 생기기 전 버전에서 연결한 서버도 들어 있게 한다.
+ * 1.0.6에서 목록에 저장된 데모 서버는 여기서 걸러져 내장 항목 하나로 합쳐진다.
+ */
 export function loadServerList(): SavedServer[] {
   let list: SavedServer[];
   try {
@@ -89,7 +92,8 @@ export function loadServerList(): SavedServer[] {
     list = [];
   }
   const current = loadSavedServer();
-  return current ? upsertServer(list, current) : list;
+  const all = current ? upsertServer(list, current) : list;
+  return all.filter((server) => !isDemoServer(server));
 }
 
 function writeServerList(list: SavedServer[]): void {
@@ -99,16 +103,26 @@ function writeServerList(list: SavedServer[]): void {
 /** 지금 연결로 정하고 목록에도 넣는다 */
 export function saveServer(server: SavedServer): void {
   // 지금 서버를 먼저 목록에 남긴다 — 목록이 생기기 전 버전에서 연결한 서버는 목록에 없어서, 덮어쓰면 사라졌다 (Android 1.0.5)
-  const list = upsertServer(loadServerList(), server);
+  // 데모 서버는 내장이라 목록에 넣지 않는다
+  const list = isDemoServer(server) ? loadServerList() : upsertServer(loadServerList(), server);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(server));
   writeServerList(list);
 }
 
-/** Komga 공식 데모 서버 — 공개 계정 (서버 없이 둘러보기, 스토어 심사용, Android 1.0.5) */
+/**
+ * Komga 공식 데모 서버 — 공개 계정 (서버 없이 둘러보기, 스토어 심사용, Android 1.0.5).
+ * 서버 목록에 늘 들어 있는 내장 항목: 저장하지 않고 지울 수도 없다.
+ */
 export const DEMO_SERVER: SavedServer = {
   url: 'https://demo.komga.org',
   auth: { kind: 'basic', email: 'demo@komga.org', password: 'komga-demo' },
 };
+
+/** 데모 서버 주소인지 (계정·끝 슬래시와 상관없이) */
+export function isDemoServer(server: SavedServer): boolean {
+  const url = (normalizeServerUrl(server.url) ?? server.url.trim()).replace(/\/+$/, '');
+  return url === (normalizeServerUrl(DEMO_SERVER.url) ?? DEMO_SERVER.url).replace(/\/+$/, '');
+}
 
 export function removeSavedServer(id: string): SavedServer[] {
   const next = removeServerFrom(loadServerList(), id);

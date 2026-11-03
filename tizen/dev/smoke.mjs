@@ -75,7 +75,7 @@ try {
   await expectFocus('첫 실행 URL 칸', 'url');
   // 서버가 없어도 둘러볼 수 있게 (Android 1.0.5) — 실제 데모 서버(demo.komga.org)에는 연결하지 않는다
   await expectText('첫 실행: 데모 서버 안내', '.settings', /Komga 공식 데모 서버/);
-  results.push(`${(await page.evaluate(() => !!document.querySelector('[data-key="demo"]'))) ? 'PASS' : 'FAIL'} 첫 실행: 데모 서버 버튼`);
+  results.push(`${(await page.evaluate(() => !!document.querySelector('[data-key="server-demo"]'))) ? 'PASS' : 'FAIL'} 첫 실행: 데모 서버 버튼`);
   await typeInto(`http://localhost:${port}/komga/`);
   await key('ArrowDown');
   await expectFocus('인증 방식 행은 선택된 항목으로', 'auth-basic');
@@ -280,6 +280,58 @@ try {
   await expectFocus('세로 스크롤 책에서 돌아오면 그 책', 'reading-book-S5B2');
   await page.waitForTimeout(1500); // 돌아온 뒤 조용한 새로고침이 끝나기를 기다린다
 
+  // 5-3. 세로 스크롤의 책 경계 (Android ContinuousPages와 같게): 첫 카드 → OK = 이전 권 끝(책 끝이 화면 아래), 끝 카드 → OK = 다음 권
+  await key('Enter'); // S5B2 다시 (5쪽, 세로 스크롤)
+  await page.waitForTimeout(1000);
+  await key('ArrowLeft', 5); // 5→4→3→2→1→책 첫 카드
+  await page.waitForTimeout(500);
+  const cardAt = (which) =>
+    page.evaluate((w) => {
+      const cards = document.querySelectorAll('.end-card');
+      const card = w === 'last' ? cards[cards.length - 1] : cards[0];
+      if (!card) return null;
+      const r = card.getBoundingClientRect();
+      return { top: Math.round(r.top), bottom: Math.round(r.bottom), text: card.textContent ?? '' };
+    }, which);
+  const startCard = await cardAt('first');
+  results.push(`${startCard && startCard.top === 0 && /이전 권/.test(startCard.text) ? 'PASS' : 'FAIL'} 1쪽에서 왼쪽 → 맨 위 책 첫 카드(한 화면): top=${startCard?.top}`);
+  await key('ArrowRight');
+  await page.waitForTimeout(400);
+  await key('Enter');
+  await expectText('첫 카드에서 오른쪽 → 1쪽 (2쪽 아님)', '.reader-overlay-row:nth-child(2)', /^1 \/ 24/);
+  await key('Escape');
+  await key('ArrowLeft');
+  await page.waitForTimeout(400);
+  await key('Enter'); // 첫 카드에서 OK = 이전 권 마지막 쪽
+  await page.waitForTimeout(1500);
+  await key('Enter');
+  await expectText('첫 카드 OK → 이전 권(01) 끝', '.reader-overlay-row:nth-child(1)', /01/);
+  await expectText('이전 권은 마지막 쪽', '.reader-overlay-row:nth-child(2)', /24 \/ 24/);
+  const lastPageBottom = await page.evaluate(() => {
+    const pages = document.querySelectorAll('.reader-column .reader-page');
+    const last = pages[pages.length - 1];
+    return last ? Math.round(last.getBoundingClientRect().bottom) : null;
+  });
+  results.push(`${lastPageBottom !== null && Math.abs(lastPageBottom - 1080) <= 1 ? 'PASS' : 'FAIL'} 이전 권: 책 끝이 화면 아래에 (마지막 쪽 아래 ${lastPageBottom})`);
+  await key('Escape');
+  await key('ArrowDown'); // 한 화면 아래 = 맨 아래 책 끝 카드
+  await page.waitForTimeout(500);
+  const endCard = await cardAt('last');
+  results.push(`${endCard && endCard.top === 0 && /다음 권/.test(endCard.text) ? 'PASS' : 'FAIL'} 맨 아래 책 끝 카드(한 화면): top=${endCard?.top}`);
+  await key('Enter'); // 끝 카드에서 OK = 다음 권 (안내 문구 "▼ / OK")
+  await page.waitForTimeout(1500);
+  await key('Enter');
+  // 첫 카드까지 거슬러 갔을 때 1쪽이 저장됐으므로(보이는 쪽 중 큰 번호, Android와 같음) 다음 권은 그 저장된 쪽에서 연다
+  const savedS5B2 = patches.filter((p) => /S5B2 page=\d+/.test(p)).pop()?.match(/page=(\d+)/)?.[1] ?? '?';
+  await expectText(`끝 카드 OK → 다음 권(02), 저장된 ${savedS5B2}쪽에서`, '.reader-overlay-row:nth-child(2)', new RegExp(`^${savedS5B2} / 24`));
+  await expectText('다음 권 제목', '.reader-overlay-row:nth-child(1)', /02/);
+  await key('Escape');
+  await key('Escape');
+  await page.waitForTimeout(1200);
+  results.push(`${!patches.some((p) => p.includes('S5B1')) ? 'PASS' : 'FAIL'} 이전 권을 열어 보기만 하면 그 책 진행은 그대로`);
+  await expectFocus('경계 시험 뒤 돌아오면 연 책', 'reading-book-S5B2');
+  await page.waitForTimeout(1500);
+
   // 5-3. 홈 줄 (Android T9): 읽는 중 아래에 다음 권·최근 추가 책·최근 추가/업데이트 시리즈
   const rows = await page.evaluate(() => Array.from(document.querySelectorAll('.home .row-title')).map((el) => el.textContent));
   results.push(`${rows.join('|') === '읽는 중|다음 권|최근 추가된 책|최근 추가된 시리즈|최근 업데이트된 시리즈|라이브러리' ? 'PASS' : 'FAIL'} 홈 줄 순서: ${rows.join(' | ')}`);
@@ -430,7 +482,7 @@ try {
   await expectFocus('API 키 서버 연결 → 홈', (k) => !!k && k.startsWith('reading-'));
   await toSettings();
   const saved = await page.evaluate(() =>
-    Array.from(document.querySelectorAll('.saved-server')).map((el) => el.textContent?.replace(/\s+/g, ' ').trim()),
+    Array.from(document.querySelectorAll('.saved-server:not(.builtin)')).map((el) => el.textContent?.replace(/\s+/g, ' ').trim()),
   );
   results.push(`${saved.length === 2 ? 'PASS' : 'FAIL'} 저장된 서버 2개: ${saved.join(' / ')}`);
   const defaultRows = await page.evaluate(() => document.querySelectorAll('.settings .view-row').length);
@@ -439,14 +491,20 @@ try {
   const app = await page.evaluate(() => ({
     langs: document.querySelectorAll('[data-section="language"] .button').length,
     about: document.querySelector('.about-box')?.textContent ?? '',
-    demo: !!document.querySelector('[data-key="demo"]'),
+    demo: !!document.querySelector('[data-key="server-demo"]'),
     title: document.title,
   }));
   results.push(`${app.langs === 16 ? 'PASS' : 'FAIL'} 언어 고르기: TV 설정 따름 + 15개 언어 = ${app.langs}`);
   results.push(
     `${/TV Reader for Komga/.test(app.about) && /락로보틱스/.test(app.about) && /한반도의 평화/.test(app.about) && /구글 TV용 버전/.test(app.about) ? 'PASS' : 'FAIL'} 앱 정보: 새 이름·소개·평화·농담`,
   );
-  results.push(`${app.demo && app.title === 'TV Reader for Komga' ? 'PASS' : 'FAIL'} 데모 서버 버튼(저장 전까지), 창 제목 "${app.title}"`);
+  results.push(`${app.demo && app.title === 'TV Reader for Komga' ? 'PASS' : 'FAIL'} 내장 데모 서버 항목, 창 제목 "${app.title}"`);
+  const builtin = await page.evaluate(() => ({
+    rows: document.querySelectorAll('.saved-server.builtin').length,
+    remove: document.querySelectorAll('.saved-server.builtin [data-key^="server-remove"]').length,
+    saved: JSON.parse(localStorage.getItem('komgatv.servers') ?? '[]').some((s) => /demo\.komga\.org/.test(s.url)),
+  }));
+  results.push(`${builtin.rows === 1 && builtin.remove === 0 && !builtin.saved ? 'PASS' : 'FAIL'} 데모 서버는 내장(1줄, 빼기 없음, 목록에 저장 안 함)`);
   await expectFocus('목록 맨 위 = 다른 서버의 바꾸기', 'server-switch-0');
   await shot('saved-servers');
   await key('Enter');
