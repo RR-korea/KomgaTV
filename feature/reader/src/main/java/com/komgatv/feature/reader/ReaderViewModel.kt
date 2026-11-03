@@ -236,6 +236,14 @@ class ReaderViewModel @Inject constructor(
     private var saveProgressJob: Job? = null
     private var hasProgressChanged = false
     private var lastSavedPage: Int? = null
+    private var lastSavedCompleted = false
+
+    /**
+     * 책을 불러오는 중. 다음·이전 권으로 넘어갈 때는 옛 책 화면이 그대로 보이지만 [currentBookId]는 이미 새 책이라,
+     * 이때 받은 키·진행을 쓰면 새 책이 끝 화면으로 열리거나 옛 책 쪽 번호가 새 책에 저장된다 — 그동안은 받지 않는다.
+     */
+    private var bookLoading = false
+    private var loadJob: Job? = null
 
     /**
      * 화면 크기를 갱신하고 타일 목록을 재계획합니다.
@@ -266,6 +274,8 @@ class ReaderViewModel @Inject constructor(
         }
 
         currentBookId = bookId
+        bookLoading = true
+        loadJob?.cancel()
         hasProgressChanged = false
         saveProgressJob?.cancel()
         nextBookJob?.cancel()
@@ -278,12 +288,13 @@ class ReaderViewModel @Inject constructor(
         showingStartPage = false
         pageStep = 0
 
-        viewModelScope.launch {
+        loadJob = viewModelScope.launch {
             if (!seamless) _uiState.value = ReaderUiState.Loading
 
             try {
                 val book = bookRepository.getBookById(bookId)
                 if (book.mediaProfile == MediaProfile.EPUB) {
+                    bookLoading = false
                     _uiState.value = ReaderUiState.Epub(bookId)
                     return@launch
                 }
@@ -339,6 +350,11 @@ class ReaderViewModel @Inject constructor(
                 // 세로 스크롤 맨 위에는 책 첫 카드가 있어 1쪽이어도 늘 스크롤한다
                 scrollToTileIndex = if (startAtEnd) bottomScreenTileIndex() else firstTileIndexOf(startPageNumber)
                 lastSavedPage = progressPage
+                lastSavedCompleted = isCompleted
+                showingEndPage = false
+                showingStartPage = false
+                pageStep = 0
+                bookLoading = false
 
                 updateReadingState()
                 // 처음 근처에서 열면 (8권을 열자마자 7권으로 갈 수 있게) 이전 권을 미리 찾는다
@@ -350,6 +366,7 @@ class ReaderViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 Timber.e(e, "책 로드 실패: $bookId")
+                bookLoading = false
                 _uiState.value = ReaderUiState.Error(e.toLoadError())
             }
         }
@@ -359,6 +376,7 @@ class ReaderViewModel @Inject constructor(
      * D-pad 왼쪽 키 입력 처리
      */
     fun onDpadLeft() {
+        if (bookLoading) return
         if (currentReaderType == ReaderType.PAGED) {
             if (currentReadingDirection == ReadingDirection.RIGHT_TO_LEFT) {
                 nextSpread()
@@ -375,6 +393,7 @@ class ReaderViewModel @Inject constructor(
      * D-pad 오른쪽 키 입력 처리
      */
     fun onDpadRight() {
+        if (bookLoading) return
         if (currentReaderType == ReaderType.PAGED) {
             if (currentReadingDirection == ReadingDirection.RIGHT_TO_LEFT) {
                 previousSpread()
@@ -389,6 +408,7 @@ class ReaderViewModel @Inject constructor(
 
     /** Paged: 다음 펼침으로 이동 */
     fun nextSpread() {
+        if (bookLoading) return
         when {
             // 책 첫 화면에서 앞으로 = 1쪽
             showingStartPage -> hideStartPage()
@@ -402,6 +422,7 @@ class ReaderViewModel @Inject constructor(
 
     /** Paged: 이전 펼침으로 이동 (책 끝 화면이면 마지막 펼침으로) */
     fun previousSpread() {
+        if (bookLoading) return
         if (showingEndPage) {
             showingEndPage = false
             updateReadingState()
@@ -418,6 +439,7 @@ class ReaderViewModel @Inject constructor(
 
     /** 책 첫 화면을 보인다 — 이전 권을 아직 안 찾았으면 지금 찾는다 */
     fun showStartPage() {
+        if (bookLoading) return
         showingStartPage = true
         resolvePreviousBook()
         updateReadingState()
@@ -430,6 +452,7 @@ class ReaderViewModel @Inject constructor(
 
     /** 이전 권을 같은 화면에서 마지막 쪽부터 연다 (지금 책 진행을 먼저 바로 저장) */
     fun openPreviousBook() {
+        if (bookLoading) return
         val previous = previousBook ?: return
         saveProgressOnExit()
         loadBook(previous.id, seamless = true, startAtEnd = true)
@@ -460,13 +483,17 @@ class ReaderViewModel @Inject constructor(
 
     /** 책 끝 화면을 보인다 — 다음 권을 아직 안 찾았으면 지금 찾는다 */
     fun showEndPage() {
+        if (bookLoading) return
         showingEndPage = true
+        // 끝까지 왔다 — 마지막 쪽에서 열어 쪽을 넘기지 않고 왔어도 완독을 남긴다
+        hasProgressChanged = true
         resolveNextBook()
         updateReadingState()
     }
 
     /** 다음 권을 같은 화면에서 이어 연다 (지금 책 진행을 먼저 바로 저장) */
     fun openNextBook() {
+        if (bookLoading) return
         val next = nextBook ?: return
         saveProgressOnExit()
         loadBook(next.id, seamless = true)
@@ -538,6 +565,7 @@ class ReaderViewModel @Inject constructor(
 
     /** Continuous: 맨 아래 책 끝 카드가 화면에 보이는지 */
     fun onContinuousEndVisible(visible: Boolean) {
+        if (bookLoading) return
         if (currentReaderType != ReaderType.CONTINUOUS || visible == showingEndPage) return
         if (visible) showEndPage() else {
             showingEndPage = false
@@ -547,6 +575,7 @@ class ReaderViewModel @Inject constructor(
 
     /** Continuous: 맨 위 책 첫 카드가 화면에 보이는지 */
     fun onContinuousStartVisible(visible: Boolean) {
+        if (bookLoading) return
         if (currentReaderType != ReaderType.CONTINUOUS || visible == showingStartPage) return
         // 처음 열 때 목록이 시작 위치로 스크롤하기 전에는 첫 카드가 잠깐 보인다 — 무시
         if (visible && scrollToTileIndex != null && scrollToTileIndex != -1) return
@@ -586,6 +615,7 @@ class ReaderViewModel @Inject constructor(
      * @param delta 이동할 페이지 수 (+면 다음, -면 이전)
      */
     fun jumpPages(delta: Int) {
+        if (bookLoading) return
         val state = _uiState.value as? ReaderUiState.Reading ?: return
         if (currentReaderType == ReaderType.PAGED) {
             val currentPageNumber = state.currentSpread.pages.firstOrNull()?.number ?: 1
@@ -825,6 +855,7 @@ class ReaderViewModel @Inject constructor(
      * 보이는 쪽 중 가장 큰 번호를 2초 뒤 저장하고, 마지막 쪽의 마지막 타일이 보이면 완독.
      */
     fun onContinuousVisibleTilesChanged(visibleKeys: List<String>) {
+        if (bookLoading) return
         if (currentReaderType != ReaderType.CONTINUOUS) return
         val visible = visibleKeys.mapNotNull { key -> currentTiles.firstOrNull { it.key == key } }
         if (visible.isEmpty()) return
@@ -876,6 +907,7 @@ class ReaderViewModel @Inject constructor(
      * 리더 종료 시 즉시 진행 상태를 저장합니다.
      */
     fun saveProgressOnExit(): Job {
+        if (bookLoading) return Job().apply { complete() }
         saveProgressJob?.cancel()
         val state = _uiState.value as? ReaderUiState.Reading ?: return Job().apply { complete() }
         val bookId = currentBookId.ifEmpty { return Job().apply { complete() } }
@@ -883,7 +915,10 @@ class ReaderViewModel @Inject constructor(
         val pageToSave: Int
         val completed: Boolean
 
-        if (currentReaderType == ReaderType.CONTINUOUS) {
+        if (showingEndPage) {
+            pageToSave = state.totalPages
+            completed = true
+        } else if (currentReaderType == ReaderType.CONTINUOUS) {
             pageToSave = currentContinuousPage
             completed = continuousCompleted
         } else {
@@ -891,7 +926,7 @@ class ReaderViewModel @Inject constructor(
             completed = state.currentSpread.containsPage(state.totalPages) || pageToSave >= state.totalPages
         }
 
-        if (!hasProgressChanged || lastSavedPage == pageToSave) {
+        if (!hasProgressChanged || (lastSavedPage == pageToSave && lastSavedCompleted == completed)) {
             return Job().apply { complete() }
         }
 
@@ -934,7 +969,11 @@ class ReaderViewModel @Inject constructor(
                 page = page,
                 completed = completed,
             )
-            lastSavedPage = page
+            // 다음 권으로 넘어가며 저장한 옛 책 결과가 새 책의 저장 기록을 덮지 않게
+            if (bookId == currentBookId && !bookLoading) {
+                lastSavedPage = page
+                lastSavedCompleted = completed
+            }
             Timber.d("읽기 진행 저장 완료: $bookId, 페이지 $page/$totalPages, completed=$completed")
         } catch (e: Exception) {
             Timber.e(e, "읽기 진행 저장 실패: $bookId, 페이지 $page")
