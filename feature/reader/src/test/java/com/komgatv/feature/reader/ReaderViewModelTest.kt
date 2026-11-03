@@ -735,6 +735,42 @@ class ReaderViewModelTest {
     }
 
     @Test
+    fun `다음 권 - 마지막 쪽에 저장된 채 열어 바로 넘어가도 완독을 저장한다`() = runTest(testDispatcher) {
+        openBook(progress = ReadProgress(page = 10, completed = false))
+        addNextBook()
+        advanceUntilIdle()
+
+        viewModel.nextSpread() // 책 끝 — 쪽은 넘기지 않았다
+        viewModel.nextSpread() // 다음 권
+        advanceUntilIdle()
+
+        assertEquals(listOf(ProgressUpdate("b1", 10, true)), bookRepository.progressUpdates)
+    }
+
+    @Test
+    fun `다음 권 - 불러오는 동안 누른 키는 무시해 새 책이 끝 화면으로 열리거나 옛 쪽이 저장되지 않는다`() = runTest(testDispatcher) {
+        openBook(progress = ReadProgress(page = 9, completed = false))
+        addNextBook()
+        advanceUntilIdle()
+        viewModel.nextSpread() // 10쪽
+        viewModel.nextSpread() // 책 끝
+        advanceUntilIdle()
+
+        viewModel.nextSpread() // 다음 권 불러오기 시작 — 화면은 아직 옛 책
+        viewModel.nextSpread()
+        viewModel.previousSpread()
+        viewModel.jumpPages(-5)
+        viewModel.saveProgressOnExit()
+        advanceUntilIdle()
+
+        assertEquals(null, reading.endPage)
+        assertEquals(1, reading.currentSpread.pages.first().number)
+        assertEquals(6, reading.totalPages)
+        assertTrue(bookRepository.progressUpdates.none { it.bookId == "b2" })
+        assertTrue(bookRepository.progressUpdates.contains(ProgressUpdate("b1", 10, true)))
+    }
+
+    @Test
     fun `다음 권 - 마지막 권이면 책 끝 화면에 머물고, 뒤로 가면 마지막 쪽`() = runTest(testDispatcher) {
         openBook(progress = ReadProgress(page = 10, completed = false))
         advanceUntilIdle()
