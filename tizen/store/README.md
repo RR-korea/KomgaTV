@@ -34,9 +34,9 @@ node dev/package-wgt.mjs KomgaTV-samsung   # 삼성 인증서 보안 프로필�
 
 ## 개인정보처리방침 — `privacy/index.html`
 
-Android 방침(`docs/privacy/index.html`)에서 저장 방식·검색 부분을 타이젠에 맞게 바꾼 것. **아직 웹에 올리지 않았다.**
-GitHub Pages는 main 브랜치 `/docs`에서 나가므로, 이 파일을 main의 `docs/privacy/tizen/index.html`로 넣으면
-`https://rr-korea.github.io/KomgaTV/privacy/tizen/`이 된다 (main은 Android 세션 담당 — 넣을 때 그쪽과 맞춘다).
+- **URL: https://rr-korea.github.io/KomgaTV/privacy/tizen/** (한·영, GitHub Pages — main 브랜치 `docs/privacy/tizen/index.html`, 2026-11-03 게시)
+- Android 방침(`/privacy/`)에서 저장 방식(앱 전용 저장 공간, 암호화 아님)·검색(음성 버튼 없음)만 타이젠에 맞게 바꿨다.
+- Seller Office의 개인정보처리방침 칸에 이 주소를 넣는다. 고칠 때는 이 파일을 고치고 main의 `docs/privacy/tizen/index.html`에도 같은 내용을 넣는다.
 
 ## 그림
 
