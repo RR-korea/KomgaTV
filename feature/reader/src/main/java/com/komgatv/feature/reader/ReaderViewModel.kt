@@ -108,6 +108,10 @@ sealed interface ReaderUiState {
         val endPage: EndPage? = null,
         /** 책 첫 화면 (1쪽 앞, 이전 권으로 가는 곳) — null이면 아님 */
         val startPage: StartPage? = null,
+        /** 보기 설정에서 숨길 수 있는 지금 쪽 (펼침의 쪽들, 세로 스크롤은 맨 위 쪽). 남은 쪽이 하나면 비어 있다. */
+        val hidablePages: List<Int> = emptyList(),
+        /** 이 책에서 숨긴 쪽 수 */
+        val hiddenPageCount: Int = 0,
     ) : ReaderUiState {
         /** 보기 설정 패널이 보여 주는 값 */
         val settings: ReaderSettings
@@ -190,6 +194,13 @@ class ReaderViewModel @Inject constructor(
     private var currentBook: Book? = null
     private var currentBookId: String = ""
     private var currentBookPages: List<BookPage> = emptyList()
+
+    /** 이 책에서 숨긴 쪽 (이 기기에만 저장). 펼침·타일은 [visiblePages]로 만든다 — 쪽 번호는 원래 번호 그대로. */
+    private var hiddenPages: Set<Int> = emptySet()
+    private val visiblePages: List<BookPage>
+        get() = currentBookPages.filter { it.number !in hiddenPages }.ifEmpty { currentBookPages }
+    private val lastVisiblePage: Int
+        get() = visiblePages.lastOrNull()?.number ?: 1
 
     // Paged 모드 상태
     private var currentSpreads: List<PageSpread> = emptyList()
@@ -329,8 +340,9 @@ class ReaderViewModel @Inject constructor(
                 }
 
                 // 5. Paged 펼침 및 Continuous 타일 계획 구성
+                hiddenPages = readerPreferences.hiddenPages(bookId).first()
                 currentSpreads = SpreadMapBuilder.buildSpreadMap(
-                    pages = currentBookPages,
+                    pages = visiblePages,
                     layout = currentLayout,
                     offset = layoutOffset,
                 )
@@ -339,10 +351,10 @@ class ReaderViewModel @Inject constructor(
                 // 6. 이어 읽기: 완독(completed)이거나 진행이 없으면 1쪽, 아니면 저장된 쪽부터 시작
                 val isCompleted = book.readProgress?.completed == true
                 val progressPage = if (!isCompleted) book.readProgress?.page else null
-                val lastPage = currentBookPages.size.coerceAtLeast(1)
+                val lastPage = lastVisiblePage
                 val startPageNumber = if (startAtEnd) lastPage else progressPage?.coerceIn(1, lastPage) ?: 1
 
-                currentSpreadIndex = currentSpreads.indexOfFirst { it.containsPage(startPageNumber) }.coerceAtLeast(0)
+                currentSpreadIndex = spreadIndexAtOrAfter(startPageNumber)
                 currentContinuousPage = startPageNumber
                 firstVisibleTile = null
                 continuousCompleted = false
@@ -532,7 +544,7 @@ class ReaderViewModel @Inject constructor(
             return
         }
         val top = firstVisibleTile ?: return
-        val target = if (top.tileIndex > 0) top.pageNumber else top.pageNumber - 1
+        val target = if (top.tileIndex > 0) top.pageNumber else visiblePages.lastOrNull { it.number < top.pageNumber }?.number ?: 0
         if (target >= 1) {
             scrollToPage(target)
         } else {
@@ -554,8 +566,9 @@ class ReaderViewModel @Inject constructor(
             return
         }
         val top = firstVisibleTile?.pageNumber ?: currentContinuousPage
-        if (top < currentBookPages.size) {
-            scrollToPage(top + 1)
+        val next = visiblePages.firstOrNull { it.number > top }?.number
+        if (next != null) {
+            scrollToPage(next)
         } else {
             // 마지막 쪽에서 다음 = 책 끝 카드로
             scrollToTileIndex = currentTiles.size
@@ -597,8 +610,15 @@ class ReaderViewModel @Inject constructor(
         updateReadingState()
     }
 
+    /** 그 쪽(숨긴 쪽이면 다음 쪽)의 첫 타일 */
     private fun firstTileIndexOf(pageNumber: Int): Int =
-        currentTiles.indexOfFirst { it.pageNumber == pageNumber }.coerceAtLeast(0)
+        currentTiles.indexOfFirst { it.pageNumber >= pageNumber }.let { if (it >= 0) it else currentTiles.lastIndex }.coerceAtLeast(0)
+
+    /** 그 쪽이 든 펼침 (숨긴 쪽이면 다음 펼침, 끝을 넘으면 마지막 펼침) */
+    private fun spreadIndexAtOrAfter(pageNumber: Int): Int =
+        currentSpreads.indexOfFirst { spread -> spread.pages.any { it.number >= pageNumber } }
+            .let { if (it >= 0) it else currentSpreads.lastIndex }
+            .coerceAtLeast(0)
 
     /** 스크롤 요청 소비 */
     fun onTileScrolled() {
@@ -620,14 +640,59 @@ class ReaderViewModel @Inject constructor(
         if (currentReaderType == ReaderType.PAGED) {
             val currentPageNumber = state.currentSpread.pages.firstOrNull()?.number ?: 1
             val targetPageNumber = (currentPageNumber + delta).coerceIn(1, state.totalPages)
-            val targetSpreadIndex = currentSpreads.indexOfFirst { it.containsPage(targetPageNumber) }
-            if (targetSpreadIndex >= 0 && targetSpreadIndex != currentSpreadIndex) {
+            val targetSpreadIndex = spreadIndexAtOrAfter(targetPageNumber)
+            if (targetSpreadIndex != currentSpreadIndex) {
                 applySpreadChange(targetSpreadIndex, step = 0)
             }
         } else {
             val from = firstVisibleTile?.pageNumber ?: currentContinuousPage
             scrollToPage((from + delta).coerceIn(1, state.totalPages))
         }
+    }
+
+    /**
+     * 이 책에서 쪽을 숨긴다 — 이 기기에만 저장하고 서버 파일은 그대로 둔다.
+     * 펼침·타일을 다시 만들고, 숨긴 쪽 자리에서 다음 쪽을 보인다. 마지막 남은 쪽은 숨기지 않는다.
+     */
+    fun hidePage(pageNumber: Int) {
+        if (bookLoading || pageNumber in hiddenPages || visiblePages.size <= 1) return
+        if (currentBookPages.none { it.number == pageNumber }) return
+        applyHiddenPages(hiddenPages + pageNumber, anchorPage = pageNumber)
+    }
+
+    /** 이 책에서 숨긴 쪽을 모두 되돌린다 */
+    fun restoreHiddenPages() {
+        if (bookLoading || hiddenPages.isEmpty()) return
+        val anchor = if (currentReaderType == ReaderType.CONTINUOUS) {
+            firstVisibleTile?.pageNumber ?: currentContinuousPage
+        } else {
+            currentSpreads.getOrNull(currentSpreadIndex)?.pages?.firstOrNull()?.number ?: 1
+        }
+        applyHiddenPages(emptySet(), anchorPage = anchor)
+    }
+
+    /** 보기 설정에서 숨길 수 있는 지금 쪽 — 펼침의 쪽들, 세로 스크롤은 진행에 쓰는 쪽. 남은 쪽이 하나면 없다. */
+    private fun hidablePages(spread: PageSpread): List<Int> {
+        if (visiblePages.size <= 1) return emptyList()
+        val pages = if (currentReaderType == ReaderType.CONTINUOUS) listOf(currentContinuousPage) else spread.pages.map { it.number }
+        return pages.filter { it !in hiddenPages }.take(visiblePages.size - 1)
+    }
+
+    private fun applyHiddenPages(pages: Set<Int>, anchorPage: Int) {
+        hiddenPages = pages
+        val bookId = currentBookId
+        viewModelScope.launch { readerPreferences.saveHiddenPages(bookId, pages) }
+        pageStep = 0
+        currentSpreads = SpreadMapBuilder.buildSpreadMap(
+            pages = visiblePages,
+            layout = currentLayout,
+            offset = layoutOffset,
+        )
+        currentSpreadIndex = spreadIndexAtOrAfter(anchorPage)
+        firstVisibleTile = null
+        rebuildContinuousTiles()
+        if (currentReaderType == ReaderType.CONTINUOUS) scrollToTileIndex = firstTileIndexOf(anchorPage)
+        updateReadingState()
     }
 
     /** 정보 오버레이 토글 */
@@ -861,7 +926,8 @@ class ReaderViewModel @Inject constructor(
         if (visible.isEmpty()) return
         firstVisibleTile = visible.first()
         visible.filter { it.isPlaceholder }.forEach { requestBounds(it.pageNumber) }
-        val totalPages = currentBookPages.size.coerceAtLeast(1)
+        // 마지막 쪽을 숨겼으면 보이는 마지막 쪽 끝이 완독
+        val totalPages = lastVisiblePage
         val progress = ContinuousProgressHelper.calculateProgress(visible, totalPages) ?: return
 
         if (currentContinuousPage == progress.pageNumber && continuousCompleted == progress.completed) return
@@ -869,7 +935,7 @@ class ReaderViewModel @Inject constructor(
         continuousCompleted = progress.completed
         hasProgressChanged = true
         (_uiState.value as? ReaderUiState.Reading)?.let {
-            _uiState.value = it.copy(currentContinuousPage = progress.pageNumber)
+            _uiState.value = it.copy(currentContinuousPage = progress.pageNumber, hidablePages = hidablePages(it.currentSpread))
         }
         preloadNextContinuousPages(currentBookId, progress.pageNumber)
         if (progress.pageNumber >= totalPages - NEXT_BOOK_LOOKAHEAD) resolveNextBook()
@@ -923,7 +989,7 @@ class ReaderViewModel @Inject constructor(
             completed = continuousCompleted
         } else {
             pageToSave = state.currentSpread.highestPageNumber
-            completed = state.currentSpread.containsPage(state.totalPages) || pageToSave >= state.totalPages
+            completed = state.currentSpread.containsPage(lastVisiblePage) || pageToSave >= lastVisiblePage
         }
 
         if (!hasProgressChanged || (lastSavedPage == pageToSave && lastSavedCompleted == completed)) {
@@ -948,7 +1014,7 @@ class ReaderViewModel @Inject constructor(
 
         val spread = currentSpreads[newSpreadIndex]
         val pageToSave = spread.highestPageNumber
-        val isCompleted = spread.containsPage(state.totalPages) || pageToSave >= state.totalPages
+        val isCompleted = spread.containsPage(lastVisiblePage) || pageToSave >= lastVisiblePage
         scheduleProgressSave(pageToSave, state.totalPages, isCompleted)
     }
 
@@ -986,13 +1052,11 @@ class ReaderViewModel @Inject constructor(
 
         pageStep = 0
         currentSpreads = SpreadMapBuilder.buildSpreadMap(
-            pages = currentBookPages,
+            pages = visiblePages,
             layout = currentLayout,
             offset = layoutOffset,
         )
-
-        val newSpreadIndex = currentSpreads.indexOfFirst { it.containsPage(currentPageNumber) }
-        currentSpreadIndex = if (newSpreadIndex >= 0) newSpreadIndex else 0
+        currentSpreadIndex = spreadIndexAtOrAfter(currentPageNumber)
 
         updateReadingState()
     }
@@ -1003,7 +1067,7 @@ class ReaderViewModel @Inject constructor(
     private fun rebuildContinuousTiles() {
         val anchor = firstVisibleTile
         currentTiles = ContinuousTilePlanner.planPages(
-            currentBookPages,
+            visiblePages,
             ContinuousTilePlanner.PlanParams(
                 screenWidthPx = screenWidthPx,
                 screenHeightPx = screenHeightPx,
@@ -1075,6 +1139,8 @@ class ReaderViewModel @Inject constructor(
             } else {
                 null
             },
+            hidablePages = hidablePages(currentSpread),
+            hiddenPageCount = hiddenPages.count { hidden -> currentBookPages.any { it.number == hidden } },
             startPage = if (showingStartPage) {
                 ReaderUiState.StartPage(
                     currentTitle = book.displayName(),
@@ -1138,8 +1204,7 @@ class ReaderViewModel @Inject constructor(
     }
 
     private fun preloadNextContinuousPages(bookId: String, currentVisibleMaxPage: Int) {
-        val targetPages = listOf(currentVisibleMaxPage + 1, currentVisibleMaxPage + 2)
-            .filter { it in 1..currentBookPages.size }
+        val targetPages = visiblePages.map { it.number }.filter { it > currentVisibleMaxPage }.take(2)
         viewModelScope.launch {
             for (page in targetPages) {
                 try {

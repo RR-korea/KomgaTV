@@ -17,6 +17,8 @@
     <string name="reader_settings_series_default">Usando os padrões do app (Configurações do servidor → Padrões de exibição). As alterações aqui valem só para esta série.</string>
     <string name="reader_settings_series_custom">Esta série tem configurações próprias.</string>
     <string name="reader_settings_reset">Restaurar padrões do app</string>
+    <string name="reader_hide_page">Ocultar página %1$d</string>
+    <string name="reader_restore_hidden_pages">Restaurar páginas ocultas (%1$d)</string>
     <string name="end_page_finished">Concluído</string>
     <string name="end_page_next">Próximo</string>
     <string name="end_page_finding_next">Procurando o próximo livro…</string>

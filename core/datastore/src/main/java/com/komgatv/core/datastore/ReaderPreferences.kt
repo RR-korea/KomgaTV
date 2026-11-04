@@ -17,6 +17,7 @@ import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.ScaleType
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -48,6 +49,12 @@ interface ReaderPreferences {
 
     /** 작품 설정을 지워 기본값으로 되돌린다 */
     suspend fun clearSeriesSettings(seriesId: String)
+
+    /** 이 책에서 숨긴 쪽 번호 — 이 기기에만 저장, 서버 파일은 그대로 */
+    fun hiddenPages(bookId: String): Flow<Set<Int>> = flowOf(emptySet())
+
+    /** 숨긴 쪽을 저장한다. 비어 있으면 지운다. */
+    suspend fun saveHiddenPages(bookId: String, pages: Set<Int>) = Unit
 }
 
 /**
@@ -72,6 +79,7 @@ class DefaultReaderPreferences @Inject constructor(
         val DEFAULTS = ReaderSettings()
 
         fun seriesKey(seriesId: String) = stringPreferencesKey("series:$seriesId")
+        fun hiddenPagesKey(bookId: String) = stringPreferencesKey("hidden-pages:$bookId")
     }
 
     override val readerSettings: Flow<ReaderSettings> = context.readerDataStore.data.map { prefs ->
@@ -115,6 +123,17 @@ class DefaultReaderPreferences @Inject constructor(
 
     override suspend fun clearSeriesSettings(seriesId: String) {
         context.readerDataStore.edit { it.remove(seriesKey(seriesId)) }
+    }
+
+    override fun hiddenPages(bookId: String): Flow<Set<Int>> =
+        context.readerDataStore.data.map { prefs ->
+            prefs[hiddenPagesKey(bookId)].orEmpty().split(',').mapNotNull { it.trim().toIntOrNull() }.toSet()
+        }
+
+    override suspend fun saveHiddenPages(bookId: String, pages: Set<Int>) {
+        context.readerDataStore.edit {
+            if (pages.isEmpty()) it.remove(hiddenPagesKey(bookId)) else it[hiddenPagesKey(bookId)] = pages.sorted().joinToString(",")
+        }
     }
 }
 

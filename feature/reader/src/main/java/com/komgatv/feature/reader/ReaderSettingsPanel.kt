@@ -12,10 +12,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -31,6 +35,8 @@ import com.komgatv.core.ui.settings.ViewSettingsForm
  * 한 화면에 다 들어가게(스크롤 없음) 한 줄짜리 항목을 쓴다. 열릴 때 첫 항목에 포커스, Back은 리더가 받아 닫는다.
  *
  * @param seriesCustomized 이 작품에 따로 저장된 설정이 있는지 — 없으면 "앱 기본값 사용 중"
+ * @param hidablePages 지금 화면의 쪽 중 숨길 수 있는 쪽 — 쪽마다 [N쪽 숨기기] 버튼 (이 책에서만, 이 기기에만)
+ * @param hiddenPageCount 이 책에서 숨긴 쪽 수 — 있으면 [숨긴 쪽 되돌리기]
  */
 @Composable
 fun ReaderSettingsPanel(
@@ -40,10 +46,23 @@ fun ReaderSettingsPanel(
     onChange: (ReaderSettings) -> Unit,
     onLayoutOffsetChange: (Boolean) -> Unit,
     onReset: () -> Unit,
+    hidablePages: List<Int> = emptyList(),
+    hiddenPageCount: Int = 0,
+    onHidePage: (Int) -> Unit = {},
+    onRestoreHiddenPages: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val firstFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { firstFocus.requestFocus() }
+    // [숨긴 쪽 되돌리기]를 누르면 그 버튼이 사라진다 — 포커스를 [N쪽 숨기기]로 옮긴다
+    val hideFocus = remember { FocusRequester() }
+    var restorePressed by remember { mutableStateOf(false) }
+    LaunchedEffect(hiddenPageCount) {
+        if (hiddenPageCount == 0 && restorePressed) {
+            restorePressed = false
+            runCatching { hideFocus.requestFocus() }
+        }
+    }
 
     Box(
         modifier = modifier
@@ -80,6 +99,27 @@ fun ReaderSettingsPanel(
                 showZoom = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+            // 쪽 숨기기 — 광고·빈 쪽 등을 이 책에서 건너뛴다 (서버 파일은 그대로)
+            if (hidablePages.isNotEmpty() || hiddenPageCount > 0) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    hidablePages.forEachIndexed { index, page ->
+                        OutlinedButton(
+                            onClick = { onHidePage(page) },
+                            modifier = if (index == 0) Modifier.focusRequester(hideFocus) else Modifier,
+                        ) {
+                            Text(stringResource(R.string.reader_hide_page, page))
+                        }
+                    }
+                    if (hiddenPageCount > 0) {
+                        OutlinedButton(onClick = {
+                            restorePressed = true
+                            onRestoreHiddenPages()
+                        }) {
+                            Text(stringResource(R.string.reader_restore_hidden_pages, hiddenPageCount))
+                        }
+                    }
+                }
+            }
             // 되돌리기 버튼과 키 안내를 한 줄에 — 항목이 늘어도 한 화면에 들어가게
             Row(
                 verticalAlignment = Alignment.CenterVertically,

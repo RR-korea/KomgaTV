@@ -18,6 +18,8 @@
     <string name="reader_settings_series_default">Using the app defaults (Server settings → View defaults). Changes here apply to this series only.</string>
     <string name="reader_settings_series_custom">This series has its own settings.</string>
     <string name="reader_settings_reset">Reset to app defaults</string>
+    <string name="reader_hide_page">Hide page %1$d</string>
+    <string name="reader_restore_hidden_pages">Restore hidden pages (%1$d)</string>
     <string name="end_page_finished">Finished</string>
     <string name="end_page_next">Next</string>
     <string name="end_page_finding_next">Looking for the next book…</string>

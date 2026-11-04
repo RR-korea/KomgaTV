@@ -17,6 +17,8 @@
     <string name="reader_settings_series_default">目前使用 App 預設值（伺服器設定 → 預設顯示設定）。在此變更的設定只會套用至此系列。</string>
     <string name="reader_settings_series_custom">此系列使用專屬設定。</string>
     <string name="reader_settings_reset">重設為 App 預設值</string>
+    <string name="reader_hide_page">隱藏第 %1$d 頁</string>
+    <string name="reader_restore_hidden_pages">恢復隱藏的頁 (%1$d)</string>
     <string name="end_page_finished">已讀完</string>
     <string name="end_page_next">下一本</string>
     <string name="end_page_finding_next">正在尋找下一本…</string>
