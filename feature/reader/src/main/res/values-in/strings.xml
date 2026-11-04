@@ -18,6 +18,8 @@
     <string name="reader_settings_series_default">Memakai bawaan aplikasi (Pengaturan server → Tampilan bawaan). Perubahan di sini hanya berlaku untuk seri ini.</string>
     <string name="reader_settings_series_custom">Seri ini punya pengaturan sendiri.</string>
     <string name="reader_settings_reset">Kembalikan ke bawaan aplikasi</string>
+    <string name="reader_hide_page">Sembunyikan halaman %1$d</string>
+    <string name="reader_restore_hidden_pages">Pulihkan halaman tersembunyi (%1$d)</string>
     <string name="end_page_finished">Selesai</string>
     <string name="end_page_next">Berikutnya</string>
     <string name="end_page_finding_next">Mencari buku berikutnya…</string>

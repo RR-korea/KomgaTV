@@ -407,6 +407,10 @@ private fun ReaderContent(
                 onChange = viewModel::applySettings,
                 onLayoutOffsetChange = viewModel::setLayoutOffset,
                 onReset = viewModel::resetSeriesSettings,
+                hidablePages = state.hidablePages,
+                hiddenPageCount = state.hiddenPageCount,
+                onHidePage = viewModel::hidePage,
+                onRestoreHiddenPages = viewModel::restoreHiddenPages,
             )
         }
     }

@@ -18,6 +18,8 @@
     <string name="reader_settings_series_default">Đang dùng mặc định của ứng dụng (Cài đặt máy chủ → Hiển thị mặc định). Thay đổi ở đây chỉ áp dụng cho bộ truyện này.</string>
     <string name="reader_settings_series_custom">Bộ truyện này có cài đặt riêng.</string>
     <string name="reader_settings_reset">Đặt lại về mặc định của ứng dụng</string>
+    <string name="reader_hide_page">Ẩn trang %1$d</string>
+    <string name="reader_restore_hidden_pages">Khôi phục trang đã ẩn (%1$d)</string>
     <string name="end_page_finished">Đã đọc xong</string>
     <string name="end_page_next">Tiếp theo</string>
     <string name="end_page_finding_next">Đang tìm cuốn tiếp theo…</string>

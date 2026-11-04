@@ -18,6 +18,8 @@
     <string name="reader_settings_series_default">Uygulama varsayılanları kullanılıyor (Sunucu ayarları → Görünüm varsayılanları). Buradaki değişiklikler yalnızca bu seriye uygulanır.</string>
     <string name="reader_settings_series_custom">Bu serinin kendi ayarları var.</string>
     <string name="reader_settings_reset">Uygulama varsayılanlarına sıfırla</string>
+    <string name="reader_hide_page">%1$d. sayfayı gizle</string>
+    <string name="reader_restore_hidden_pages">Gizli sayfaları geri getir (%1$d)</string>
     <string name="end_page_finished">Bitti</string>
     <string name="end_page_next">Sonraki</string>
     <string name="end_page_finding_next">Sonraki kitap aranıyor…</string>

@@ -18,6 +18,8 @@
     <string name="reader_settings_series_default">Используются настройки приложения (Настройки сервера → Вид по умолчанию). Изменения здесь применяются только к этой серии.</string>
     <string name="reader_settings_series_custom">У этой серии свои настройки.</string>
     <string name="reader_settings_reset">Сбросить к настройкам приложения</string>
+    <string name="reader_hide_page">Скрыть стр. %1$d</string>
+    <string name="reader_restore_hidden_pages">Вернуть скрытые (%1$d)</string>
     <string name="end_page_finished">Прочитано</string>
     <string name="end_page_next">Следующий том</string>
     <string name="end_page_finding_next">Ищем следующий том…</string>

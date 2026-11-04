@@ -17,6 +17,8 @@
     <string name="reader_settings_series_default">Używane są domyślne ustawienia aplikacji (Ustawienia serwera → Domyślny widok). Zmiany tutaj dotyczą tylko tej serii.</string>
     <string name="reader_settings_series_custom">Ta seria ma własne ustawienia.</string>
     <string name="reader_settings_reset">Przywróć domyślne ustawienia aplikacji</string>
+    <string name="reader_hide_page">Ukryj stronę %1$d</string>
+    <string name="reader_restore_hidden_pages">Przywróć ukryte strony (%1$d)</string>
     <string name="end_page_finished">Przeczytane</string>
     <string name="end_page_next">Następna</string>
     <string name="end_page_finding_next">Szukanie następnej książki…</string>

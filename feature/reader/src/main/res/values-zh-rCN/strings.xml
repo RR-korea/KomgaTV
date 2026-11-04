@@ -17,6 +17,8 @@
     <string name="reader_settings_series_default">正在使用应用默认设置（服务器设置 → 默认显示设置）。在此处的更改仅适用于此系列。</string>
     <string name="reader_settings_series_custom">此系列使用单独的设置。</string>
     <string name="reader_settings_reset">恢复为应用默认设置</string>
+    <string name="reader_hide_page">隐藏第 %1$d 页</string>
+    <string name="reader_restore_hidden_pages">恢复隐藏的页 (%1$d)</string>
     <string name="end_page_finished">已读完</string>
     <string name="end_page_next">下一本</string>
     <string name="end_page_finding_next">正在查找下一本…</string>

@@ -771,6 +771,59 @@ class ReaderViewModelTest {
     }
 
     @Test
+    fun `쪽 숨기기 - 숨긴 쪽은 건너뛰고 원래 쪽 번호로 저장하며, 다시 열어도 숨겨져 있다`() = runTest(testDispatcher) {
+        openBook(progress = ReadProgress(page = 4, completed = false))
+        advanceUntilIdle()
+        assertEquals(listOf(4), reading.hidablePages)
+
+        viewModel.nextSpread() // 5쪽
+        viewModel.hidePage(5)
+        advanceUntilIdle()
+        assertEquals(6, reading.currentSpread.pages.first().number) // 숨긴 자리의 다음 쪽
+        assertEquals(1, reading.hiddenPageCount)
+        assertEquals(10, reading.totalPages) // 쪽 번호·전체 쪽 수는 원래대로
+        assertEquals(setOf(5), readerPreferences.hidden.value["b1"])
+
+        viewModel.previousSpread()
+        assertEquals(4, reading.currentSpread.pages.first().number)
+
+        // 다시 열어도 숨겨져 있다
+        viewModel = ReaderViewModel(bookRepository, seriesRepository, FakeImageUrls, readerPreferences, tileSource)
+        openBook(progress = ReadProgress(page = 4, completed = false))
+        advanceUntilIdle()
+        viewModel.nextSpread()
+        assertEquals(6, reading.currentSpread.pages.first().number)
+
+        viewModel.restoreHiddenPages()
+        advanceUntilIdle()
+        assertEquals(0, reading.hiddenPageCount)
+        assertEquals(6, reading.currentSpread.pages.first().number)
+        viewModel.previousSpread()
+        assertEquals(5, reading.currentSpread.pages.first().number)
+    }
+
+    @Test
+    fun `쪽 숨기기 - 마지막 쪽을 숨기면 보이는 마지막 쪽에서 완독, 마지막 남은 쪽은 숨기지 않는다`() = runTest(testDispatcher) {
+        openBook(pages = (1..3).map { BookPage(number = it, width = 1000, height = 1000) })
+        advanceUntilIdle()
+        viewModel.jumpPages(2) // 3쪽
+        viewModel.hidePage(3)
+        advanceUntilIdle()
+        assertEquals(2, reading.currentSpread.pages.first().number)
+
+        viewModel.previousSpread() // 1쪽
+        viewModel.nextSpread() // 2쪽 — 보이는 마지막 쪽
+        advanceUntilIdle()
+        assertEquals(ProgressUpdate("b1", 2, true), bookRepository.progressUpdates.last())
+
+        viewModel.hidePage(2)
+        viewModel.hidePage(1) // 남은 쪽이 하나라 숨기지 않는다
+        advanceUntilIdle()
+        assertEquals(1, reading.currentSpread.pages.first().number)
+        assertEquals(emptyList<Int>(), reading.hidablePages)
+    }
+
+    @Test
     fun `다음 권 - 마지막 권이면 책 끝 화면에 머물고, 뒤로 가면 마지막 쪽`() = runTest(testDispatcher) {
         openBook(progress = ReadProgress(page = 10, completed = false))
         advanceUntilIdle()
@@ -1153,6 +1206,14 @@ class ReaderViewModelTest {
 
         override suspend fun clearSeriesSettings(seriesId: String) {
             series.value = series.value - seriesId
+        }
+
+        val hidden = MutableStateFlow<Map<String, Set<Int>>>(emptyMap())
+
+        override fun hiddenPages(bookId: String): Flow<Set<Int>> = hidden.map { it[bookId].orEmpty() }
+
+        override suspend fun saveHiddenPages(bookId: String, pages: Set<Int>) {
+            hidden.value = hidden.value + (bookId to pages)
         }
 
         // 테스트 준비용: 앱 기본값 한 항목만 바꾸기
