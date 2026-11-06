@@ -153,12 +153,18 @@ fun ViewSettingsForm(
             }
         }
         if (showZoom) {
-            // 대비는 페이지 넘김·세로 스크롤 모두 (작품별)
+            // 대비·밝기는 페이지 넘김·세로 스크롤 모두 (작품별)
             SettingRow(
                 title = stringResource(R.string.view_contrast),
                 value = stringResource(R.string.view_percent_value, settings.contrastPercent),
                 onPrevious = { onChange(settings.copy(contrastPercent = stepContrast(settings.contrastPercent, -1))) },
                 onNext = { onChange(settings.copy(contrastPercent = stepContrast(settings.contrastPercent, 1))) },
+            )
+            SettingRow(
+                title = stringResource(R.string.view_brightness),
+                value = stringResource(R.string.view_percent_value, settings.brightnessPercent),
+                onPrevious = { onChange(settings.copy(brightnessPercent = stepBrightness(settings.brightnessPercent, -1))) },
+                onNext = { onChange(settings.copy(brightnessPercent = stepBrightness(settings.brightnessPercent, 1))) },
             )
         }
         OptionRow(
@@ -181,6 +187,10 @@ fun ViewSettingsForm(
 private fun stepContrast(current: Int, delta: Int): Int =
     (current + delta * ReaderSettings.CONTRAST_STEP)
         .coerceIn(ReaderSettings.MIN_CONTRAST_PERCENT, ReaderSettings.MAX_CONTRAST_PERCENT)
+
+private fun stepBrightness(current: Int, delta: Int): Int =
+    (current + delta * ReaderSettings.BRIGHTNESS_STEP)
+        .coerceIn(ReaderSettings.MIN_BRIGHTNESS_PERCENT, ReaderSettings.MAX_BRIGHTNESS_PERCENT)
 
 private fun stepZoom(current: Int, delta: Int): Int =
     (current + delta).coerceIn(ReaderSettings.MIN_ZOOM_PERCENT, ReaderSettings.MAX_ZOOM_PERCENT)

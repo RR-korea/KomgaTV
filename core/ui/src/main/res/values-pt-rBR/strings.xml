@@ -37,6 +37,7 @@
     <string name="view_transition_slide">Deslizar</string>
     <string name="view_transition_fade">Esmaecer</string>
     <string name="view_contrast">Contraste</string>
+    <string name="view_brightness">Brilho</string>
     <string name="view_enhancement_lanczos2">Lanczos2 (rápido)</string>
     <string name="view_enhancement_lanczos">Lanczos3</string>
     <string name="view_enhancement_lanczos4">Lanczos4 (melhor)</string>

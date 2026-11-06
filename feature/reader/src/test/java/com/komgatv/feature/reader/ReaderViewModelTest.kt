@@ -1026,6 +1026,17 @@ class ReaderViewModelTest {
         assertEquals(150, reading.contrastPercent)
         viewModel.setContrastPercent(0)
         assertEquals(50, reading.contrastPercent)
+
+        // 밝기도 같은 방식 — 이 작품에 저장, 범위를 넘으면 끝에서 멈춘다
+        assertEquals(100, reading.brightnessPercent)
+        viewModel.applySettings(reading.settings.copy(brightnessPercent = 80))
+        advanceUntilIdle()
+        assertEquals(80, reading.brightnessPercent)
+        assertEquals(80, readerPreferences.series.value["s1"]!!.brightnessPercent)
+        viewModel.setBrightnessPercent(500)
+        assertEquals(150, reading.brightnessPercent)
+        viewModel.setBrightnessPercent(0)
+        assertEquals(50, reading.brightnessPercent)
     }
 
     @Test

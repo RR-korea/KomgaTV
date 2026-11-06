@@ -340,7 +340,7 @@ private fun ReaderContent(
                 tiles = state.continuousTiles,
                 listState = listState,
                 filterQuality = ImageEnhancer.filterQuality(state.imageEnhancement),
-                colorFilter = ImageEnhancer.contrastFilter(state.contrastPercent),
+                colorFilter = ImageEnhancer.colorFilter(state.contrastPercent, state.brightnessPercent),
                 scrollToTileIndex = state.scrollToTileIndex,
                 // 화질 설정이 바뀌면 보이는 타일도 다시 불러오게 함수 자체를 바꾼다
                 loadTile = remember(state.imageEnhancement) { { tile -> viewModel.loadTile(tile) } },
@@ -537,7 +537,7 @@ private fun SpreadPages(
                     contentScale = contentScale,
                     alignment = alignment,
                     filterQuality = ImageEnhancer.filterQuality(state.imageEnhancement),
-                    colorFilter = ImageEnhancer.contrastFilter(state.contrastPercent),
+                    colorFilter = ImageEnhancer.colorFilter(state.contrastPercent, state.brightnessPercent),
                     onState = {
                         loadState = it
                         if (it is AsyncImagePainter.State.Error && !useRendered && url.endsWith("/raw")) useRendered = true

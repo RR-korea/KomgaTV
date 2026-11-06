@@ -116,6 +116,8 @@ data class ReaderSettings(
     val zoomPercent: Int = MIN_ZOOM_PERCENT,
     /** 대비 % (작품별, [MIN_CONTRAST_PERCENT]~[MAX_CONTRAST_PERCENT], 5% 단위, 100 = 그대로) — 흐린 스캔본을 진하게 */
     val contrastPercent: Int = 100,
+    /** 밝기 % (작품별, [MIN_BRIGHTNESS_PERCENT]~[MAX_BRIGHTNESS_PERCENT], 5% 단위, 100 = 그대로) — 어두운 스캔본을 밝게, 밤에는 어둡게 */
+    val brightnessPercent: Int = 100,
     /** 페이지 넘김 화면 전환 효과 */
     val pageTransition: PageTransition = PageTransition.SLIDE,
 ) {
@@ -125,5 +127,8 @@ data class ReaderSettings(
         const val MIN_CONTRAST_PERCENT = 50
         const val MAX_CONTRAST_PERCENT = 150
         const val CONTRAST_STEP = 5
+        const val MIN_BRIGHTNESS_PERCENT = 50
+        const val MAX_BRIGHTNESS_PERCENT = 150
+        const val BRIGHTNESS_STEP = 5
     }
 }

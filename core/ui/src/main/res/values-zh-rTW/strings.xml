@@ -37,6 +37,7 @@
     <string name="view_transition_slide">滑動</string>
     <string name="view_transition_fade">淡入淡出</string>
     <string name="view_contrast">對比</string>
+    <string name="view_brightness">亮度</string>
     <string name="view_enhancement_lanczos2">Lanczos2（快速）</string>
     <string name="view_enhancement_lanczos">Lanczos3</string>
     <string name="view_enhancement_lanczos4">Lanczos4（最佳）</string>

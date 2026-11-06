@@ -35,6 +35,7 @@ import com.komgatv.core.model.Book
 import com.komgatv.core.model.Library
 import com.komgatv.core.model.cardTitle
 import kotlinx.coroutines.delay
+import com.komgatv.core.ui.components.ignoreHeldSelectKey
 
 /**
  * 라이브러리 메뉴 (라이브러리 카드에서 OK를 길게) — 스캔, 휴지통 비우기 (둘 다 관리자). Back으로 닫는다.
@@ -52,6 +53,7 @@ internal fun LibraryActionsDialog(
     Dialog(onDismissRequest = onDismiss) {
         Box(
             modifier = Modifier
+                .ignoreHeldSelectKey()
                 .ignoreHeldKey()
                 .width(440.dp)
                 .background(Color(0xFF1E1E1E), RoundedCornerShape(12.dp))
@@ -93,6 +95,7 @@ internal fun ReadingActionsDialog(
     Dialog(onDismissRequest = onDismiss) {
         Box(
             modifier = Modifier
+                .ignoreHeldSelectKey()
                 .ignoreHeldKey()
                 .width(480.dp)
                 .background(Color(0xFF1E1E1E), RoundedCornerShape(12.dp))

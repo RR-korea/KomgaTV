@@ -37,6 +37,7 @@
     <string name="view_transition_slide">Сдвиг</string>
     <string name="view_transition_fade">Затухание</string>
     <string name="view_contrast">Контраст</string>
+    <string name="view_brightness">Яркость</string>
     <string name="view_enhancement_lanczos2">Lanczos2 (быстро)</string>
     <string name="view_enhancement_lanczos">Lanczos3</string>
     <string name="view_enhancement_lanczos4">Lanczos4 (лучшее качество)</string>
