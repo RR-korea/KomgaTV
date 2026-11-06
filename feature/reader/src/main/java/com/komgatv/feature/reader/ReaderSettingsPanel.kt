@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -74,6 +76,8 @@ fun ReaderSettingsPanel(
                 .fillMaxHeight()
                 .width(500.dp)
                 .background(Color(0xFF1E1E1E))
+                // 항목이 늘어 한 화면을 넘으면 포커스를 따라 스크롤된다
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 28.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
