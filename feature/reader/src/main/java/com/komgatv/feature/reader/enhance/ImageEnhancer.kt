@@ -30,15 +30,25 @@ internal object ImageEnhancer {
     }
 
     /**
-     * 대비 — 화면에 그릴 때 GPU 색 변환으로 (부담 없음). 100%면 null.
-     * 가운데 회색(128)을 기준으로 밝은 곳은 더 밝게, 어두운 곳은 더 어둡게.
+     * 대비·밝기 — 화면에 그릴 때 GPU 색 변환 한 번으로 (부담 없음). 둘 다 100%면 null.
+     * 대비는 가운데 회색(128)을 기준으로 밝은 곳은 더 밝게, 어두운 곳은 더 어둡게.
+     * 밝기는 그 결과에 곱한다 — 100% 아래는 고르게 어둡게(밤), 위는 밝게(어두운 스캔본).
      */
-    fun contrastFilter(percent: Int): ColorFilter? {
-        if (percent == 100) return null
-        val c = percent / 100f
-        val t = 128f * (1f - c)
+    fun colorFilter(contrastPercent: Int, brightnessPercent: Int = 100): ColorFilter? {
+        if (contrastPercent == 100 && brightnessPercent == 100) return null
+        val c = contrastPercent / 100f
+        val b = brightnessPercent / 100f
+        val gain = c * b
+        val offset = 128f * (1f - c) * b
         return ColorFilter.colorMatrix(
-            ColorMatrix(floatArrayOf(c, 0f, 0f, 0f, t, 0f, c, 0f, 0f, t, 0f, 0f, c, 0f, t, 0f, 0f, 0f, 1f, 0f)),
+            ColorMatrix(
+                floatArrayOf(
+                    gain, 0f, 0f, 0f, offset,
+                    0f, gain, 0f, 0f, offset,
+                    0f, 0f, gain, 0f, offset,
+                    0f, 0f, 0f, 1f, 0f,
+                ),
+            ),
         )
     }
 

@@ -37,6 +37,7 @@
     <string name="view_transition_slide">Slide</string>
     <string name="view_transition_fade">Fade</string>
     <string name="view_contrast">Contrast</string>
+    <string name="view_brightness">Brightness</string>
     <string name="view_enhancement_lanczos2">Lanczos2 (fast)</string>
     <string name="view_enhancement_lanczos">Lanczos3</string>
     <string name="view_enhancement_lanczos4">Lanczos4 (best)</string>

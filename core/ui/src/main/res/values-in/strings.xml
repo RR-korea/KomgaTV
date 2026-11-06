@@ -37,6 +37,7 @@
     <string name="view_transition_slide">Geser</string>
     <string name="view_transition_fade">Memudar</string>
     <string name="view_contrast">Kontras</string>
+    <string name="view_brightness">Kecerahan</string>
     <string name="view_enhancement_lanczos2">Lanczos2 (cepat)</string>
     <string name="view_enhancement_lanczos">Lanczos3</string>
     <string name="view_enhancement_lanczos4">Lanczos4 (terbaik)</string>

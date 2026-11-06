@@ -37,6 +37,7 @@
     <string name="view_transition_slide">Glissement</string>
     <string name="view_transition_fade">Fondu</string>
     <string name="view_contrast">Contraste</string>
+    <string name="view_brightness">Luminosité</string>
     <string name="view_enhancement_lanczos2">Lanczos2 (rapide)</string>
     <string name="view_enhancement_lanczos">Lanczos3</string>
     <string name="view_enhancement_lanczos4">Lanczos4 (meilleur)</string>

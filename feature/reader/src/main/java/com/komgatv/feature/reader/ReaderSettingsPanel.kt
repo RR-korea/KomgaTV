@@ -33,6 +33,7 @@ import com.komgatv.core.ui.settings.ViewSettingsForm
  * 리더 보기 설정 패널 — **이 작품(시리즈)에만** 저장된다. 앱 전체 기본값은 서버 설정 화면에서 바꾼다.
  *
  * 한 화면에 다 들어가게(스크롤 없음) 한 줄짜리 항목을 쓴다. 열릴 때 첫 항목에 포커스, Back은 리더가 받아 닫는다.
+ * 책 화면은 어둡게 덮지 않는다 — 대비·밝기·화질을 바꾸면 패널 왼쪽 책에서 바로 확인한다.
  *
  * @param seriesCustomized 이 작품에 따로 저장된 설정이 있는지 — 없으면 "앱 기본값 사용 중"
  * @param hidablePages 지금 화면의 쪽 중 숨길 수 있는 쪽 — 쪽마다 [N쪽 숨기기] 버튼 (이 책에서만, 이 기기에만)
@@ -65,9 +66,7 @@ fun ReaderSettingsPanel(
     }
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.75f)),
+        modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.CenterEnd,
     ) {
         Column(
