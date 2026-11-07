@@ -6,6 +6,7 @@ import coil3.size.Size
 import coil3.transform.Transformation
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import kotlinx.coroutines.sync.withLock
 
 /**
  * 칸(패널) 사이 위아래 여백을 없애 칸끼리 붙이고, 칸들을 쪽 가운데(세로)로 모은다. 좌우 여백은 그대로.
@@ -471,9 +472,11 @@ internal class GutterTransformation : Transformation() {
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width
         val h = input.height
-        val pixels = IntArray(w * h)
-        input.getPixels(pixels, 0, w, 0, 0, w, h)
-        val out = collapseGutters(pixels, w, h) ?: return input
+        val out = pageWorkLock.withLock {
+            val pixels = IntArray(w * h)
+            input.getPixels(pixels, 0, w, 0, 0, w, h)
+            collapseGutters(pixels, w, h)
+        } ?: return input
         val config = if (input.config == Bitmap.Config.RGB_565) Bitmap.Config.RGB_565 else Bitmap.Config.ARGB_8888
         return createBitmap(w, h, config).apply { setPixels(out, 0, w, 0, 0, w, h) }
     }

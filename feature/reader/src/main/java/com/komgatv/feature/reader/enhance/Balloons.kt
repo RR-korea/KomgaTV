@@ -1,0 +1,547 @@
+package com.komgatv.feature.reader.enhance
+
+import android.graphics.Bitmap
+import androidx.core.graphics.createBitmap
+import coil3.size.Size
+import coil3.transform.Transformation
+import kotlin.math.abs
+import kotlin.math.roundToInt
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+
+/**
+ * 확대하면 잘리는 쪽 위·아래 끝의 대사를 쪽 가운데 쪽으로 옮긴다 — 말풍선 안에서만.
+ * [moveBalloons]면 쪽 끝에 걸려 잘린 말풍선은 말풍선째로 먼저 민다 ([BalloonPage.moveBalloons]).
+ * 그래도 모자라면 말풍선 안에서 대사를 옮긴다.
+ *
+ * 말풍선: 종이색 덩어리 중 쪽의 [MAX_BALLOON_RATIO] 이하인 것 (쪽 끝에 걸려 열린 말풍선도).
+ * 대사: 그 말풍선에만 맞닿은 작은 잉크 덩어리 — 글자 획. 말풍선 테두리는 바깥에도 맞닿아 빠진다.
+ *
+ * @param topCut 위에서 잘리는 줄 수
+ * @param bottomCut 아래에서 잘리는 줄 수
+ * @return 바꾼 픽셀, 옮길 것이 없으면 null
+ */
+internal fun pullBalloonText(
+    pixels: IntArray,
+    width: Int,
+    height: Int,
+    topCut: Int,
+    bottomCut: Int,
+    moveBalloons: Boolean,
+): IntArray? {
+    if (width < 8 || height < 32 || (topCut <= 0 && bottomCut <= 0)) return null
+    val bg = paperLuminance(pixels)
+    if (bg < MIN_PAPER) return null
+    // 잘리는 곳 둘레의 위·아래 띠만 본다 (TV 메모리) — 띠가 겹치면 쪽 전체
+    val reach = (height * STRIP_RATIO).roundToInt()
+    val topEnd = minOf(height, topCut + reach)
+    val bottomStart = maxOf(0, height - bottomCut - reach)
+    var out: IntArray? = null
+    fun strip(y0: Int, y1: Int, top: Int, bottom: Int) {
+        val part = pixels.copyOfRange(y0 * width, y1 * width)
+        val rows = y1 - y0
+        var current = part
+        var changed = false
+        fun page(px: IntArray) = BalloonPage(px, width, rows, height, bg, innerTop = y0 > 0, innerBottom = y1 < height)
+        if (moveBalloons) {
+            page(current).moveBalloons(top, bottom)?.let {
+                current = it
+                changed = true
+            }
+        }
+        page(current).moveText(top, bottom)?.let {
+            current = it
+            changed = true
+        }
+        if (changed) System.arraycopy(current, 0, out ?: pixels.copyOf().also { out = it }, y0 * width, current.size)
+    }
+    if (topEnd >= bottomStart) {
+        strip(0, height, topCut, bottomCut)
+    } else {
+        if (topCut > 0) strip(0, topEnd, topCut, 0)
+        if (bottomCut > 0) strip(bottomStart, height, 0, bottomCut)
+    }
+    return out
+}
+
+/** 종이(바탕) 밝기 — 가장 흔한 밝기 (3칸마다 본다) */
+private fun paperLuminance(pixels: IntArray): Int {
+    val hist = IntArray(256)
+    for (i in pixels.indices step 3) {
+        val c = pixels[i]
+        hist[(((c shr 16) and 0xFF) * 299 + ((c shr 8) and 0xFF) * 587 + (c and 0xFF) * 114) / 1000]++
+    }
+    return hist.indices.maxBy { hist[it] }
+}
+
+/**
+ * 쪽(의 위·아래 띠)의 종이색 덩어리(4방향)와 잉크 덩어리(8방향), 말풍선과 그 안의 대사.
+ * 크기 기준은 쪽 높이 [pageHeight]로 잰다. [innerTop]·[innerBottom]은 띠를 자른 곳 — 거기 닿은 말풍선은 크기를 몰라 뺀다.
+ */
+private class BalloonPage(
+    private val pixels: IntArray,
+    private val width: Int,
+    private val height: Int,
+    private val pageHeight: Int,
+    private val bg: Int,
+    private val innerTop: Boolean,
+    private val innerBottom: Boolean,
+) {
+    private val lum: IntArray
+    private val paperLabel: IntArray
+    private val inkLabel: IntArray
+    private val paperArea: IntArray
+    /** 종이 덩어리마다 위·아래·왼쪽·오른쪽 끝 */
+    private val paperBox: Array<IntArray>
+    private val groups: List<Group>
+
+    /** 말풍선 [balloon] 안의 대사 — 잉크 덩어리들과 그 테두리 상자 */
+    class Group(val balloon: Int, val inks: Set<Int>, val top: Int, val bottom: Int, val left: Int, val right: Int)
+
+    private val holeArea = (pageHeight * HOLE_RATIO).let { (it * it).roundToInt() }
+
+    init {
+        val lum = IntArray(pixels.size) { i ->
+            val c = pixels[i]
+            (((c shr 16) and 0xFF) * 299 + ((c shr 8) and 0xFF) * 587 + (c and 0xFF) * 114) / 1000
+        }
+        val paper = BooleanArray(pixels.size) { lum[it] >= bg - PAPER_DIFF }
+        // 말풍선은 테두리에서 [CLOSE]칸 넘게 떨어진 종이로 나눈다 — 테두리의 좁은 틈으로 바깥과 이어지지 않게.
+        // 테두리 가까운 종이는 가장 가까운 덩어리에 붙인다
+        paperLabel = label(eroded(paper, CLOSE), diagonal = false)
+        grow(paperLabel, paper)
+        inkLabel = label(BooleanArray(pixels.size) { !paper[it] }, diagonal = true)
+        this.lum = lum
+        paperArea = areas(paperLabel)
+        paperBox = boxes(paperLabel, paperArea.size)
+        groups = findGroups()
+    }
+
+    /** 둘레 [r]칸이 모두 종이인 곳 */
+    private fun eroded(mask: BooleanArray, r: Int): BooleanArray {
+        val rows = BooleanArray(mask.size)
+        for (y in 0 until height) {
+            var run = 0
+            for (x in 0 until width) {
+                run = if (mask[y * width + x]) run + 1 else 0
+                // 가로로 [x-2r, x] 모두 종이면 가운데 x-r에 표시
+                if (run >= 2 * r + 1) rows[y * width + x - r] = true
+            }
+        }
+        val out = BooleanArray(mask.size)
+        for (x in 0 until width) {
+            var run = 0
+            for (y in 0 until height) {
+                run = if (rows[y * width + x]) run + 1 else 0
+                if (run >= 2 * r + 1) out[(y - r) * width + x] = true
+            }
+        }
+        return out
+    }
+
+    /** 이름표 없는 [mask] 칸을 이웃한 덩어리 이름표로 채워 나간다 (가까운 덩어리부터) */
+    private fun grow(labels: IntArray, mask: BooleanArray) {
+        val queue = IntArray(labels.size)
+        var tail = 0
+        for (i in labels.indices) if (labels[i] >= 0) queue[tail++] = i
+        var head = 0
+        while (head < tail) {
+            val i = queue[head++]
+            val x = i % width
+            val y = i / width
+            for ((dx, dy) in NEIGHBOURS) {
+                val nx = x + dx
+                val ny = y + dy
+                if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue
+                val j = ny * width + nx
+                if (mask[j] && labels[j] < 0) {
+                    labels[j] = labels[i]
+                    queue[tail++] = j
+                }
+            }
+        }
+    }
+
+    private fun label(mask: BooleanArray, diagonal: Boolean): IntArray {
+        val labels = IntArray(mask.size) { -1 }
+        val queue = IntArray(mask.size)
+        var next = 0
+        for (start in mask.indices) {
+            if (!mask[start] || labels[start] >= 0) continue
+            labels[start] = next
+            var head = 0
+            var tail = 0
+            queue[tail++] = start
+            while (head < tail) {
+                val i = queue[head++]
+                val x = i % width
+                val y = i / width
+                for (dy in -1..1) for (dx in -1..1) {
+                    if ((dx == 0 && dy == 0) || (!diagonal && dx != 0 && dy != 0)) continue
+                    val nx = x + dx
+                    val ny = y + dy
+                    if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue
+                    val j = ny * width + nx
+                    if (mask[j] && labels[j] < 0) {
+                        labels[j] = next
+                        queue[tail++] = j
+                    }
+                }
+            }
+            next++
+        }
+        return labels
+    }
+
+    private fun areas(labels: IntArray): IntArray {
+        val area = IntArray((labels.maxOrNull() ?: -1) + 1)
+        for (l in labels) if (l >= 0) area[l]++
+        return area
+    }
+
+    private fun boxes(labels: IntArray, count: Int): Array<IntArray> {
+        val box = Array(count) { intArrayOf(Int.MAX_VALUE, -1, Int.MAX_VALUE, -1) }
+        for (i in labels.indices) {
+            val l = labels[i]
+            if (l < 0) continue
+            val x = i % width
+            val y = i / width
+            val b = box[l]
+            if (y < b[0]) b[0] = y
+            if (y > b[1]) b[1] = y
+            if (x < b[2]) b[2] = x
+            if (x > b[3]) b[3] = x
+        }
+        return box
+    }
+
+    /** 말풍선 모양 — 크기가 알맞고, 둘레 상자를 [MIN_BALLOON_FILL] 이상 채운다 (칸 속 그림 사이 빈 곳은 들쭉날쭉하다) */
+    private fun isBalloon(paper: Int): Boolean {
+        val area = paperArea[paper]
+        val pageArea = width.toLong() * pageHeight
+        if (area < pageArea * MIN_BALLOON_RATIO || area > pageArea * MAX_BALLOON_RATIO) return false
+        val b = paperBox[paper]
+        if ((innerTop && b[0] == 0) || (innerBottom && b[1] == height - 1)) return false
+        return area >= (b[1] - b[0] + 1).toLong() * (b[3] - b[2] + 1) * MIN_BALLOON_FILL
+    }
+
+    /** 글자 속 구멍(ㅇ·ㅁ 안쪽) 같은 작은 종이 덩어리 */
+    private fun isHole(paper: Int): Boolean = paperArea[paper] <= holeArea
+
+    private fun findGroups(): List<Group> {
+        val inkCount = (inkLabel.maxOrNull() ?: -1) + 1
+        // 잉크 덩어리마다 맞닿은 (구멍이 아닌) 종이 덩어리 두 개까지와 그 맞닿은 칸 수
+        val touchA = IntArray(inkCount) { -1 }
+        val countA = IntArray(inkCount)
+        val touchB = IntArray(inkCount) { -1 }
+        val countB = IntArray(inkCount)
+        val many = BooleanArray(inkCount)
+        val top = IntArray(inkCount) { Int.MAX_VALUE }
+        val bottom = IntArray(inkCount) { -1 }
+        val left = IntArray(inkCount) { Int.MAX_VALUE }
+        val right = IntArray(inkCount) { -1 }
+        for (i in pixels.indices) {
+            val ink = inkLabel[i]
+            if (ink < 0) continue
+            val x = i % width
+            val y = i / width
+            top[ink] = minOf(top[ink], y)
+            bottom[ink] = maxOf(bottom[ink], y)
+            left[ink] = minOf(left[ink], x)
+            right[ink] = maxOf(right[ink], x)
+            for (dy in -REACH..REACH) for (dx in -REACH..REACH) {
+                val nx = x + dx
+                val ny = y + dy
+                if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue
+                val paper = paperLabel[ny * width + nx]
+                if (paper < 0 || isHole(paper)) continue
+                when {
+                    touchA[ink] < 0 || touchA[ink] == paper -> { touchA[ink] = paper; countA[ink]++ }
+                    touchB[ink] < 0 || touchB[ink] == paper -> { touchB[ink] = paper; countB[ink]++ }
+                    else -> many[ink] = true
+                }
+            }
+        }
+        val maxGlyphH = pageHeight * MAX_GLYPH_RATIO
+        val maxGlyphW = width * MAX_GLYPH_RATIO
+        val byBalloon = HashMap<Int, MutableList<Int>>()
+        for (ink in 0 until inkCount) {
+            // 거의 한 덩어리에만 맞닿아야 대사 — 옆 말풍선 테두리에 살짝 가까운 글자는 괜찮다. 테두리는 안팎에 고루 맞닿는다
+            if (touchA[ink] < 0 || many[ink]) continue
+            val balloon = when {
+                countB[ink] <= countA[ink] * OTHER_TOUCH_RATIO -> touchA[ink]
+                countA[ink] <= countB[ink] * OTHER_TOUCH_RATIO -> touchB[ink]
+                else -> continue
+            }
+            if (bottom[ink] - top[ink] + 1 > maxGlyphH || right[ink] - left[ink] + 1 > maxGlyphW) continue
+            if (!isBalloon(balloon)) continue
+            byBalloon.getOrPut(balloon) { mutableListOf() } += ink
+        }
+        return byBalloon.map { (balloon, inks) ->
+            Group(
+                balloon, inks.toSet(),
+                top = inks.minOf { top[it] }, bottom = inks.maxOf { bottom[it] },
+                left = inks.minOf { left[it] }, right = inks.maxOf { right[it] },
+            )
+        }.filter { it.bottom - it.top + 1 >= pageHeight * MIN_TEXT_RATIO } // 티끌 하나는 대사가 아니다
+    }
+
+    /** 대사가 잘리는 곳에 걸렸으면 잘리지 않을 만큼 옮길 거리 (아래로 +), 아니면 0 */
+    private fun wanted(group: Group, topCut: Int, bottomCut: Int): Int {
+        val margin = (pageHeight * MARGIN_RATIO).roundToInt()
+        val visibleBottom = height - bottomCut
+        val upper = group.top < topCut
+        val lower = group.bottom >= visibleBottom
+        return when {
+            upper && lower -> 0
+            upper -> topCut - group.top + margin
+            lower -> visibleBottom - 1 - group.bottom - margin
+            else -> 0
+        }
+    }
+
+    /** 대사 자리: 말풍선 안, 대사 획(과 [marks]), 대사 상자 안의 구멍 */
+    private fun inside(group: Group, i: Int, marks: Set<Int> = emptySet()): Boolean {
+        val paper = paperLabel[i]
+        if (paper == group.balloon || i in marks) return true
+        val ink = inkLabel[i]
+        if (ink >= 0) return ink in group.inks
+        val x = i % width
+        val y = i / width
+        // 글자 속 구멍 — 작은 덩어리이거나, 너무 좁아 덩어리를 못 이룬 종이
+        return (paper < 0 || isHole(paper)) && y in group.top..group.bottom && x in group.left..group.right
+    }
+
+    /** 대사 획과 그 둘레 [HALO]칸 안의 옅은 회색(종이보다 [HALO_DIFF] 넘게 어두운 곳) — 옮길 것 */
+    private fun marks(group: Group): Set<Int> {
+        val marks = HashSet<Int>()
+        for (y in group.top..group.bottom) for (x in group.left..group.right) {
+            val i = y * width + x
+            if (inkLabel[i] < 0 || inkLabel[i] !in group.inks) continue
+            marks += i
+            for (yy in (y - HALO).coerceAtLeast(0)..(y + HALO).coerceAtMost(height - 1)) {
+                for (xx in (x - HALO).coerceAtLeast(0)..(x + HALO).coerceAtMost(width - 1)) {
+                    val j = yy * width + xx
+                    val paper = paperLabel[j]
+                    if (lum[j] < bg - HALO_DIFF && (paper == group.balloon || paper < 0 || isHole(paper))) marks += j
+                }
+            }
+        }
+        return marks
+    }
+
+    fun moveText(topCut: Int, bottomCut: Int): IntArray? {
+        var out: IntArray? = null
+        val gap = (pageHeight * GAP_RATIO).roundToInt().coerceAtLeast(2)
+        for (group in groups) {
+            val want = wanted(group, topCut, bottomCut)
+            if (want == 0) continue
+            val marks = marks(group)
+            val strokes = marks.filter { inkLabel[it] >= 0 }
+            fun ok(x: Int, y: Int) = x in 0 until width && y in 0 until height && inside(group, y * width + x, marks)
+            // 옮긴 획은 말풍선 안에 — 테두리와 [gap]칸 띄우되, 지금 이미 그보다 가까운 쪽은 더 가까워지지만 않게
+            fun clear(x: Int, y: Int, sx: Int, sy: Int) = ok(x, y) || !ok(sx, sy)
+            fun fits(d: Int): Boolean = strokes.all { i ->
+                val sx = i % width
+                val sy = i / width
+                val y = sy + d
+                ok(sx, y) && clear(sx, y - gap, sx, sy - gap) && clear(sx, y + gap, sx, sy + gap) &&
+                    clear(sx - gap, y, sx - gap, sy) && clear(sx + gap, y, sx + gap, sy)
+            }
+            val step = if (want > 0) 1 else -1
+            var d = want
+            while (d != 0 && !fits(d)) d -= step
+            if (abs(d) < MIN_MOVE) continue
+            val dst = out ?: pixels.copyOf().also { out = it }
+            val paperColor = averagePaper(group)
+            for (i in marks) dst[i] = paperColor
+            for (i in marks) dst[i + d * width] = pixels[i]
+        }
+        return out
+    }
+
+    /**
+     * 쪽 끝에 걸려 잘린 말풍선을 쪽 끝 쪽 그림째로 가운데 쪽으로 민다 — 위쪽 말풍선이면 말풍선 아래 끝까지의 열을 아래로.
+     * 쪽 끝에 생기는 빈 줄은 잘리는 곳 안이라 보이지 않고, 말풍선은 바로 아래 그림을 조금 덮는다.
+     * 말풍선 좌우 [TAPER_RATIO]만큼은 미는 거리를 줄여 가며 이어 붙인다.
+     */
+    fun moveBalloons(topCut: Int, bottomCut: Int): IntArray? {
+        var out: IntArray? = null
+        val ring = (pageHeight * RING_RATIO).roundToInt().coerceAtLeast(2)
+        val taper = (width * TAPER_RATIO).roundToInt().coerceAtLeast(1)
+        for (group in groups) {
+            val want = wanted(group, topCut, bottomCut)
+            if (want == 0) continue
+            val box = paperBox[group.balloon]
+            val down = want > 0
+            // 쪽 끝에 걸려 잘린 말풍선만 — 칸 안의 닫힌 말풍선을 밀면 그 위 칸 테두리까지 끌려온다
+            if (if (down) box[0] > EDGE_ROWS else box[1] < height - 1 - EDGE_ROWS) continue
+            // 쪽 끝의 빈 줄이 잘리는 곳 안에 남을 만큼만
+            val d = if (down) minOf(want, topCut) else -minOf(-want, bottomCut)
+            if (abs(d) < MIN_MOVE) continue
+            // 열마다 말풍선(테두리 포함) 끝 줄
+            val edge = IntArray(width) { -1 }
+            for (y in box[0]..box[1]) for (x in box[2]..box[3]) {
+                if (paperLabel[y * width + x] != group.balloon) continue
+                edge[x] = if (edge[x] < 0) y else if (down) maxOf(edge[x], y) else minOf(edge[x], y)
+            }
+            val src = out ?: pixels
+            val dst = out ?: pixels.copyOf().also { out = it }
+            val before = src.copyOf()
+            for (x in (box[2] - taper).coerceAtLeast(0)..(box[3] + taper).coerceAtMost(width - 1)) {
+                val inner = x.coerceIn(box[2], box[3])
+                val far = abs(x - inner)
+                val shift = (d * (1f - far.toFloat() / (taper + 1))).roundToInt()
+                if (shift == 0) continue
+                var e = edge[inner]
+                if (e < 0) e = if (down) box[1] else box[0]
+                e = if (down) (e + ring).coerceAtMost(height - 1) else (e - ring).coerceAtLeast(0)
+                if (down) {
+                    for (y in (e + shift).coerceAtMost(height - 1) downTo 0) {
+                        val from = y - shift
+                        dst[y * width + x] = before[from.coerceAtLeast(0) * width + x]
+                    }
+                } else {
+                    for (y in (e + shift).coerceAtLeast(0) until height) {
+                        val from = y - shift
+                        dst[y * width + x] = before[from.coerceAtMost(height - 1) * width + x]
+                    }
+                }
+            }
+        }
+        return out
+    }
+
+    /** 대사 둘레 말풍선 종이색의 평균 (글자의 옅은 테두리는 빼고) */
+    private fun averagePaper(group: Group): Int {
+        var r = 0L
+        var g = 0L
+        var b = 0L
+        var n = 0
+        val pad = HALO * 4
+        for (y in (group.top - pad).coerceAtLeast(0)..(group.bottom + pad).coerceAtMost(height - 1)) {
+            for (x in (group.left - pad).coerceAtLeast(0)..(group.right + pad).coerceAtMost(width - 1)) {
+                val i = y * width + x
+                if (paperLabel[i] != group.balloon || lum[i] < bg - HALO_DIFF) continue
+                val c = pixels[i]
+                r += (c shr 16) and 0xFF
+                g += (c shr 8) and 0xFF
+                b += c and 0xFF
+                n++
+            }
+        }
+        if (n == 0) return pixels[group.top * width + group.left]
+        return (0xFF shl 24) or ((r / n).toInt() shl 16) or ((g / n).toInt() shl 8) or (b / n).toInt()
+    }
+}
+
+private val NEIGHBOURS = listOf(1 to 0, -1 to 0, 0 to 1, 0 to -1)
+
+/** 잘리는 줄에서 쪽 가운데 쪽으로 이만큼(쪽 높이 비율)까지의 띠만 본다 — 말풍선이 그 안에 들어 있어야 한다 */
+private const val STRIP_RATIO = 0.25f
+
+/** 바탕(종이)이 이보다 어두우면 (검은 바탕 쪽) 손대지 않는다 */
+private const val MIN_PAPER = 128
+
+/** 종이색과 이만큼 안쪽이면 종이, 더 어두우면 잉크 */
+private const val PAPER_DIFF = 60
+
+/** 글자 둘레에서 종이색보다 이만큼 어두운 곳은 글자의 옅은 테두리 */
+private const val HALO_DIFF = 6
+
+/** 말풍선 테두리의 이 칸 수만 한 틈은 막힌 것으로 본다 */
+private const val CLOSE = 2
+
+/** 잉크 덩어리가 맞닿은 종이를 이 거리까지 본다 */
+private const val REACH = 1
+
+/** 말풍선은 둘레 상자를 이만큼은 채운다 (타원은 0.79) */
+private const val MIN_BALLOON_FILL = 0.5f
+
+/** 대사 덩어리는 쪽 높이의 이만큼은 된다 */
+private const val MIN_TEXT_RATIO = 0.01f
+
+/** 말풍선은 쪽 넓이의 이만큼 이상, [MAX_BALLOON_RATIO] 이하 */
+private const val MIN_BALLOON_RATIO = 0.001
+private const val MAX_BALLOON_RATIO = 0.06
+
+/** 대사 획이 다른 종이 덩어리에 맞닿은 칸이 주 덩어리의 이 비율 이하면 주 덩어리의 대사 */
+private const val OTHER_TOUCH_RATIO = 0.25f
+
+/** 글자 획 덩어리는 쪽 높이(너비)의 이만큼보다 작다 */
+private const val MAX_GLYPH_RATIO = 0.08f
+
+/** 이 크기(쪽 높이 비율)의 정사각형보다 작은 종이 덩어리는 글자 속 구멍 */
+private const val HOLE_RATIO = 0.015f
+
+/** 옮긴 대사가 잘리는 선에서 띄울 거리 (쪽 높이 비율) */
+private const val MARGIN_RATIO = 0.01f
+
+/** 옮긴 대사와 말풍선 테두리 사이 거리 (쪽 높이 비율) */
+private const val GAP_RATIO = 0.004f
+
+/** 말풍선이 쪽 끝에서 이 줄 수 안까지 닿으면 쪽 끝에 걸린 말풍선 */
+private const val EDGE_ROWS = 2
+
+/** 말풍선을 밀 때 좌우로 미는 거리를 줄여 가며 이어 붙이는 폭 (쪽 너비 비율) */
+private const val TAPER_RATIO = 0.03f
+
+/** 말풍선 테두리 두께로 볼 거리 (쪽 높이 비율) */
+private const val RING_RATIO = 0.006f
+
+/** 글자 둘레의 옅은 테두리(안티에일리어싱)까지 함께 옮긴다 */
+private const val HALO = 4
+
+/** 이보다 조금 옮기는 건 하지 않는다 */
+private const val MIN_MOVE = 2
+
+/**
+ * 쪽 전체를 훑는 무거운 처리(칸 간격, 대사 옮기기)는 한 번에 한 쪽씩 — 미리 받는 쪽들이 한꺼번에 돌면
+ * 큰 배열이 겹쳐 TV 메모리가 모자란다.
+ */
+internal val pageWorkLock = Mutex()
+
+/**
+ * 확대([zoomPercent])했을 때 쪽 위·아래에서 잘리는 줄 수 — 화면 높이 [screenHeightPx]에 크기 맞춤으로 그린 [width]×[height] 쪽.
+ * 확대는 화면 가운데 기준이라 위아래가 같다 (▲▼로 옮긴 자리는 보지 않는다 — 옮길 때마다 쪽을 다시 그리지 않게).
+ * [fitHeight]면 높이 맞춤, 아니면 칸([slotWidthPx]×[screenHeightPx]) 안에 맞춤.
+ */
+internal fun zoomCutRows(
+    width: Int,
+    height: Int,
+    zoomPercent: Int,
+    slotWidthPx: Int,
+    screenHeightPx: Int,
+    fitHeight: Boolean,
+): Int {
+    if (zoomPercent <= 100 || width <= 0 || height <= 0) return 0
+    val scale = if (fitHeight) screenHeightPx.toFloat() / height else minOf(slotWidthPx.toFloat() / width, screenHeightPx.toFloat() / height)
+    val letterbox = (screenHeightPx - height * scale) / 2
+    val screenCut = screenHeightPx * (1f - 100f / zoomPercent) / 2
+    return ((screenCut - letterbox) / scale).roundToInt().coerceAtLeast(0)
+}
+
+/** 페이지 리더(Coil)용 — 확대하면 잘리는 쪽 끝 대사를 옮긴다 (작품 보기 설정 "확대", "말풍선까지 옮기기") */
+internal class BalloonTextTransformation(
+    private val zoomPercent: Int,
+    private val moveBalloons: Boolean,
+    private val slotWidthPx: Int,
+    private val screenHeightPx: Int,
+    private val fitHeight: Boolean,
+) : Transformation() {
+    override val cacheKey: String = "balloons-1-$zoomPercent-$moveBalloons-${slotWidthPx}x$screenHeightPx-$fitHeight"
+
+    override suspend fun transform(input: Bitmap, size: Size): Bitmap {
+        val w = input.width
+        val h = input.height
+        val cut = zoomCutRows(w, h, zoomPercent, slotWidthPx, screenHeightPx, fitHeight)
+        if (cut <= 0) return input
+        val out = pageWorkLock.withLock {
+            val pixels = IntArray(w * h)
+            input.getPixels(pixels, 0, w, 0, 0, w, h)
+            pullBalloonText(pixels, w, h, cut, cut, moveBalloons)
+        } ?: return input
+        val config = if (input.config == Bitmap.Config.RGB_565) Bitmap.Config.RGB_565 else Bitmap.Config.ARGB_8888
+        return createBitmap(w, h, config).apply { setPixels(out, 0, w, 0, 0, w, h) }
+    }
+}

@@ -33,6 +33,7 @@
     <string name="view_off">Désactivé</string>
     <string name="view_zoom">Zoom</string>
     <string name="view_remove_gutters">Resserrer les cases</string>
+    <string name="view_move_balloons">Déplacer aussi les bulles</string>
     <string name="view_transition">Transition de page</string>
     <string name="view_transition_off">Aucune</string>
     <string name="view_transition_slide">Glissement</string>

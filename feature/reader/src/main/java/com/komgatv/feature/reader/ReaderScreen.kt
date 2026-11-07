@@ -82,6 +82,7 @@ import com.komgatv.core.model.ScaleType
 import com.komgatv.core.ui.components.ProgressBar
 import com.komgatv.core.ui.components.loadErrorText
 import com.komgatv.feature.reader.continuous.ContinuousPages
+import com.komgatv.feature.reader.enhance.BalloonTextTransformation
 import com.komgatv.feature.reader.enhance.GutterTransformation
 import com.komgatv.feature.reader.enhance.ImageEnhancer
 import com.komgatv.feature.reader.enhance.LanczosTransformation
@@ -211,10 +212,11 @@ private fun ReaderContent(
     val preloads = remember { mutableMapOf<String, Disposable>() }
     LaunchedEffect(
         state.preloadSpreads, state.spreadPageUrls, state.scaleType, state.imageEnhancement, state.removeGutters,
-        screenWidthPx, screenHeightPx,
+        state.zoomPercent, state.moveBalloons, screenWidthPx, screenHeightPx,
     ) {
         val imageLoader = SingletonImageLoader.get(context)
-        val variant = "${state.scaleType}|${state.imageEnhancement}|${state.removeGutters}|${screenWidthPx}x$screenHeightPx"
+        val variant = "${state.scaleType}|${state.imageEnhancement}|${state.removeGutters}|${state.zoomPercent}|${state.moveBalloons}|" +
+            "${screenWidthPx}x$screenHeightPx"
         val wanted = state.preloadSpreads.flatMap { urls -> urls.map { url -> "$url|${urls.size}|$variant" to (url to urls.size) } }
             .toMap()
         // 지금 보이는 쪽은 화면이 같은 주소를 받는 중일 수 있어 끊지 않는다 (같은 요청은 한 번만 받는다)
@@ -230,7 +232,7 @@ private fun ReaderContent(
             preloads[key] = imageLoader.enqueue(
                 pageRequest(
                     context, url, state.scaleType, slotWidth(screenWidthPx, slots), screenHeightPx,
-                    state.imageEnhancement, state.removeGutters,
+                    state.imageEnhancement, state.removeGutters, state.zoomPercent, state.moveBalloons,
                 )
             )
         }
@@ -519,10 +521,13 @@ private fun SpreadPages(
             // PDF 원본 쪽(/raw)을 서버가 못 주면(파일을 옮겼거나 분석 중 등) 서버가 그린 일반 쪽으로 다시 받는다
             var useRendered by remember(url) { mutableStateOf(false) }
             val pageUrl = if (useRendered) url.removeSuffix("/raw") else url
-            val request = remember(pageUrl, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement, state.removeGutters) {
+            val request = remember(
+                pageUrl, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement, state.removeGutters,
+                state.zoomPercent, state.moveBalloons,
+            ) {
                 pageRequest(
                     context, pageUrl, state.scaleType, slotWidthPx, screenHeightPx,
-                    state.imageEnhancement, state.removeGutters,
+                    state.imageEnhancement, state.removeGutters, state.zoomPercent, state.moveBalloons,
                 )
             }
             // 받는 중이면 스피너, 실패하면 문구 — 빨리 넘길 때 검은 화면이 멈춘 것처럼 보이지 않게
@@ -641,6 +646,8 @@ private fun pageRequest(
     screenHeightPx: Int,
     enhancement: ImageEnhancement,
     removeGutters: Boolean,
+    zoomPercent: Int,
+    moveBalloons: Boolean,
 ): ImageRequest {
     val size = when (scaleType) {
         ScaleType.SCREEN -> CoilSize(slotWidthPx, screenHeightPx)
@@ -656,8 +663,15 @@ private fun pageRequest(
         .crossfade(false)
         .transformations(
             listOfNotNull(
-                // 칸 사이 여백을 먼저 줄이고(쪽 크기는 그대로), 화면 크기로 Lanczos 리샘플링한 뒤 선명하게
+                // 칸 사이 여백을 먼저 줄이고(쪽 크기는 그대로), 확대로 잘릴 쪽 끝 대사를 옮기고,
+                // 화면 크기로 Lanczos 리샘플링한 뒤 선명하게
                 if (removeGutters) GutterTransformation() else null,
+                // 확대는 화면 고정(맞춤·높이 맞춤)에서만 위아래가 잘린다
+                if (zoomPercent > ReaderSettings.MIN_ZOOM_PERCENT && (scaleType == ScaleType.SCREEN || scaleType == ScaleType.FIT_HEIGHT)) {
+                    BalloonTextTransformation(zoomPercent, moveBalloons, slotWidthPx, screenHeightPx, fitHeight = scaleType == ScaleType.FIT_HEIGHT)
+                } else {
+                    null
+                },
                 ImageEnhancer.lanczos(enhancement)?.let { LanczosTransformation(scaleType, it) },
                 ImageEnhancer.sharpenAmount(enhancement)?.let { SharpenTransformation(it) },
             ),
