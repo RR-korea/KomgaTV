@@ -993,6 +993,19 @@ class ReaderViewModelTest {
     }
 
     @Test
+    fun `칸 간격 없애기 - 켜면 이 작품에만 저장된다`() = runTest(testDispatcher) {
+        openBook()
+        advanceUntilIdle()
+        assertEquals(false, reading.removeGutters)
+
+        viewModel.applySettings(reading.settings.copy(removeGutters = true))
+        advanceUntilIdle()
+        assertEquals(true, reading.removeGutters)
+        assertEquals(true, readerPreferences.series.value["s1"]!!.removeGutters)
+        assertEquals(false, readerPreferences.readerSettings.first().removeGutters)
+    }
+
+    @Test
     fun `확대 - 저장된 작품 확대로 열고, 기본값으로 되돌리면 100`() = runTest(testDispatcher) {
         readerPreferences.series.value = mapOf("s1" to ReaderSettings(zoomPercent = 125))
         openBook()

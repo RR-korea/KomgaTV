@@ -25,6 +25,7 @@ internal object ReaderSettingsCodec {
         "contrastPercent" to s.contrastPercent.toString(),
         "brightnessPercent" to s.brightnessPercent.toString(),
         "zoomPanPercent" to s.zoomPanPercent.toString(),
+        "removeGutters" to s.removeGutters.toString(),
         "pageTransition" to s.pageTransition.name,
     ).joinToString(";") { (k, v) -> "$k=$v" }
 
@@ -52,6 +53,7 @@ internal object ReaderSettingsCodec {
                 ?.coerceIn(ReaderSettings.MIN_BRIGHTNESS_PERCENT, ReaderSettings.MAX_BRIGHTNESS_PERCENT) ?: d.brightnessPercent,
             zoomPanPercent = map["zoomPanPercent"]?.toIntOrNull()
                 ?.coerceIn(ReaderSettings.MIN_ZOOM_PAN_PERCENT, ReaderSettings.MAX_ZOOM_PAN_PERCENT) ?: d.zoomPanPercent,
+            removeGutters = map["removeGutters"]?.toBooleanStrictOrNull() ?: d.removeGutters,
         )
     }
 

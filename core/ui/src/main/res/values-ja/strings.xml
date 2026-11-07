@@ -32,6 +32,7 @@
     <string name="view_on">オン</string>
     <string name="view_off">オフ</string>
     <string name="view_zoom">ズーム</string>
+    <string name="view_remove_gutters">コマ間を詰める</string>
     <string name="view_transition">ページ切り替え効果</string>
     <string name="view_transition_off">オフ</string>
     <string name="view_transition_slide">スライド</string>

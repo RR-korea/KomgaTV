@@ -32,6 +32,7 @@
     <string name="view_on">An</string>
     <string name="view_off">Aus</string>
     <string name="view_zoom">Zoom</string>
+    <string name="view_remove_gutters">Panel-Abstände entfernen</string>
     <string name="view_transition">Seitenübergang</string>
     <string name="view_transition_off">Aus</string>
     <string name="view_transition_slide">Schieben</string>

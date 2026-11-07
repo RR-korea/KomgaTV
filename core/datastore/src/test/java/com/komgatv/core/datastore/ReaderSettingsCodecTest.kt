@@ -27,6 +27,7 @@ class ReaderSettingsCodecTest {
             contrastPercent = 125,
             brightnessPercent = 85,
             zoomPanPercent = -50,
+            removeGutters = true,
             pageTransition = PageTransition.FADE,
         )
         assertEquals(s, ReaderSettingsCodec.decode(ReaderSettingsCodec.encode(s)))
