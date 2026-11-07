@@ -25,7 +25,7 @@ class GuttersTest {
         px.panel(40)
         px.panel(200)
         // 칸 사이(140~199)의 작은 글자 — 획 높이 10줄이라 칸으로 치지 않는다
-        for (y in 165 until 175) for (x in 30 until 60) px[y * w + x] = black
+        for (y in 165 until 175) for (x in 30 until 60) if (x % 6 < 3) px[y * w + x] = black
 
         val out = requireNotNull(collapseGutters(px, w, h))
 
@@ -76,6 +76,28 @@ class GuttersTest {
         // 상자 왼쪽 테두리는 끊기지 않고 160~249로 이어진다 (칸 A 위 테두리 100·101, 칸 B 아래 테두리 298·299)
         val boxRows = (0 until h).filter { out[it * w + 60] == black }
         assertEquals(listOf(100, 101) + (160..249).toList() + listOf(298, 299), boxRows)
+    }
+
+    @Test
+    fun `기울어진 스캔의 테두리 끝자락이 여백에 걸쳐도 테두리를 자르지 않고 칸을 붙인다`() {
+        val px = IntArray(w * h) { white }
+        px.panel(40)
+        px.panel(200)
+        // 칸 A 아래 테두리가 오른쪽으로 갈수록 3줄 내려가고(138~142), 칸 B 위 테두리도 기울었다(196~200)
+        for (x in 10 until 90) {
+            val down = (x - 10) * 4 / 80
+            for (y in 138 + down until 140 + down) px[y * w + x] = black
+            for (y in 196 + down until 198 + down) px[y * w + x] = black
+        }
+
+        val out = requireNotNull(collapseGutters(px, w, h))
+
+        // 오른쪽 끝(x=80) 테두리 줄이 하나도 잘리지 않는다
+        assertEquals((0 until h).count { px[it * w + 80] == black }, (0 until h).count { out[it * w + 80] == black })
+        // 칸 사이 흰 곳은 없어진다 — 칸 A 아래 테두리 끝(142)과 칸 B 위 테두리 시작(196) 사이 53줄이 빠진다
+        val before = (0 until h).filter { px[it * w + 80] == black }
+        val after = (0 until h).filter { out[it * w + 80] == black }
+        assertEquals(53, (before.last() - before.first()) - (after.last() - after.first()))
     }
 
     @Test
