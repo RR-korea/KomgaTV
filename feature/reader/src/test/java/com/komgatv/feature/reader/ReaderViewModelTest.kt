@@ -951,7 +951,7 @@ class ReaderViewModelTest {
     }
 
     @Test
-    fun `확대 - 1% 단위로 바뀌고 100~120 안에서, 이 작품에만 저장된다`() = runTest(testDispatcher) {
+    fun `확대 - 1% 단위로 바뀌고 100~150 안에서, 이 작품에만 저장된다`() = runTest(testDispatcher) {
         openBook()
         advanceUntilIdle()
         assertEquals(100, reading.zoomPercent)
@@ -963,7 +963,7 @@ class ReaderViewModelTest {
         assertEquals(100, readerPreferences.readerSettings.first().zoomPercent)
 
         viewModel.setZoomPercent(1000)
-        assertEquals(120, reading.zoomPercent)
+        assertEquals(150, reading.zoomPercent)
         viewModel.setZoomPercent(50)
         assertEquals(100, reading.zoomPercent)
     }
@@ -1049,7 +1049,7 @@ class ReaderViewModelTest {
     }
 
     @Test
-    fun `대비 - 5% 단위, 50~150 안에서, 이 작품에만 저장된다`() = runTest(testDispatcher) {
+    fun `대비 - 5% 단위, 50~190 안에서, 이 작품에만 저장된다`() = runTest(testDispatcher) {
         openBook()
         advanceUntilIdle()
         assertEquals(100, reading.contrastPercent)
@@ -1060,7 +1060,7 @@ class ReaderViewModelTest {
         assertEquals(125, readerPreferences.series.value["s1"]!!.contrastPercent)
 
         viewModel.setContrastPercent(500)
-        assertEquals(150, reading.contrastPercent)
+        assertEquals(190, reading.contrastPercent)
         viewModel.setContrastPercent(0)
         assertEquals(50, reading.contrastPercent)
 
@@ -1073,7 +1073,7 @@ class ReaderViewModelTest {
         viewModel.setBrightnessPercent(500)
         assertEquals(150, reading.brightnessPercent)
         viewModel.setBrightnessPercent(0)
-        assertEquals(50, reading.brightnessPercent)
+        assertEquals(10, reading.brightnessPercent)
     }
 
     @Test

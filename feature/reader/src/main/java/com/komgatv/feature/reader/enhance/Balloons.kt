@@ -10,12 +10,13 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * 확대하면 잘리는 쪽 위·아래 끝의 대사를 쪽 가운데 쪽으로 옮긴다 — 말풍선 안에서만.
- * [moveBalloons]면 쪽 끝에 걸려 잘린 말풍선은 말풍선째로 먼저 민다 ([BalloonPage.moveBalloons]).
+ * 확대하면 잘리는 쪽 위·아래 끝의 대사를 쪽 가운데 쪽으로 옮긴다 — 말풍선 안에서, 또는 칸 안 빈 종이 위에서.
+ * [moveBalloons]면 잘리는 곳에 걸친 말풍선은 말풍선째로 먼저 민다 ([BalloonPage.moveBalloons]).
  * 그래도 모자라면 말풍선 안에서 대사를 옮긴다.
  *
  * 말풍선: 종이색 덩어리 중 쪽의 [MAX_BALLOON_RATIO] 이하인 것 (쪽 끝에 걸려 열린 말풍선도).
  * 대사: 그 말풍선에만 맞닿은 작은 잉크 덩어리 — 글자 획. 말풍선 테두리는 바깥에도 맞닿아 빠진다.
+ * 해설 글: 말풍선이 아닌 큰 종이(칸 안 빈 곳) 위에 모여 있는 글자 획 덩어리 ([BalloonPage.textBlocks]).
  *
  * @param topCut 위에서 잘리는 줄 수
  * @param bottomCut 아래에서 잘리는 줄 수
@@ -95,8 +96,20 @@ private class BalloonPage(
     private val paperBox: Array<IntArray>
     private val groups: List<Group>
 
-    /** 말풍선 [balloon] 안의 대사 — 잉크 덩어리들과 그 테두리 상자 */
-    class Group(val balloon: Int, val inks: Set<Int>, val top: Int, val bottom: Int, val left: Int, val right: Int)
+    /**
+     * 종이 덩어리 [balloon] 안의 대사 — 잉크 덩어리들과 그 테두리 상자.
+     * [isBalloon]이 아니면 칸 안 빈 종이 위의 해설 글. [canPush]면 제 테두리만 두른 말풍선 — 말풍선째 밀 수 있다.
+     */
+    class Group(
+        val balloon: Int,
+        val inks: Set<Int>,
+        val top: Int,
+        val bottom: Int,
+        val left: Int,
+        val right: Int,
+        val isBalloon: Boolean = true,
+        val canPush: Boolean = false,
+    )
 
     private val holeArea = (pageHeight * HOLE_RATIO).let { (it * it).roundToInt() }
 
@@ -225,6 +238,35 @@ private class BalloonPage(
         return area >= (b[1] - b[0] + 1).toLong() * (b[3] - b[2] + 1) * MIN_BALLOON_FILL
     }
 
+    /**
+     * 말풍선은 테두리 하나(꼬리나 겹친 그림까지 이어진 잉크 덩어리)로 둘러싸여 있다 — 글자 [text] 말고 맞닿은 잉크 덩어리가
+     * [MAX_OUTLINE_PARTS]개 이하. 칸 안 빈 곳은 그림 조각, 망점, 칸 테두리 여럿에 맞닿는다.
+     * @return 테두리 잉크 덩어리들, 말풍선이 아니면 null
+     */
+    private fun outline(paper: Int, text: Set<Int>): Set<Int>? {
+        val b = paperBox[paper]
+        val minContact = (pageHeight * MIN_OUTLINE_CONTACT_RATIO).roundToInt().coerceAtLeast(3)
+        val contact = HashMap<Int, Int>()
+        val parts = HashSet<Int>()
+        for (y in b[0]..b[1]) for (x in b[2]..b[3]) {
+            if (paperLabel[y * width + x] != paper) continue
+            for ((dx, dy) in NEIGHBOURS) {
+                val nx = x + dx
+                val ny = y + dy
+                if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue
+                val ink = inkLabel[ny * width + nx]
+                if (ink < 0 || ink in text) continue
+                val n = contact.getOrDefault(ink, 0) + 1
+                contact[ink] = n
+                if (n == minContact) {
+                    parts += ink
+                    if (parts.size > MAX_OUTLINE_PARTS) return null
+                }
+            }
+        }
+        return parts
+    }
+
     /** 글자 속 구멍(ㅇ·ㅁ 안쪽) 같은 작은 종이 덩어리 */
     private fun isHole(paper: Int): Boolean = paperArea[paper] <= holeArea
 
@@ -264,7 +306,7 @@ private class BalloonPage(
         }
         val maxGlyphH = pageHeight * MAX_GLYPH_RATIO
         val maxGlyphW = width * MAX_GLYPH_RATIO
-        val byBalloon = HashMap<Int, MutableList<Int>>()
+        val byPaper = HashMap<Int, MutableList<Int>>()
         for (ink in 0 until inkCount) {
             // 거의 한 덩어리에만 맞닿아야 대사 — 옆 말풍선 테두리에 살짝 가까운 글자는 괜찮다. 테두리는 안팎에 고루 맞닿는다
             if (touchA[ink] < 0 || many[ink]) continue
@@ -274,17 +316,106 @@ private class BalloonPage(
                 else -> continue
             }
             if (bottom[ink] - top[ink] + 1 > maxGlyphH || right[ink] - left[ink] + 1 > maxGlyphW) continue
-            if (!isBalloon(balloon)) continue
-            byBalloon.getOrPut(balloon) { mutableListOf() } += ink
+            byPaper.getOrPut(balloon) { mutableListOf() } += ink
         }
-        return byBalloon.map { (balloon, inks) ->
-            Group(
-                balloon, inks.toSet(),
-                top = inks.minOf { top[it] }, bottom = inks.maxOf { bottom[it] },
-                left = inks.minOf { left[it] }, right = inks.maxOf { right[it] },
-            )
+        val slack = (pageHeight * RING_RATIO * 2).roundToInt().coerceAtLeast(2)
+        val inkArea = areas(inkLabel)
+        return byPaper.flatMap { (paper, inks) ->
+            val ring = if (isBalloon(paper)) outline(paper, inks.toSet()) else null
+            val b = paperBox[paper]
+            // 테두리가 말풍선만 두른다 (그림과 이어지지 않았다) — 말풍선째 밀어도 둘레 그림을 끌고 오지 않는다
+            val own = ring != null && ring.isNotEmpty() && ring.all {
+                top[it] >= b[0] - slack && bottom[it] <= b[1] + slack && left[it] >= b[2] - slack && right[it] <= b[3] + slack
+            }
+            // 대사는 한데 모여 있다 — 그림 사이 빈 곳의 티끌은 넓게 흩어진다
+            val textBox = (inks.maxOf { bottom[it] } - inks.minOf { top[it] } + 1).toLong() *
+                (inks.maxOf { right[it] } - inks.minOf { left[it] } + 1)
+            val dense = inks.sumOf { inkArea[it] } >= textBox * MIN_TEXT_DENSITY
+            // 쪽 끝에 걸린 작은 말풍선 — 큰 것은 쪽 끝까지 이어진 칸 안 빈 곳일 수 있다
+            val edge = (b[0] <= EDGE_ROWS || b[1] >= height - 1 - EDGE_ROWS) && b[1] - b[0] + 1 <= pageHeight * MAX_EDGE_BALLOON_RATIO
+            if (ring != null && (own || dense)) {
+                listOf(
+                    Group(
+                        paper, inks.toSet(),
+                        top = inks.minOf { top[it] }, bottom = inks.maxOf { bottom[it] },
+                        left = inks.minOf { left[it] }, right = inks.maxOf { right[it] },
+                        // 쪽 끝에 걸린 말풍선은 테두리가 그림과 이어져도 민다 — 끌려오는 쪽 끝은 잘리는 곳 안이다
+                        canPush = own || (dense && edge),
+                    ),
+                )
+            } else {
+                textBlocks(paper, inks, top, bottom, left, right)
+            }
         }.filter { it.bottom - it.top + 1 >= pageHeight * MIN_TEXT_RATIO } // 티끌 하나는 대사가 아니다
     }
+
+    /**
+     * 큰 종이 [paper] 위의 글자 크기 잉크 덩어리를 [TEXT_LINK_RATIO] 거리 안끼리 묶어 해설 글 덩어리로.
+     * 조각이 여럿이고 그림만큼 크지 않으며, 둘레 상자 안에 다른 잉크(그림)가 없는 것만 — 그림에 붙은 글자를 두고 가지 않게.
+     */
+    private fun textBlocks(paper: Int, inks: List<Int>, top: IntArray, bottom: IntArray, left: IntArray, right: IntArray): List<Group> {
+        val link = (pageHeight * TEXT_LINK_RATIO).roundToInt().coerceAtLeast(2)
+        val minPart = (pageHeight * MIN_GLYPH_PART_RATIO).roundToInt().coerceAtLeast(2)
+        fun size(ink: Int) = maxOf(bottom[ink] - top[ink], right[ink] - left[ink]) + 1
+        // 글자 획만 잇는다 — 망점 같은 티끌로 이어 붙이면 글과 그림이 한 덩어리가 된다
+        val (parts, specks) = inks.partition { size(it) >= minPart }
+        val parent = IntArray(parts.size) { it }
+        fun find(i: Int): Int {
+            var r = i
+            while (parent[r] != r) r = parent[r]
+            var j = i
+            while (parent[j] != r) j = parent[j].also { parent[j] = r }
+            return r
+        }
+        // 가까운 것끼리 — 격자 칸에 넣어 같은 칸에 든 것만 견준다
+        val cell = link * 4
+        val grid = HashMap<Long, MutableList<Int>>()
+        for ((n, ink) in parts.withIndex()) {
+            for (cy in (top[ink] - link).coerceAtLeast(0) / cell..(bottom[ink] + link) / cell) {
+                for (cx in (left[ink] - link).coerceAtLeast(0) / cell..(right[ink] + link) / cell) {
+                    val list = grid.getOrPut(cy.toLong() shl 32 or cx.toLong()) { mutableListOf() }
+                    for (m in list) {
+                        val o = parts[m]
+                        val near = left[ink] - link <= right[o] && left[o] <= right[ink] + link &&
+                            top[ink] - link <= bottom[o] && top[o] <= bottom[ink] + link
+                        if (near) parent[find(n)] = find(m)
+                    }
+                    list += n
+                }
+            }
+        }
+        val maxH = pageHeight * MAX_TEXT_BLOCK_H_RATIO
+        val maxW = pageHeight * MAX_TEXT_BLOCK_W_RATIO
+        return parts.indices.groupBy { find(it) }.values.mapNotNull { members ->
+            if (members.size < MIN_TEXT_PARTS) return@mapNotNull null
+            val block = members.map { parts[it] }.toMutableSet()
+            val t = block.minOf { top[it] }
+            val b = block.maxOf { bottom[it] }
+            val l = block.minOf { left[it] }
+            val r = block.maxOf { right[it] }
+            if (b - t + 1 > maxH || r - l + 1 > maxW) return@mapNotNull null
+            // 글 줄 높이 안, 글 옆 [minPart] 안의 티끌(마침표, 쉼표)은 함께 옮긴다
+            for (ink in specks) {
+                if (top[ink] >= t && bottom[ink] <= b && left[ink] >= l - minPart && right[ink] <= r + minPart) block += ink
+            }
+            val g = Group(
+                paper, block,
+                top = t, bottom = b, left = block.minOf { left[it] }, right = block.maxOf { right[it] },
+                isBalloon = false,
+            )
+            // 둘레 상자 안에 통째로 든 다른 잉크 — 그림에 붙어 못 옮기는 글자일 수 있다. 상자 밖에서 들어온 그림, 티끌은 괜찮다
+            val foreign = HashSet<Int>()
+            for (y in g.top..g.bottom) for (x in g.left..g.right) {
+                val ink = inkLabel[y * width + x]
+                if (ink >= 0 && ink !in g.inks) foreign += ink
+            }
+            val stray = foreign.any {
+                top[it] >= g.top && bottom[it] <= g.bottom && left[it] >= g.left && right[it] <= g.right && size(it) >= minPart
+            }
+            if (stray) null else g
+        }
+    }
+
 
     /** 대사가 잘리는 곳에 걸렸으면 잘리지 않을 만큼 옮길 거리 (아래로 +), 아니면 0 */
     private fun wanted(group: Group, topCut: Int, bottomCut: Int): Int {
@@ -361,23 +492,23 @@ private class BalloonPage(
     }
 
     /**
-     * 쪽 끝에 걸려 잘린 말풍선을 쪽 끝 쪽 그림째로 가운데 쪽으로 민다 — 위쪽 말풍선이면 말풍선 아래 끝까지의 열을 아래로.
-     * 쪽 끝에 생기는 빈 줄은 잘리는 곳 안이라 보이지 않고, 말풍선은 바로 아래 그림을 조금 덮는다.
-     * 말풍선 좌우 [TAPER_RATIO]만큼은 미는 거리를 줄여 가며 이어 붙인다.
+     * 잘리는 곳에 걸친 말풍선을 쪽 끝 쪽 그림째로 가운데 쪽으로 민다 — 위쪽 말풍선이면 말풍선 아래 끝까지의 열을 아래로.
+     * 쪽 끝 쪽에서 끌려오는 것(쪽 끝의 빈 줄, 칸 테두리)은 잘리는 곳 안에 남을 만큼만 밀어 보이지 않고,
+     * 말풍선은 바로 아래 그림을 조금 덮는다. 말풍선 좌우 [TAPER_RATIO]만큼은 미는 거리를 줄여 가며 이어 붙인다.
      */
     fun moveBalloons(topCut: Int, bottomCut: Int): IntArray? {
         var out: IntArray? = null
         val ring = (pageHeight * RING_RATIO).roundToInt().coerceAtLeast(2)
         val taper = (width * TAPER_RATIO).roundToInt().coerceAtLeast(1)
         for (group in groups) {
+            if (!group.canPush) continue
             val want = wanted(group, topCut, bottomCut)
             if (want == 0) continue
             val box = paperBox[group.balloon]
             val down = want > 0
-            // 쪽 끝에 걸려 잘린 말풍선만 — 칸 안의 닫힌 말풍선을 밀면 그 위 칸 테두리까지 끌려온다
-            if (if (down) box[0] > EDGE_ROWS else box[1] < height - 1 - EDGE_ROWS) continue
-            // 쪽 끝의 빈 줄이 잘리는 곳 안에 남을 만큼만
-            val d = if (down) minOf(want, topCut) else -minOf(-want, bottomCut)
+            // 말풍선 바깥 끝(테두리 포함)이 잘리는 곳 안에 남을 만큼만 — 그 너머에서 끌려오는 그림이 보이지 않게
+            val hidden = if (down) topCut - (box[0] - ring) else box[1] + ring - (height - bottomCut) + 1
+            val d = if (down) minOf(want, topCut, hidden) else -minOf(-want, bottomCut, hidden)
             if (abs(d) < MIN_MOVE) continue
             // 열마다 말풍선(테두리 포함) 끝 줄
             val edge = IntArray(width) { -1 }
@@ -458,6 +589,12 @@ private const val REACH = 1
 /** 말풍선은 둘레 상자를 이만큼은 채운다 (타원은 0.79) */
 private const val MIN_BALLOON_FILL = 0.5f
 
+/** 말풍선 종이에 맞닿은 (글자 아닌) 잉크 덩어리는 이만큼(테두리, 꼬리가 이어진 그림)까지 */
+private const val MAX_OUTLINE_PARTS = 2
+
+/** 말풍선 종이에 이 칸 수(쪽 높이 비율)보다 적게 맞닿은 잉크 티끌은 세지 않는다 */
+private const val MIN_OUTLINE_CONTACT_RATIO = 0.005f
+
 /** 대사 덩어리는 쪽 높이의 이만큼은 된다 */
 private const val MIN_TEXT_RATIO = 0.01f
 
@@ -480,8 +617,27 @@ private const val MARGIN_RATIO = 0.01f
 /** 옮긴 대사와 말풍선 테두리 사이 거리 (쪽 높이 비율) */
 private const val GAP_RATIO = 0.004f
 
+/** 대사 글자 획은 글 상자를 이만큼은 채운다 */
+private const val MIN_TEXT_DENSITY = 0.1f
+
 /** 말풍선이 쪽 끝에서 이 줄 수 안까지 닿으면 쪽 끝에 걸린 말풍선 */
 private const val EDGE_ROWS = 2
+
+/** 테두리가 그림과 이어진 채 쪽 끝에 걸린 말풍선은 쪽 높이의 이만큼까지만 민다 */
+private const val MAX_EDGE_BALLOON_RATIO = 0.12f
+
+/** 해설 글: 글자 조각끼리 이 거리(쪽 높이 비율) 안이면 한 덩어리 */
+private const val TEXT_LINK_RATIO = 0.012f
+
+/** 해설 글 덩어리는 조각이 이만큼은 있다 (글자 몇 개) */
+private const val MIN_TEXT_PARTS = 3
+
+/** 이보다 작은 잉크(쪽 높이 비율)는 티끌 — 해설 글 상자 안에 남아도 괜찮다 */
+private const val MIN_GLYPH_PART_RATIO = 0.005f
+
+/** 해설 글 덩어리는 쪽 높이의 이만큼보다 낮고 좁다 — 더 크면 그림(군중, 풀숲) */
+private const val MAX_TEXT_BLOCK_H_RATIO = 0.3f
+private const val MAX_TEXT_BLOCK_W_RATIO = 0.4f
 
 /** 말풍선을 밀 때 좌우로 미는 거리를 줄여 가며 이어 붙이는 폭 (쪽 너비 비율) */
 private const val TAPER_RATIO = 0.03f
@@ -529,7 +685,7 @@ internal class BalloonTextTransformation(
     private val screenHeightPx: Int,
     private val fitHeight: Boolean,
 ) : Transformation() {
-    override val cacheKey: String = "balloons-1-$zoomPercent-$moveBalloons-${slotWidthPx}x$screenHeightPx-$fitHeight"
+    override val cacheKey: String = "balloons-2-$zoomPercent-$moveBalloons-${slotWidthPx}x$screenHeightPx-$fitHeight"
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width

@@ -64,15 +64,48 @@ class BalloonsTest {
     }
 
     @Test
-    fun `큰 칸 안의 글은 말풍선이 아니라 그대로 둔다`() {
+    fun `큰 칸 안 빈 곳의 해설 글은 빈 곳에서 옮기고, 칸은 밀지 않는다`() {
         val px = IntArray(w * h) { white }
-        // 쪽의 6%보다 넓은 칸
+        // 쪽의 6%보다 넓은 칸 — 말풍선이 아니다
         for (y in 10 until 300) for (x in 20 until 380) {
             if (y < 12 || y >= 298 || x < 22 || x >= 378) px[y * w + x] = black
         }
         px.text(170, 230, 20)
 
-        assertNull(pullBalloonText(px, w, h, topCut = 40, bottomCut = 40, moveBalloons = true))
+        val out = requireNotNull(pullBalloonText(px, w, h, topCut = 40, bottomCut = 40, moveBalloons = true))
+
+        // 대사(20~29줄)는 잘리는 선 + 여백(6줄) 아래로, 칸 테두리는 그대로
+        assertEquals((46..55).toList(), (12 until 120).filter { out[it * w + 170] == black })
+        assertEquals((0 until h).filter { px[it * w + 100] == black }, (0 until h).filter { out[it * w + 100] == black })
+    }
+
+    @Test
+    fun `칸 안의 꽉 찬 해설 상자는 옵션을 켜면 상자째 올린다`() {
+        val px = IntArray(w * h) { white }
+        // 쪽 아래까지 이어진 칸, 그 안 아래쪽의 해설 상자 (140~259, 530~589) — 글 두 줄로 꽉 찼다
+        for (y in 300 until 600) for (x in 20 until 380) {
+            if (y < 302 || y >= 598 || x < 22 || x >= 378) px[y * w + x] = black
+        }
+        for (y in 530 until 590) for (x in 140 until 260) {
+            if (y < 532 || y >= 588 || x < 142 || x >= 258) px[y * w + x] = black
+        }
+        px.text(152, 250, 540)
+        px.text(152, 250, 566)
+
+        // 끄면 상자 안에서 조금밖에 못 옮겨 아랫줄이 아직 잘린다
+        val inside = pullBalloonText(px, w, h, topCut = 40, bottomCut = 40, moveBalloons = false) ?: px
+        assertTrue((300 until h).last { inside[it * w + 152] == black } > 588 - 30 && (560 until 588).any { inside[it * w + 152] == black })
+
+        val out = requireNotNull(pullBalloonText(px, w, h, topCut = 40, bottomCut = 40, moveBalloons = true))
+        // 상자째 22줄 올라 아랫줄 글(566~575줄)이 보이는 곳(560줄 위) 안으로 — 위 테두리, 윗줄 글, 아래 테두리도 함께.
+        // 쪽 끝 쪽에서 끌려온 것은 잘리는 곳(560줄부터) 안에만 있다
+        assertEquals(
+            listOf(300, 301, 508, 509) + (518..527) + (544..553),
+            (300 until 560).filter { out[it * w + 152] == black },
+        )
+        // 상자 밖 칸 테두리는 그대로
+        assertEquals(black, out[598 * w + 50])
+        assertEquals(white, out[540 * w + 50])
     }
 
     @Test

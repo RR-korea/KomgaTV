@@ -35,8 +35,8 @@ class ReaderSettingsCodecTest {
     }
 
     @Test
-    fun `확대는 100~120 밖이면 끝값, 없으면 100`() {
-        assertEquals(120, ReaderSettingsCodec.decode("zoomPercent=999")!!.zoomPercent)
+    fun `확대는 100~150 밖이면 끝값, 없으면 100`() {
+        assertEquals(150, ReaderSettingsCodec.decode("zoomPercent=999")!!.zoomPercent)
         assertEquals(100, ReaderSettingsCodec.decode("zoomPercent=20")!!.zoomPercent)
         assertEquals(100, ReaderSettingsCodec.decode("pageLayout=DOUBLE_PAGES")!!.zoomPercent)
     }
