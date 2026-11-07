@@ -37,6 +37,30 @@ class GuttersTest {
         assertEquals(white, out[150 * w + 9])
     }
 
+    /** 테두리 2px짜리 칸: 가로 [x0]~[x1] 앞, 세로 [y0]~[y1] 앞 */
+    private fun IntArray.box(x0: Int, x1: Int, y0: Int, y1: Int) {
+        for (y in y0 until y1) for (x in x0 until x1) {
+            val edge = y < y0 + 2 || y >= y1 - 2 || x < x0 + 2 || x >= x1 - 2
+            if (edge) this[y * w + x] = black
+        }
+    }
+
+    @Test
+    fun `옆에 긴 칸이 있는 작은 칸들도 여백을 붙여 쪽 가운데 쪽으로 민다`() {
+        val px = IntArray(w * h) { white }
+        // 오른쪽 세로로 긴 칸, 왼쪽에 작은 칸 둘 (사이 40줄) — 쪽 위쪽 절반
+        px.box(55, 95, 20, 180)
+        px.box(6, 50, 20, 80)
+        px.box(6, 50, 120, 180)
+
+        val out = requireNotNull(collapseGutters(px, w, h))
+
+        // 띠 160줄이 가운데(120~279)로. 긴 칸은 그대로
+        assertEquals(listOf(120, 121, 278, 279), (0 until h).filter { out[it * w + 70] == black })
+        // 작은 칸 둘은 1줄 사이로 붙고, 위쪽 띠라 아래(쪽 가운데 쪽)로 붙는다
+        assertEquals(listOf(159, 160, 217, 218, 220, 221, 278, 279), (0 until h).filter { out[it * w + 20] == black })
+    }
+
     @Test
     fun `쪽 끝의 스캔 테두리 줄은 칸으로 치지 않는다`() {
         val px = IntArray(w * h) { white }
