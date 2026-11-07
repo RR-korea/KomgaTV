@@ -21,6 +21,7 @@ import kotlin.math.roundToInt
  * - 한 가지 색으로 고른 줄 (가로로 살짝 흐리게 본 뒤) — 검은 틈, 망점 그라데이션 틈. 다만 쪽 높이의
  *   [MIN_FLAT_GAP_RATIO]보다 얇으면 칸 테두리로, 칸 사이에서 [MAX_FLAT_GAP_RATIO]보다 길면 그림 속 검은 곳으로 보고 둔다.
  * 쪽 왼쪽·오른쪽 끝(스캔 테두리)은 보지 않는다.
+ * 여백은 대부분([CLEAN_GAP_RATIO] 이상) 빈 줄이어야 한다 — 글자·그림이 빽빽한 곳(한 장 그림, 글 쪽)은 여백이 아니다.
  *
  * @return 바꾼 픽셀, 바꿀 것이 거의 없으면 null
  */
@@ -36,8 +37,9 @@ internal fun collapseGutters(pixels: IntArray, width: Int, height: Int): IntArra
 
     val bands = segments(
         height, minGap, minFlatGap, maxFlatGap,
-        isContent = { y -> page.inkContent(y, 0, width) && !page.flat(y, edgeX, width - edgeX) },
+        isContent = { y -> page.inkContent(y, 0, width) && !page.flatGutter(y, edgeX, width - edgeX) },
         flatOnly = { y -> page.inkContent(y, 0, width) },
+        keepGap = { gap -> !page.cleanGap(gap, edgeX, width - edgeX) },
     )
     if (bands.isEmpty()) return null
     var columnsMoved = false
@@ -62,7 +64,7 @@ internal fun collapseGutters(pixels: IntArray, width: Int, height: Int): IntArra
             fun inked(i: Int) = page.inkContent(band.first + i, x0, x1) || page.inkCount(band.first + i, x0, x1) > looseInk
             val parts = segments(
                 bandH, minStackGap, minFlatGap, maxFlatGap,
-                isContent = { i -> inked(i) && !page.flat(band.first + i, x0, x1) },
+                isContent = { i -> inked(i) && !page.flatGutter(band.first + i, x0, x1) },
                 flatOnly = { i -> inked(i) },
             )
             if (parts.isEmpty()) continue
@@ -106,8 +108,11 @@ internal fun collapseGutters(pixels: IntArray, width: Int, height: Int): IntArra
 
 /** 쪽을 보는 표들 — 잉크(바탕과 다른 곳), 세로·가로로 길게 이어진 잉크, 살짝 흐리게 한 밝기 */
 private class PageMaps(pixels: IntArray, private val width: Int, height: Int) {
+    private val bg: Int
     private val ink: BooleanArray
     private val tall: BooleanArray
+    /** 세로로 긴 잉크가 아닌 잉크 중 위나 아래도 잉크인 곳 — 글자 획·그림. 망점 하나하나는 빠진다 */
+    private val stroke: BooleanArray
     val wide: BooleanArray
     /** 가로로 흐리게 (줄이 고른지 볼 때), 세로로 흐리게 (열이 고른지 볼 때) — 망점이 고른 회색이 된다 */
     private val blurH: IntArray
@@ -118,13 +123,17 @@ private class PageMaps(pixels: IntArray, private val width: Int, height: Int) {
             val c = pixels[i]
             (((c shr 16) and 0xFF) * 299 + ((c shr 8) and 0xFF) * 587 + (c and 0xFF) * 114) / 1000
         }
-        val bg = backgroundLuminance(lum)
+        bg = backgroundLuminance(lum)
         ink = BooleanArray(pixels.size) { abs(lum[it] - bg) > INK_DIFF }
         val edgeX = (width * EDGE_RATIO).roundToInt()
         val minRunV = (height * LONG_INK_RATIO).roundToInt().coerceAtLeast(8)
         val minRunH = (width * LONG_INK_RATIO).roundToInt().coerceAtLeast(8)
         tall = longRuns(ink, width, height, vertical = true, minRun = minRunV, skipEdge = edgeX)
         wide = longRuns(ink, width, height, vertical = false, minRun = minRunH, skipEdge = 0)
+        val loose = BooleanArray(pixels.size) { ink[it] && !tall[it] }
+        stroke = BooleanArray(pixels.size) { i ->
+            loose[i] && ((i >= width && loose[i - width]) || (i + width < loose.size && loose[i + width]))
+        }
         blurH = boxBlur(lum, width, height, BLUR_RADIUS, horizontal = true)
         blurV = boxBlur(lum, width, height, BLUR_RADIUS, horizontal = false)
     }
@@ -183,12 +192,48 @@ private class PageMaps(pixels: IntArray, private val width: Int, height: Int) {
 
     fun flat(y: Int, x0: Int, x1: Int): Boolean = x1 > x0 && outliers(y, x0, x1) <= (x1 - x0) * FLAT_OUTLIER_RATIO
 
+    /** 바탕과 다른 한 가지 색으로 고른 줄 — 검은 틈·망점 틈. 바탕색으로 고른 줄(액자 선만 지나가는 흰 줄)은 아니다 */
+    fun flatGutter(y: Int, x0: Int, x1: Int): Boolean =
+        flat(y, x0, x1) && abs(median(x1 - x0) { blurH[y * width + x0 + it] } - bg) > FLAT_DIFF
+
+    /** 여백 후보가 정말 비었는지 — 빈 줄(고른 색 줄 포함)이 [CLEAN_GAP_RATIO] 이상이고 획이 평균 [GAP_STROKE_RATIO] 이하 */
+    fun cleanGap(rows: IntRange, x0: Int, x1: Int): Boolean {
+        val noise = ((x1 - x0) * CLEAN_ROW_RATIO).roundToInt().coerceAtLeast(OVERLAY_NOISE)
+        var clean = 0
+        var strokes = 0L
+        for (y in rows) {
+            if (flatGutter(y, x0, x1)) {
+                clean++
+                continue
+            }
+            var n = 0
+            for (x in x0 until x1) if (stroke[y * width + x]) n++
+            if (n <= noise) clean++
+            strokes += n
+        }
+        val count = rows.last - rows.first + 1
+        return clean >= count * CLEAN_GAP_RATIO && strokes <= count.toLong() * (x1 - x0) * GAP_STROKE_RATIO
+    }
+
     fun flatColumn(x: Int, y0: Int, y1: Int): Boolean =
         outliers(y1 - y0) { blurV[(y0 + it) * width + x] } <= (y1 - y0) * FLAT_OUTLIER_RATIO
 
     private inline fun outliers(n: Int, value: (Int) -> Int): Int {
         val hist = IntArray(256)
         for (i in 0 until n) hist[value(i)]++
+        val median = median(hist, n)
+        var out = 0
+        for (v in 0..255) if (abs(v - median) > FLAT_DIFF) out += hist[v]
+        return out
+    }
+
+    private inline fun median(n: Int, value: (Int) -> Int): Int {
+        val hist = IntArray(256)
+        for (i in 0 until n) hist[value(i)]++
+        return median(hist, n)
+    }
+
+    private fun median(hist: IntArray, n: Int): Int {
         var median = 0
         var seen = 0
         while (median < 255) {
@@ -196,9 +241,7 @@ private class PageMaps(pixels: IntArray, private val width: Int, height: Int) {
             if (seen * 2 >= n) break
             median++
         }
-        var out = 0
-        for (v in 0..255) if (abs(v - median) > FLAT_DIFF) out += hist[v]
-        return out
+        return median
     }
 }
 
@@ -243,7 +286,7 @@ private fun boxBlur(lum: IntArray, width: Int, height: Int, r: Int, horizontal: 
 /**
  * 내용이 있는 구간들 — [minGap]보다 짧은 빈 곳은 구간 안으로 치고, 앞뒤 빈 곳은 뺀다.
  * 고른 색이라서만 빈 곳([flatOnly])이 이어진 구간은 [minFlat]보다 짧으면(칸 테두리 굵기) 내용,
- * 칸 사이에서 [maxFlat]보다 길면(그림 속 검은 곳) 내용으로 친다.
+ * 칸 사이에서 [maxFlat]보다 길면(그림 속 검은 곳) 내용으로 친다. [keepGap]이 참인 빈 곳(빽빽한 글·그림)도 내용.
  */
 private fun segments(
     length: Int,
@@ -252,6 +295,7 @@ private fun segments(
     maxFlat: Int,
     isContent: (Int) -> Boolean,
     flatOnly: (Int) -> Boolean = { false },
+    keepGap: (IntRange) -> Boolean = { false },
 ): List<IntRange> {
     val content = BooleanArray(length) { isContent(it) }
     val first = content.indexOfFirst { it }
@@ -266,6 +310,16 @@ private fun segments(
         while (i < length && !content[i] && flatOnly(i)) i++
         val inner = start > first && i - 1 < last
         if (i - start < minFlat || (inner && i - start > maxFlat)) for (k in start until i) content[k] = true
+    }
+    i = 0
+    while (i < length) {
+        if (content[i]) {
+            i++
+            continue
+        }
+        val start = i
+        while (i < length && !content[i]) i++
+        if (keepGap(start until i)) for (k in start until i) content[k] = true
     }
     val out = ArrayList<IntRange>()
     var start = -1
@@ -321,6 +375,15 @@ private const val MIN_FLAT_GAP_RATIO = 0.008f
 /** 고른 색 빈 곳이 쪽 높이의 이만큼보다 길면 틈이 아니라 그림 속 고른 곳 */
 private const val MAX_FLAT_GAP_RATIO = 0.06f
 
+/** 여백 후보의 줄 중 이만큼은 빈 줄이어야 여백 — 글 쪽·한 장 그림은 빈 줄이 드물다 */
+private const val CLEAN_GAP_RATIO = 0.6f
+
+/** 획이 이 비율 이하인 줄은 빈 줄 (잡티·망점 틈) */
+private const val CLEAN_ROW_RATIO = 0.01f
+
+/** 여백 후보 전체에서 획이 평균 이 비율을 넘으면 여백이 아니다 */
+private const val GAP_STROKE_RATIO = 0.1f
+
 /** 칸 묶음 안에서 여백으로 볼 가장 짧은 빈 곳 — 그림 속 흰 줄은 이보다 짧다 */
 private const val MIN_STACK_GAP_RATIO = 0.006f
 
@@ -338,7 +401,7 @@ private const val MIN_SAVED_RATIO = 0.005f
 
 /** 페이지 리더(Coil)용 — 작품 보기 설정 "칸 간격 없애기" */
 internal class GutterTransformation : Transformation() {
-    override val cacheKey: String = "gutters-8"
+    override val cacheKey: String = "gutters-9"
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width

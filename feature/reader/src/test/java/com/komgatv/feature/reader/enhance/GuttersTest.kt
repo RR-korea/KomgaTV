@@ -119,6 +119,43 @@ class GuttersTest {
         assertEquals(60, (0 until h).count { out[it * w + 5] == black })
     }
 
+    /** [x] 열에서 검은 줄들이 (통째로 옮겨졌을 수는 있어도) 간격 그대로인지 */
+    private fun assertRowsKept(input: IntArray, out: IntArray?, width: Int, x: Int) {
+        val before = (0 until h).filter { input[it * width + x] == black }
+        val after = (0 until h).filter { (out ?: input)[it * width + x] == black }
+        assertEquals(before.size, after.size)
+        assertEquals(before.map { it - before.first() }, after.map { it - after.first() })
+    }
+
+    @Test
+    fun `글이 빽빽한 곳은 여백이 아니다 - 글 줄 사이를 지우지 않는다`() {
+        val px = IntArray(w * h) { white }
+        px.panel(20)
+        px.panel(290)
+        // 두 칸 사이 글 12줄 — 획 높이 8줄(짧아서 칸으로는 안 친다), 줄 사이 4줄
+        for (t in 135 until 280 step 12) for (y in t until t + 8) for (x in 15 until 85) if (x % 6 < 3) px[y * w + x] = black
+
+        val out = collapseGutters(px, w, h)
+
+        assertRowsKept(px, out, w, 15)
+    }
+
+    @Test
+    fun `액자 선만 지나가는 흰 줄은 여백이 아니다 - 목차 줄 사이를 지우지 않는다`() {
+        val wide = 400
+        val px = IntArray(wide * h) { white }
+        // 쪽 높이 거의 전부를 두른 1px 액자, 안에 30줄마다 목차 한 줄
+        for (y in 20 until 380) {
+            px[y * wide + 40] = black
+            px[y * wide + 360] = black
+        }
+        for (t in 40 until 360 step 30) for (y in t until t + 8) for (x in 60 until 340) if (x % 6 < 3) px[y * wide + x] = black
+
+        val out = collapseGutters(px, wide, h)
+
+        assertRowsKept(px, out, wide, 60)
+    }
+
     @Test
     fun `지울 여백이 없으면 그대로`() {
         // 쪽 전체가 그림(세로 줄무늬)
