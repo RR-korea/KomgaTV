@@ -13,6 +13,7 @@ import kotlin.math.roundToInt
  *
  * 칸 줄과 여백 줄 구분: 세로로 길게 이어지는 잉크(칸 테두리·그림)가 지나가는 줄은 칸, 아니면 여백.
  * 여백에 있는 글자(쪽 번호·역자 주·작은 효과음)는 획이 짧아 칸으로 치지 않는다 — 여백과 함께 지운다.
+ * 쪽 왼쪽·오른쪽 끝(스캔 테두리 검은 줄 등)은 보지 않는다 — 위아래로 쭉 이어져 모든 줄을 칸으로 만든다.
  *
  * @return 바꾼 픽셀, 지울 여백이 거의 없으면 null
  */
@@ -27,9 +28,10 @@ internal fun collapseGutters(pixels: IntArray, width: Int, height: Int): IntArra
     // 가로를 몇 칸씩 묶어 본다 — 묶음 안에 잉크가 하나라도 있으면 잉크 (가는 테두리를 놓치지 않게)
     val step = (width / 320).coerceAtLeast(1)
     val cols = (width + step - 1) / step
+    val edgeCols = ((width * EDGE_RATIO).roundToInt() + step - 1) / step
     val minRun = (height * TALL_INK_RATIO).roundToInt().coerceAtLeast(8)
     val contentRow = BooleanArray(height)
-    for (col in 0 until cols) {
+    for (col in edgeCols until cols - edgeCols) {
         val x0 = col * step
         val x1 = minOf(width, x0 + step)
         var runStart = -1
@@ -82,6 +84,9 @@ private fun backgroundLuminance(lum: IntArray): Int {
     return hist.indices.maxBy { hist[it] }
 }
 
+/** 왼쪽·오른쪽 끝에서 이만큼은 보지 않는다 (스캔 테두리) */
+private const val EDGE_RATIO = 0.02f
+
 /** 바탕과 이만큼 다르면 잉크 */
 private const val INK_DIFF = 80
 
@@ -92,14 +97,14 @@ private const val TALL_INK_RATIO = 0.04f
 private const val MIN_GAP_RATIO = 0.006f
 
 /** 칸 사이에 남기는 여백 */
-private const val KEEP_GAP_RATIO = 0.005f
+private const val KEEP_GAP_RATIO = 0.003f
 
 /** 지울 여백이 이보다 적으면 그대로 */
-private const val MIN_SAVED_RATIO = 0.02f
+private const val MIN_SAVED_RATIO = 0.005f
 
 /** 페이지 리더(Coil)용 — 작품 보기 설정 "칸 간격 없애기" */
 internal class GutterTransformation : Transformation() {
-    override val cacheKey: String = "gutters-1"
+    override val cacheKey: String = "gutters-2"
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width
