@@ -37,8 +37,8 @@ internal fun collapseGutters(pixels: IntArray, width: Int, height: Int): IntArra
 
     val bands = segments(
         height, minGap, minFlatGap, maxFlatGap,
-        isContent = { y -> page.inkContent(y, 0, width) && !page.flatGutter(y, edgeX, width - edgeX) },
-        flatOnly = { y -> page.inkContent(y, 0, width) },
+        isContent = { y -> page.bandInk(y, edgeX) && !page.flatGutter(y, edgeX, width - edgeX) },
+        flatOnly = { y -> page.bandInk(y, edgeX) },
         keepGap = { gap -> !page.cleanGap(gap, edgeX, width - edgeX) },
     )
     if (bands.isEmpty()) return null
@@ -157,6 +157,14 @@ private class PageMaps(pixels: IntArray, private val width: Int, height: Int) {
         var loose = 0
         for (x in first..last) if (ink[base + x] && !tall[base + x]) loose++
         return loose > OVERLAY_NOISE
+    }
+
+    /** 쪽 전체 띠를 나눌 때의 잉크 줄 — 세로로 긴 잉크가 지나가거나, 칸 테두리 같은 가로선이 길게 지나간다 (기울어진 스캔의 테두리 끝자락) */
+    fun bandInk(y: Int, edgeX: Int): Boolean {
+        if (inkContent(y, 0, width)) return true
+        var n = 0
+        for (x in edgeX until width - edgeX) if (wide[y * width + x]) n++
+        return n >= (width - 2 * edgeX) * BORDER_ROW_RATIO
     }
 
     fun inkCount(y: Int, x0: Int, x1: Int): Int {
@@ -375,6 +383,9 @@ private const val MIN_FLAT_GAP_RATIO = 0.008f
 /** 고른 색 빈 곳이 쪽 높이의 이만큼보다 길면 틈이 아니라 그림 속 고른 곳 */
 private const val MAX_FLAT_GAP_RATIO = 0.06f
 
+/** 가로로 긴 잉크가 줄의 이만큼을 덮으면 칸 테두리가 지나가는 줄 */
+private const val BORDER_ROW_RATIO = 0.1f
+
 /** 여백 후보의 줄 중 이만큼은 빈 줄이어야 여백 — 글 쪽·한 장 그림은 빈 줄이 드물다 */
 private const val CLEAN_GAP_RATIO = 0.6f
 
@@ -401,7 +412,7 @@ private const val MIN_SAVED_RATIO = 0.005f
 
 /** 페이지 리더(Coil)용 — 작품 보기 설정 "칸 간격 없애기" */
 internal class GutterTransformation : Transformation() {
-    override val cacheKey: String = "gutters-9"
+    override val cacheKey: String = "gutters-10"
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width
