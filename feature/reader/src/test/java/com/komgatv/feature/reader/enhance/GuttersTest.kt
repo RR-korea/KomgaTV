@@ -29,9 +29,9 @@ class GuttersTest {
 
         val out = requireNotNull(collapseGutters(px, w, h))
 
-        // 칸 100줄 + 남긴 여백 1줄 + 칸 100줄 = 201줄, 위 99줄·아래 100줄을 비운다
+        // 칸 100줄 + 칸 100줄 = 200줄이 붙고, 위아래 100줄씩 비운다
         val blackRows = (0 until h).filter { out[it * w + 45] == black }
-        assertEquals(listOf(99, 100, 197, 198, 200, 201, 298, 299), blackRows)
+        assertEquals(listOf(100, 101, 198, 199, 200, 201, 298, 299), blackRows)
         // 좌우는 그대로
         assertEquals(black, out[150 * w + 10])
         assertEquals(white, out[150 * w + 9])
@@ -57,8 +57,25 @@ class GuttersTest {
 
         // 띠 160줄이 가운데(120~279)로. 긴 칸은 그대로
         assertEquals(listOf(120, 121, 278, 279), (0 until h).filter { out[it * w + 70] == black })
-        // 작은 칸 둘은 1줄 사이로 붙고, 위쪽 띠라 아래(쪽 가운데 쪽)로 붙는다
-        assertEquals(listOf(159, 160, 217, 218, 220, 221, 278, 279), (0 until h).filter { out[it * w + 20] == black })
+        // 작은 칸 둘은 맞붙고, 위쪽 띠라 아래(쪽 가운데 쪽)로 붙는다
+        assertEquals(listOf(160, 161, 218, 219, 220, 221, 278, 279), (0 until h).filter { out[it * w + 20] == black })
+    }
+
+    @Test
+    fun `칸 사이에 걸친 글 상자는 여백으로 보고, 상자는 빈 안쪽만 짧아지며 테두리가 이어진다`() {
+        val px = IntArray(w * h) { white }
+        px.panel(40)
+        px.panel(200)
+        // 칸 A 아래쪽부터 칸 B 중간까지 걸친 좁은 글 상자 (안쪽은 비어 있다)
+        px.box(60, 80, 100, 250)
+
+        val out = requireNotNull(collapseGutters(px, w, h))
+
+        // 칸은 첫 시험과 같은 자리로 붙는다
+        assertEquals(listOf(100, 101, 198, 199, 200, 201, 298, 299), (0 until h).filter { out[it * w + 45] == black })
+        // 상자 왼쪽 테두리는 끊기지 않고 160~249로 이어진다 (칸 A 위 테두리 100·101, 칸 B 아래 테두리 298·299)
+        val boxRows = (0 until h).filter { out[it * w + 60] == black }
+        assertEquals(listOf(100, 101) + (160..249).toList() + listOf(298, 299), boxRows)
     }
 
     @Test
@@ -71,7 +88,7 @@ class GuttersTest {
 
         val out = requireNotNull(collapseGutters(px, w, h))
         val blackRows = (0 until h).filter { out[it * w + 45] == black }
-        assertEquals(listOf(99, 100, 197, 198, 200, 201, 298, 299), blackRows)
+        assertEquals(listOf(100, 101, 198, 199, 200, 201, 298, 299), blackRows)
     }
 
     @Test
