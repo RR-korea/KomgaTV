@@ -20,8 +20,9 @@ import kotlin.math.roundToInt
  *   획이 짧아 칸으로 치지 않는다. 걸친 좁은 글 상자·말풍선도 그 안이 비어 있으면 여백.
  * - 한 가지 색으로 고른 줄 (가로로 살짝 흐리게 본 뒤) — 검은 틈, 망점 그라데이션 틈. 다만 쪽 높이의
  *   [MIN_FLAT_GAP_RATIO]보다 얇으면 칸 테두리로, 칸 사이에서 [MAX_FLAT_GAP_RATIO]보다 길면 그림 속 검은 곳으로 보고 둔다.
- * 쪽 왼쪽·오른쪽 끝(스캔 테두리)은 보지 않는다.
+ * 쪽 왼쪽·오른쪽 끝에서 쪽 높이 대부분을 지나는 줄(스캔 테두리)은 보지 않는다.
  * 여백은 대부분([CLEAN_GAP_RATIO] 이상) 빈 줄이어야 한다 — 글자·그림이 빽빽한 곳(한 장 그림, 글 쪽)은 여백이 아니다.
+ * 다만 위아래가 칸 테두리로 막힌 여백에 좁게 걸친 효과음·말풍선은 여백과 함께 짧아진다.
  *
  * @return 바꾼 픽셀, 바꿀 것이 거의 없으면 null
  */
@@ -78,7 +79,7 @@ internal fun collapseGutters(pixels: IntArray, width: Int, height: Int): IntArra
             }
             // 비는 곳은 이 묶음의 원래 여백 중 가장 고른 줄의 대표 색으로 채운다 (검은 틈이면 검정)
             val kept = rows.toHashSet()
-            val pad = (0 until bandH).filter { it !in kept }.minBy { page.outliers(band.first + it, x0, x1) }
+            val pad = page.evenest((0 until bandH).filter { it !in kept }.map { band.first + it }, x0, x1) - band.first
             val padColor = page.typicalColor(pixels, band.first + pad, x0, x1)
             for (i in 0 until bandH) block.fill(padColor, i * width + x0, i * width + x1)
             rows.forEachIndexed { i, r ->
@@ -91,11 +92,16 @@ internal fun collapseGutters(pixels: IntArray, width: Int, height: Int): IntArra
 
     val total = blocks.sumOf { it.size / width }
     val removed = (0 until height).filter { y -> bands.none { y in it } }
-    if (removed.isEmpty() || (!columnsMoved && removed.size < height * MIN_SAVED_RATIO)) return null
+    if (!columnsMoved && removed.size < height * MIN_SAVED_RATIO) return null
     // 위아래 빈 곳은 쪽 위·아래 절반의 원래 여백 중 가장 고른 줄의 대표 색 (위는 검정 틈, 아래는 흰 종이인 쪽도 있다)
-    fun padColor(rows: List<Int>) = page.typicalColor(pixels, rows.ifEmpty { removed }.minBy { page.outliers(it, 0, width) }, 0, width)
+    fun padColor(rows: List<Int>) = page.typicalColor(pixels, page.evenest(rows.ifEmpty { removed }, 0, width), 0, width)
     val start = (height - total) / 2
     val out = IntArray(pixels.size)
+    if (removed.isEmpty()) {
+        // 쪽 전체 여백은 없고 칸 묶음만 움직였다
+        blocks.forEachIndexed { i, block -> System.arraycopy(block, 0, out, bands[i].first * width, block.size) }
+        return out
+    }
     out.fill(padColor(removed.filter { it < height / 2 }), 0, start * width)
     var y = start
     blocks.forEach { block ->
@@ -107,7 +113,7 @@ internal fun collapseGutters(pixels: IntArray, width: Int, height: Int): IntArra
 }
 
 /** 쪽을 보는 표들 — 잉크(바탕과 다른 곳), 세로·가로로 길게 이어진 잉크, 살짝 흐리게 한 밝기 */
-private class PageMaps(pixels: IntArray, private val width: Int, height: Int) {
+private class PageMaps(pixels: IntArray, private val width: Int, private val height: Int) {
     private val bg: Int
     private val ink: BooleanArray
     private val tall: BooleanArray
@@ -128,8 +134,8 @@ private class PageMaps(pixels: IntArray, private val width: Int, height: Int) {
         val edgeX = (width * EDGE_RATIO).roundToInt()
         val minRunV = (height * LONG_INK_RATIO).roundToInt().coerceAtLeast(8)
         val minRunH = (width * LONG_INK_RATIO).roundToInt().coerceAtLeast(8)
-        tall = longRuns(ink, width, height, vertical = true, minRun = minRunV, skipEdge = edgeX)
-        wide = longRuns(ink, width, height, vertical = false, minRun = minRunH, skipEdge = 0)
+        tall = longRuns(ink, width, height, vertical = true, minRun = minRunV, edge = edgeX, maxEdgeRun = (height * SCAN_EDGE_RUN_RATIO).roundToInt())
+        wide = longRuns(ink, width, height, vertical = false, minRun = minRunH)
         val loose = BooleanArray(pixels.size) { ink[it] && !tall[it] }
         stroke = BooleanArray(pixels.size) { i ->
             loose[i] && ((i >= width && loose[i - width]) || (i + width < loose.size && loose[i + width]))
@@ -159,12 +165,16 @@ private class PageMaps(pixels: IntArray, private val width: Int, height: Int) {
         return loose > OVERLAY_NOISE
     }
 
+    /** 칸 테두리 같은 가로선이 줄의 [BORDER_ROW_RATIO] 이상을 지나간다 */
+    private fun borderRow(y: Int, x0: Int, x1: Int): Boolean {
+        var n = 0
+        for (x in x0 until x1) if (wide[y * width + x]) n++
+        return n >= (x1 - x0) * BORDER_ROW_RATIO
+    }
+
     /** 쪽 전체 띠를 나눌 때의 잉크 줄 — 세로로 긴 잉크가 지나가거나, 칸 테두리 같은 가로선이 길게 지나간다 (기울어진 스캔의 테두리 끝자락) */
     fun bandInk(y: Int, edgeX: Int): Boolean {
-        if (inkContent(y, 0, width)) return true
-        var n = 0
-        for (x in edgeX until width - edgeX) if (wide[y * width + x]) n++
-        return n >= (width - 2 * edgeX) * BORDER_ROW_RATIO
+        return inkContent(y, 0, width) || borderRow(y, edgeX, width - edgeX)
     }
 
     fun inkCount(y: Int, x0: Int, x1: Int): Int {
@@ -176,6 +186,10 @@ private class PageMaps(pixels: IntArray, private val width: Int, height: Int) {
 
     /** 줄에서 가운데 밝기(중앙값)와 [FLAT_DIFF] 넘게 다른 칸 수 — 적을수록 고른 줄 */
     fun outliers(y: Int, x0: Int, x1: Int): Int = outliers(x1 - x0) { blurH[y * width + x0 + it] }
+
+    /** 가장 고른 줄 — 똑같이 고르면 바탕색에 가까운 줄 (스캔 끝의 회색 줄보다 종이) */
+    fun evenest(rows: List<Int>, x0: Int, x1: Int): Int =
+        rows.minWith(compareBy({ outliers(it, x0, x1) }, { abs(median(x1 - x0) { i -> blurH[it * width + x0 + i] } - bg) }))
 
     /** 줄의 대표 색 — 흐리게 본 밝기가 가운데 값 가까운 칸들의 평균 색 (망점이면 그 회색, 색 틈이면 그 색) */
     fun typicalColor(pixels: IntArray, y: Int, x0: Int, x1: Int): Int {
@@ -209,18 +223,39 @@ private class PageMaps(pixels: IntArray, private val width: Int, height: Int) {
         val noise = ((x1 - x0) * CLEAN_ROW_RATIO).roundToInt().coerceAtLeast(OVERLAY_NOISE)
         var clean = 0
         var strokes = 0L
+        val columns = IntArray(x1 - x0)
         for (y in rows) {
             if (flatGutter(y, x0, x1)) {
                 clean++
                 continue
             }
             var n = 0
-            for (x in x0 until x1) if (stroke[y * width + x]) n++
+            for (x in x0 until x1) if (stroke[y * width + x]) {
+                n++
+                columns[x - x0]++
+            }
             if (n <= noise) clean++
             strokes += n
         }
         val count = rows.last - rows.first + 1
-        return clean >= count * CLEAN_GAP_RATIO && strokes <= count.toLong() * (x1 - x0) * GAP_STROKE_RATIO
+        if (clean >= count * CLEAN_GAP_RATIO && strokes <= count.toLong() * (x1 - x0) * GAP_STROKE_RATIO) return true
+        // 위아래가 칸 테두리로 막혔고 획이 좁은 곳에만 몰려 있으면 여백에 걸친 효과음·말풍선 — 그만큼 짧아져도 여백으로 친다
+        return count <= height * MAX_FLAT_GAP_RATIO &&
+            rows.first > 0 && borderRow(rows.first - 1, x0, x1) && rows.last < height - 1 && borderRow(rows.last + 1, x0, x1) &&
+            narrowestSpan(columns, strokes * OVERLAY_STROKE_SHARE) < (x1 - x0) * OVERLAY_SPAN_RATIO
+    }
+
+    /** [counts]의 합이 [share] 이상인 가장 좁은 연속 구간의 폭 */
+    private fun narrowestSpan(counts: IntArray, share: Double): Int {
+        var best = counts.size
+        var sum = 0L
+        var a = 0
+        for (b in counts.indices) {
+            sum += counts[b]
+            while (a <= b && sum - counts[a] >= share) sum -= counts[a++]
+            if (sum >= share) best = minOf(best, b - a + 1)
+        }
+        return best
     }
 
     fun flatColumn(x: Int, y0: Int, y1: Int): Boolean =
@@ -253,19 +288,32 @@ private class PageMaps(pixels: IntArray, private val width: Int, height: Int) {
     }
 }
 
-/** 세로(또는 가로)로 [minRun] 이상 이어지는 잉크만 남긴 표. [skipEdge]만큼 왼쪽·오른쪽 끝 열은 뺀다 (세로일 때) */
-private fun longRuns(ink: BooleanArray, width: Int, height: Int, vertical: Boolean, minRun: Int, skipEdge: Int): BooleanArray {
+/**
+ * 세로(또는 가로)로 [minRun] 이상 이어지는 잉크만 남긴 표.
+ * 세로일 때 왼쪽·오른쪽 끝 [edge]열 안에서는 [maxEdgeRun]보다 긴 것(쪽 높이 대부분을 지나는 스캔 테두리)은 뺀다 —
+ * 쪽 끝에 바짝 붙은 칸 테두리는 칸 높이만큼만 이어지므로 남는다.
+ */
+private fun longRuns(
+    ink: BooleanArray,
+    width: Int,
+    height: Int,
+    vertical: Boolean,
+    minRun: Int,
+    edge: Int = 0,
+    maxEdgeRun: Int = Int.MAX_VALUE,
+): BooleanArray {
     val out = BooleanArray(ink.size)
-    val lines = if (vertical) skipEdge until width - skipEdge else 0 until height
+    val lines = if (vertical) 0 until width else 0 until height
     val length = if (vertical) height else width
     for (line in lines) {
         fun index(i: Int) = if (vertical) i * width + line else line * width + i
+        val maxRun = if (vertical && (line < edge || line >= width - edge)) maxEdgeRun else Int.MAX_VALUE
         var start = -1
         for (i in 0..length) {
             if (i < length && ink[index(i)]) {
                 if (start < 0) start = i
             } else if (start >= 0) {
-                if (i - start >= minRun) for (k in start until i) out[index(k)] = true
+                if (i - start in minRun..maxRun) for (k in start until i) out[index(k)] = true
                 start = -1
             }
         }
@@ -356,6 +404,9 @@ private fun backgroundLuminance(lum: IntArray): Int {
 /** 왼쪽·오른쪽 끝에서 이만큼은 보지 않는다 (스캔 테두리) */
 private const val EDGE_RATIO = 0.02f
 
+/** 쪽 끝 열에서 쪽 높이의 이만큼보다 길게 이어지는 잉크는 스캔 테두리 */
+private const val SCAN_EDGE_RUN_RATIO = 0.6f
+
 /** 바탕과 이만큼 다르면 잉크 */
 private const val INK_DIFF = 80
 
@@ -364,6 +415,9 @@ private const val LONG_INK_RATIO = 0.04f
 
 /** 여백을 가로지르는 것이 이 폭(비율)보다 좁으면 글 상자·말풍선으로 본다 */
 private const val OVERLAY_SPAN_RATIO = 0.3f
+
+/** 여백 후보의 획이 이만큼 좁은 곳([OVERLAY_SPAN_RATIO] 미만)에 몰려 있으면 걸친 효과음·말풍선 */
+private const val OVERLAY_STROKE_SHARE = 0.9
 
 /** 글 상자 안 줄에 이만큼까지의 짧은 잉크는 잡티로 본다 */
 private const val OVERLAY_NOISE = 2
@@ -412,7 +466,7 @@ private const val MIN_SAVED_RATIO = 0.005f
 
 /** 페이지 리더(Coil)용 — 작품 보기 설정 "칸 간격 없애기" */
 internal class GutterTransformation : Transformation() {
-    override val cacheKey: String = "gutters-10"
+    override val cacheKey: String = "gutters-11"
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width

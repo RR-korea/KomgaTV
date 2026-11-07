@@ -101,6 +101,53 @@ class GuttersTest {
     }
 
     @Test
+    fun `쪽 위아래 끝까지 찬 펼침 쪽도 칸 묶음 안의 여백은 붙인다`() {
+        val px = IntArray(w * h) { white }
+        // 왼쪽은 쪽 높이 전부를 차는 칸, 오른쪽은 위아래 끝에 닿은 작은 칸 둘 (사이 40줄) — 쪽 전체를 가로지르는 여백이 없다
+        for ((x0, x1, y0, y1) in listOf(listOf(6, 45, 0, h), listOf(55, 95, 0, 180), listOf(55, 95, 220, h))) {
+            px.box(x0, x1, y0, y1)
+            // 칸 안 그림 (빗금)
+            for (y in y0 + 5 until y1 - 5) for (x in x0 + 5 until x1 - 5) if ((x + y) % 7 == 0) px[y * w + x] = black
+        }
+
+        val out = requireNotNull(collapseGutters(px, w, h))
+
+        // 왼쪽 칸은 그대로, 오른쪽 칸 둘은 맞붙어 가운데로
+        assertEquals(listOf(0, 1, 398, 399), (0 until h).filter { out[it * w + 9] == black })
+        assertEquals(listOf(20, 21, 198, 199, 200, 201, 378, 379), (0 until h).filter { out[it * w + 58] == black })
+    }
+
+    @Test
+    fun `쪽 끝에 바짝 붙은 칸 테두리는 칸이다`() {
+        val wide = 400
+        val px = IntArray(wide * h) { white }
+        // 좌우 테두리가 쪽 끝(2% 안)에 붙은 칸 둘, 사이 60줄
+        for ((y0, y1) in listOf(40 to 140, 200 to 300)) for (y in y0 until y1) for (x in 2 until 398) {
+            if (y < y0 + 2 || y >= y1 - 2 || x < 4 || x >= 396) px[y * wide + x] = black
+        }
+
+        val out = requireNotNull(collapseGutters(px, wide, h))
+
+        // 칸 안쪽 빈 곳은 그대로 두고 사이 여백만 없앤다
+        assertEquals(listOf(100, 101, 198, 199, 200, 201, 298, 299), (0 until h).filter { out[it * wide + 200] == black })
+        assertEquals(200, (0 until h).count { out[it * wide + 2] == black })
+    }
+
+    @Test
+    fun `칸 사이 여백에 좁게 걸친 효과음은 여백과 함께 짧아진다`() {
+        val px = IntArray(w * h) { white }
+        px.panel(40)
+        px.box(10, 90, 160, 260)
+        // 칸 A 아래쪽부터 칸 B 위쪽까지 걸친 효과음 — 폭 7칸, 획 높이 3줄
+        for (y in 120 until 180) for (x in 20..26) if (y % 6 < 3) px[y * w + x] = black
+
+        val out = requireNotNull(collapseGutters(px, w, h))
+
+        // 칸 100줄 + 칸 100줄이 맞붙어 가운데(100~299)로
+        assertEquals(listOf(100, 101, 198, 199, 200, 201, 298, 299), (0 until h).filter { out[it * w + 45] == black })
+    }
+
+    @Test
     fun `쪽 끝의 스캔 테두리 줄은 칸으로 치지 않는다`() {
         val px = IntArray(w * h) { white }
         px.panel(40)
