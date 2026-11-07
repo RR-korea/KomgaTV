@@ -92,6 +92,34 @@ class GuttersTest {
     }
 
     @Test
+    fun `검은 칸 틈도 붙인다`() {
+        val px = IntArray(w * h) { white }
+        px.panel(40)
+        // 칸 사이(140~159)가 쪽 끝까지 검정
+        for (y in 140 until 160) for (x in 0 until w) px[y * w + x] = black
+        px.panel(160)
+
+        val out = requireNotNull(collapseGutters(px, w, h))
+
+        // 칸 둘(200줄)이 맞붙어 가운데(100~299)로, 검은 틈은 없어진다
+        assertEquals(listOf(100, 101, 198, 199, 200, 201, 298, 299), (0 until h).filter { out[it * w + 45] == black })
+        assertEquals(emptyList<Int>(), (0 until h).filter { out[it * w + 5] == black })
+    }
+
+    @Test
+    fun `그림 속 넓은 검은 곳은 틈으로 보지 않는다`() {
+        val px = IntArray(w * h) { white }
+        px.panel(40)
+        // 쪽 높이의 6%보다 긴(60줄) 검은 띠 — 그림 속 검은 하늘 같은 것
+        for (y in 140 until 200) for (x in 0 until w) px[y * w + x] = black
+        px.panel(200)
+
+        val out = requireNotNull(collapseGutters(px, w, h))
+        // 칸과 검은 띠가 한 덩어리(260줄)로 남아 가운데로 모일 뿐 — 검은 띠 60줄이 그대로 있다
+        assertEquals(60, (0 until h).count { out[it * w + 5] == black })
+    }
+
+    @Test
     fun `지울 여백이 없으면 그대로`() {
         // 쪽 전체가 그림(세로 줄무늬)
         val px = IntArray(w * h) { i -> if (i % w % 10 < 3) black else white }
