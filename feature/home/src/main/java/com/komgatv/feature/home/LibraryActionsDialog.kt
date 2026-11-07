@@ -26,6 +26,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.tv.material3.Button
@@ -112,11 +113,11 @@ internal fun ReadingActionsDialog(
                     Button(
                         onClick = onDismiss,
                         modifier = Modifier.weight(1f).focusRequester(firstFocus),
-                    ) { Text(stringResource(R.string.reading_action_keep)) }
+                    ) { Text(stringResource(R.string.reading_action_keep), Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }
                     Button(
                         onClick = { onHide(); onDismiss() },
                         modifier = Modifier.weight(1f),
-                    ) { Text(stringResource(R.string.reading_action_remove)) }
+                    ) { Text(stringResource(R.string.reading_action_remove), Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }
                 }
                 Text(
                     text = stringResource(R.string.reading_action_hint),
