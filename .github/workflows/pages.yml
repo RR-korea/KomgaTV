@@ -1,0 +1,40 @@
+# 개인정보처리방침 페이지(GitHub Pages)만 올린다 — docs/privacy가 바뀔 때만 돈다.
+# 주소: https://rr-korea.github.io/KomgaTV/privacy/ (Android), .../privacy/tizen/ (Tizen)
+name: Privacy policy page
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/privacy/**
+      - .github/workflows/pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Collect pages
+        run: |
+          mkdir -p _site
+          cp -r docs/privacy _site/privacy
+          touch _site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
