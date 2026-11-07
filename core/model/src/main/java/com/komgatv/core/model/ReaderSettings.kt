@@ -100,7 +100,7 @@ enum class PageTransition {
  * @property continuousPadding 세로 스크롤 시 좌우 여백 (화면 너비 비율, 기본값: 0f)
  * @property continuousPageSpacing 세로 스크롤 시 쪽 사이 간격 dp (기본값: 0)
  * @property zoomPercent 페이지 넘김에서 크기 맞춤으로 맞춘 결과를 더 확대(줌인)하는 비율 %
- *   ([MIN_ZOOM_PERCENT]~[MAX_ZOOM_PERCENT], 1% 단위 — 100이면 확대 안 함, 120%까지면 충분하다는 사용자 의견).
+ *   ([MIN_ZOOM_PERCENT]~[MAX_ZOOM_PERCENT], 1% 단위 — 100이면 확대 안 함, 150%까지).
  *   스캔 여백을 잘라 크게 볼 때 — 작품별로만 바꾼다.
  */
 data class ReaderSettings(
@@ -135,11 +135,11 @@ data class ReaderSettings(
 ) {
     companion object {
         const val MIN_ZOOM_PERCENT = 100
-        const val MAX_ZOOM_PERCENT = 120
+        const val MAX_ZOOM_PERCENT = 150
         const val MIN_CONTRAST_PERCENT = 50
-        const val MAX_CONTRAST_PERCENT = 150
+        const val MAX_CONTRAST_PERCENT = 190
         const val CONTRAST_STEP = 5
-        const val MIN_BRIGHTNESS_PERCENT = 50
+        const val MIN_BRIGHTNESS_PERCENT = 10
         const val MIN_ZOOM_PAN_PERCENT = -100
         const val MAX_ZOOM_PAN_PERCENT = 100
         const val ZOOM_PAN_STEP = 25
