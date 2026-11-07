@@ -32,6 +32,7 @@
     <string name="view_on">Bật</string>
     <string name="view_off">Tắt</string>
     <string name="view_zoom">Thu phóng</string>
+    <string name="view_remove_gutters">Bỏ khoảng cách khung</string>
     <string name="view_transition">Chuyển trang</string>
     <string name="view_transition_off">Tắt</string>
     <string name="view_transition_slide">Trượt</string>

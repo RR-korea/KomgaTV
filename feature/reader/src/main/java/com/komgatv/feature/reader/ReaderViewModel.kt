@@ -97,6 +97,8 @@ sealed interface ReaderUiState {
         val brightnessPercent: Int = 100,
         /** 확대했을 때 위아래로 옮겨 둔 자리 % (0 = 가운데) */
         val zoomPanPercent: Int = 0,
+        /** 칸 사이 위아래 여백 없애기 */
+        val removeGutters: Boolean = false,
         /** 페이지 넘김 화면 전환 효과 */
         val pageTransition: PageTransition = PageTransition.SLIDE,
         /**
@@ -131,6 +133,7 @@ sealed interface ReaderUiState {
                 contrastPercent = contrastPercent,
                 brightnessPercent = brightnessPercent,
                 zoomPanPercent = zoomPanPercent,
+                removeGutters = removeGutters,
                 pageTransition = pageTransition,
             )
     }
@@ -235,6 +238,7 @@ class ReaderViewModel @Inject constructor(
     private var currentContrastPercent: Int = 100
     private var currentBrightnessPercent: Int = 100
     private var currentZoomPanPercent: Int = 0
+    private var currentRemoveGutters: Boolean = false
     private var currentPageTransition: PageTransition = PageTransition.SLIDE
     private var pageStep = 0
     private var currentSeriesId: String = ""
@@ -804,6 +808,7 @@ class ReaderViewModel @Inject constructor(
         if (new.contrastPercent != currentContrastPercent) setContrastPercent(new.contrastPercent)
         if (new.brightnessPercent != currentBrightnessPercent) setBrightnessPercent(new.brightnessPercent)
         if (new.zoomPanPercent != currentZoomPanPercent) setZoomPanPercent(new.zoomPanPercent)
+        if (new.removeGutters != currentRemoveGutters) setRemoveGutters(new.removeGutters)
         if (new.pageTransition != currentPageTransition) setPageTransition(new.pageTransition)
     }
 
@@ -838,6 +843,14 @@ class ReaderViewModel @Inject constructor(
         val clamped = percent.coerceIn(ReaderSettings.MIN_ZOOM_PAN_PERCENT, ReaderSettings.MAX_ZOOM_PAN_PERCENT)
         if (currentZoomPanPercent == clamped) return
         currentZoomPanPercent = clamped
+        updateReadingState()
+        saveSeriesSettings()
+    }
+
+    /** 칸 사이 위아래 여백 없애기 — 이 작품에 저장 */
+    fun setRemoveGutters(enabled: Boolean) {
+        if (currentRemoveGutters == enabled) return
+        currentRemoveGutters = enabled
         updateReadingState()
         saveSeriesSettings()
     }
@@ -894,6 +907,7 @@ class ReaderViewModel @Inject constructor(
         currentContrastPercent = settings.contrastPercent
         currentBrightnessPercent = settings.brightnessPercent
         currentZoomPanPercent = settings.zoomPanPercent
+        currentRemoveGutters = settings.removeGutters
         currentPageTransition = settings.pageTransition
     }
 
@@ -909,6 +923,7 @@ class ReaderViewModel @Inject constructor(
         contrastPercent = currentContrastPercent,
         brightnessPercent = currentBrightnessPercent,
         zoomPanPercent = currentZoomPanPercent,
+        removeGutters = currentRemoveGutters,
         pageTransition = currentPageTransition,
     )
 
@@ -1157,6 +1172,7 @@ class ReaderViewModel @Inject constructor(
             contrastPercent = currentContrastPercent,
             brightnessPercent = currentBrightnessPercent,
             zoomPanPercent = currentZoomPanPercent,
+            removeGutters = currentRemoveGutters,
             pageTransition = currentPageTransition,
             pageStep = pageStep,
             seriesCustomized = seriesCustomized,

@@ -63,7 +63,7 @@ fun ViewSettingsForm(
     onLayoutOffsetChange: (Boolean) -> Unit = {},
     showZoom: Boolean = false,
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         OptionRow(
             title = stringResource(R.string.view_reader_type),
             options = listOf(
@@ -132,6 +132,12 @@ fun ViewSettingsForm(
                         value = stringResource(R.string.view_percent_value, settings.zoomPercent),
                         onPrevious = { onChange(settings.copy(zoomPercent = stepZoom(settings.zoomPercent, -1))) },
                         onNext = { onChange(settings.copy(zoomPercent = stepZoom(settings.zoomPercent, 1))) },
+                    )
+                    // 칸 사이 위아래 여백을 없애 칸들을 쪽 가운데로 모은다 (확대와 함께 쓰면 칸이 화면을 더 채운다)
+                    OnOffRow(
+                        title = stringResource(R.string.view_remove_gutters),
+                        value = settings.removeGutters,
+                        onChange = { onChange(settings.copy(removeGutters = it)) },
                     )
                 }
             }
@@ -258,7 +264,7 @@ private fun SettingRow(
                     else -> false
                 }
             }
-            .padding(horizontal = 14.dp, vertical = 4.dp),
+            .padding(horizontal = 14.dp, vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {

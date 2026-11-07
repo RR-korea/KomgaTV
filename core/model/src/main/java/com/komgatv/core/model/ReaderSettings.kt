@@ -123,6 +123,8 @@ data class ReaderSettings(
      * 0 = 가운데, -100 = 맨 위, 100 = 맨 아래. 쪽을 넘겨도 그 자리를 유지한다.
      */
     val zoomPanPercent: Int = 0,
+    /** 칸 사이 위아래 여백을 없애고 칸들을 쪽 가운데로 모은다 (작품별, 페이지 넘김) */
+    val removeGutters: Boolean = false,
     /** 페이지 넘김 화면 전환 효과 */
     val pageTransition: PageTransition = PageTransition.SLIDE,
 ) {
