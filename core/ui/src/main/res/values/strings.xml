@@ -33,6 +33,7 @@
     <string name="view_off">Off</string>
     <string name="view_zoom">Zoom</string>
     <string name="view_remove_gutters">Remove panel gaps</string>
+    <string name="view_move_balloons">Move balloons too</string>
     <string name="view_transition">Page transition</string>
     <string name="view_transition_off">Off</string>
     <string name="view_transition_slide">Slide</string>

@@ -139,6 +139,12 @@ fun ViewSettingsForm(
                         value = settings.removeGutters,
                         onChange = { onChange(settings.copy(removeGutters = it)) },
                     )
+                    // 확대하면 쪽 끝에서 잘리는 대사는 늘 말풍선 안에서 옮긴다. 켜면 쪽 끝에 걸린 말풍선은 말풍선째
+                    OnOffRow(
+                        title = stringResource(R.string.view_move_balloons),
+                        value = settings.moveBalloons,
+                        onChange = { onChange(settings.copy(moveBalloons = it)) },
+                    )
                 }
             }
 

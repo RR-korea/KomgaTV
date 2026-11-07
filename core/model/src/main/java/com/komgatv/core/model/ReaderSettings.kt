@@ -125,6 +125,11 @@ data class ReaderSettings(
     val zoomPanPercent: Int = 0,
     /** 칸 사이 위아래 여백을 없애고 칸들을 쪽 가운데로 모은다 (작품별, 페이지 넘김) */
     val removeGutters: Boolean = false,
+    /**
+     * 확대해서 쪽 끝에서 잘리는 대사를 옮길 때, 쪽 끝에 걸려 잘린 말풍선은 말풍선째 옮긴다 (작품별, 페이지 넘김).
+     * 꺼져 있어도 확대하면 말풍선 안에서 대사는 옮긴다.
+     */
+    val moveBalloons: Boolean = false,
     /** 페이지 넘김 화면 전환 효과 */
     val pageTransition: PageTransition = PageTransition.SLIDE,
 ) {
