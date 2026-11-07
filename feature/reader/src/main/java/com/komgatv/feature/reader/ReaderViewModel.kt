@@ -95,6 +95,8 @@ sealed interface ReaderUiState {
         val contrastPercent: Int = 100,
         /** 밝기 % (100 = 그대로) */
         val brightnessPercent: Int = 100,
+        /** 확대했을 때 위아래로 옮겨 둔 자리 % (0 = 가운데) */
+        val zoomPanPercent: Int = 0,
         /** 페이지 넘김 화면 전환 효과 */
         val pageTransition: PageTransition = PageTransition.SLIDE,
         /**
@@ -128,6 +130,7 @@ sealed interface ReaderUiState {
                 zoomPercent = zoomPercent,
                 contrastPercent = contrastPercent,
                 brightnessPercent = brightnessPercent,
+                zoomPanPercent = zoomPanPercent,
                 pageTransition = pageTransition,
             )
     }
@@ -231,6 +234,7 @@ class ReaderViewModel @Inject constructor(
     private var currentZoomPercent: Int = ReaderSettings.MIN_ZOOM_PERCENT
     private var currentContrastPercent: Int = 100
     private var currentBrightnessPercent: Int = 100
+    private var currentZoomPanPercent: Int = 0
     private var currentPageTransition: PageTransition = PageTransition.SLIDE
     private var pageStep = 0
     private var currentSeriesId: String = ""
@@ -799,6 +803,7 @@ class ReaderViewModel @Inject constructor(
         if (new.zoomPercent != currentZoomPercent) setZoomPercent(new.zoomPercent)
         if (new.contrastPercent != currentContrastPercent) setContrastPercent(new.contrastPercent)
         if (new.brightnessPercent != currentBrightnessPercent) setBrightnessPercent(new.brightnessPercent)
+        if (new.zoomPanPercent != currentZoomPanPercent) setZoomPanPercent(new.zoomPanPercent)
         if (new.pageTransition != currentPageTransition) setPageTransition(new.pageTransition)
     }
 
@@ -824,6 +829,15 @@ class ReaderViewModel @Inject constructor(
         val clamped = percent.coerceIn(ReaderSettings.MIN_BRIGHTNESS_PERCENT, ReaderSettings.MAX_BRIGHTNESS_PERCENT)
         if (currentBrightnessPercent == clamped) return
         currentBrightnessPercent = clamped
+        updateReadingState()
+        saveSeriesSettings()
+    }
+
+    /** 확대했을 때 위아래 자리 변경 (▲▼) — 이 작품에 저장, 쪽을 넘겨도 유지 */
+    fun setZoomPanPercent(percent: Int) {
+        val clamped = percent.coerceIn(ReaderSettings.MIN_ZOOM_PAN_PERCENT, ReaderSettings.MAX_ZOOM_PAN_PERCENT)
+        if (currentZoomPanPercent == clamped) return
+        currentZoomPanPercent = clamped
         updateReadingState()
         saveSeriesSettings()
     }
@@ -879,6 +893,7 @@ class ReaderViewModel @Inject constructor(
         currentZoomPercent = settings.zoomPercent
         currentContrastPercent = settings.contrastPercent
         currentBrightnessPercent = settings.brightnessPercent
+        currentZoomPanPercent = settings.zoomPanPercent
         currentPageTransition = settings.pageTransition
     }
 
@@ -893,6 +908,7 @@ class ReaderViewModel @Inject constructor(
         zoomPercent = currentZoomPercent,
         contrastPercent = currentContrastPercent,
         brightnessPercent = currentBrightnessPercent,
+        zoomPanPercent = currentZoomPanPercent,
         pageTransition = currentPageTransition,
     )
 
@@ -1140,6 +1156,7 @@ class ReaderViewModel @Inject constructor(
             zoomPercent = currentZoomPercent,
             contrastPercent = currentContrastPercent,
             brightnessPercent = currentBrightnessPercent,
+            zoomPanPercent = currentZoomPanPercent,
             pageTransition = currentPageTransition,
             pageStep = pageStep,
             seriesCustomized = seriesCustomized,

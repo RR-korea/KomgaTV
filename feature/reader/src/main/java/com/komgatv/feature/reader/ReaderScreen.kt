@@ -36,7 +36,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.TransformOrigin
@@ -76,6 +75,7 @@ import coil3.size.Precision
 import timber.log.Timber
 import com.komgatv.core.model.ImageEnhancement
 import com.komgatv.core.model.PageTransition
+import com.komgatv.core.model.ReaderSettings
 import com.komgatv.core.model.ReaderType
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.ScaleType
@@ -249,11 +249,10 @@ private fun ReaderContent(
     val contentScale = remember(state.scaleType) { contentScaleFor(state.scaleType) }
 
     // 확대(줌인): 크기 맞춤 결과를 펼침째(두 쪽이면 두 쪽 함께, 가운데 기준) 키운다.
-    // 화면 고정 모드에서는 ▲▼로 위아래를 본다 (반 칸씩, 쪽이 바뀌면 가운데로).
+    // 화면 고정 모드에서는 ▲▼로 위아래를 본다 (넘치는 높이의 1/8씩). 옮겨 둔 자리는 작품에 저장돼 쪽을 넘겨도 그대로.
     val zoom = state.zoomPercent / 100f
-    var panStep by remember(state.currentSpreadIndex, state.zoomPercent, state.scaleType) { mutableIntStateOf(0) }
     val panOffset by animateFloatAsState(
-        targetValue = -panStep / PAN_STEPS.toFloat() * (zoom - 1f) * screenHeightPx / 2f,
+        targetValue = -state.zoomPanPercent / 100f * (zoom - 1f) * screenHeightPx / 2f,
         label = "zoom-pan",
     )
 
@@ -293,7 +292,7 @@ private fun ReaderContent(
                             scrollState.animateScrollTo((scrollState.value - screenHeightPx / 2).coerceAtLeast(0))
                         }
                     } else if (!scrollable && zoom > 1f) {
-                        panStep = (panStep - 1).coerceAtLeast(-PAN_STEPS)
+                        viewModel.setZoomPanPercent(state.zoomPanPercent - ReaderSettings.ZOOM_PAN_STEP)
                     }
                     Key.DirectionDown -> if (state.showOverlay) {
                         viewModel.jumpPages(-10)
@@ -311,7 +310,7 @@ private fun ReaderContent(
                             )
                         }
                     } else if (!scrollable && zoom > 1f) {
-                        panStep = (panStep + 1).coerceAtMost(PAN_STEPS)
+                        viewModel.setZoomPanPercent(state.zoomPanPercent + ReaderSettings.ZOOM_PAN_STEP)
                     }
                     else -> return@onPreviewKeyEvent false
                 }
@@ -655,9 +654,6 @@ private fun pageRequest(
         )
         .build()
 }
-
-/** 확대 상태에서 ▲▼ 한 번에 움직이는 양 — 넘치는 높이의 절반을 이만큼 나눈다 */
-private const val PAN_STEPS = 2
 
 /**
  * 스크롤 모드(너비 맞춤·원본)의 확대: 위쪽 가운데를 기준으로 키우고, 키운 높이만큼 자리를 차지해 끝까지 스크롤된다.

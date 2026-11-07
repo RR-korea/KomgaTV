@@ -969,6 +969,30 @@ class ReaderViewModelTest {
     }
 
     @Test
+    fun `확대 - 위아래로 옮긴 자리는 쪽을 넘겨도 유지되고 이 작품에 저장된다`() = runTest(testDispatcher) {
+        readerPreferences.series.value = mapOf("s1" to ReaderSettings(zoomPercent = 110))
+        openBook()
+        advanceUntilIdle()
+        assertEquals(0, reading.zoomPanPercent)
+
+        viewModel.setZoomPanPercent(reading.zoomPanPercent + ReaderSettings.ZOOM_PAN_STEP)
+        viewModel.setZoomPanPercent(reading.zoomPanPercent + ReaderSettings.ZOOM_PAN_STEP)
+        advanceUntilIdle()
+        assertEquals(50, reading.zoomPanPercent)
+        assertEquals(50, readerPreferences.series.value["s1"]!!.zoomPanPercent)
+        assertEquals(0, readerPreferences.readerSettings.first().zoomPanPercent)
+
+        viewModel.onDpadRight()
+        advanceUntilIdle()
+        assertEquals(50, reading.zoomPanPercent)
+
+        viewModel.setZoomPanPercent(1000)
+        assertEquals(100, reading.zoomPanPercent)
+        viewModel.setZoomPanPercent(-1000)
+        assertEquals(-100, reading.zoomPanPercent)
+    }
+
+    @Test
     fun `확대 - 저장된 작품 확대로 열고, 기본값으로 되돌리면 100`() = runTest(testDispatcher) {
         readerPreferences.series.value = mapOf("s1" to ReaderSettings(zoomPercent = 125))
         openBook()
