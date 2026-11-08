@@ -46,6 +46,32 @@ class BalloonsTest {
     }
 
     @Test
+    fun `말풍선 안에서 다 못 옮기면 대사 줄 사이를 좁혀 잘리는 쪽 줄을 마저 옮긴다`() {
+        val px = IntArray(w * h) { white }
+        px.ellipse(200, 60, 90, 45)
+        // 세 줄 (줄 사이 15줄) — 그대로는 아랫줄이 말풍선 바닥에 막혀 19줄밖에 못 내려간다
+        px.text(170, 230, 22)
+        px.text(170, 230, 47)
+        px.text(170, 230, 72)
+
+        val out = requireNotNull(pullBalloonText(px, w, h, topCut = 40, bottomCut = 40, moveBalloons = false))
+
+        // 말풍선 테두리(위 15~17줄, 아래 102~105줄 언저리)는 빼고 본다
+        val rows = (20 until 100).filter { y -> (170 until 230).any { out[y * w + it] == black } }
+        val lines = rows.fold(mutableListOf<MutableList<Int>>()) { acc, y ->
+            if (acc.isEmpty() || y != acc.last().last() + 1) acc += mutableListOf(y) else acc.last() += y
+            acc
+        }.filter { it.size >= 5 }.map { it.first()..it.last() }
+        // 윗줄은 잘리는 선 + 여백(6줄) 아래로, 줄 사이는 15줄에서 11줄로 (0.7배)
+        assertEquals("$lines", 3, lines.size)
+        assertEquals(46, lines[0].first)
+        assertEquals(11, lines[1].first - lines[0].last - 1)
+        assertEquals(11, lines[2].first - lines[1].last - 1)
+        // 말풍선 테두리는 그대로
+        assertEquals((0 until h).filter { px[it * w + 200] == black && it !in 15..105 }, (0 until h).filter { out[it * w + 200] == black && it !in 15..105 })
+    }
+
+    @Test
     fun `쪽 끝에 걸린 말풍선은 옵션을 켜면 말풍선째 밀어 대사가 잘리지 않게 한다`() {
         val px = IntArray(w * h) { white }
         // 쪽 위 끝에 걸려 잘린 말풍선 (아래 절반 타원) — 대사가 넓어 말풍선 안에서는 다 못 옮긴다
@@ -92,9 +118,10 @@ class BalloonsTest {
         px.text(152, 250, 540)
         px.text(152, 250, 566)
 
-        // 끄면 상자 안에서 조금밖에 못 옮겨 아랫줄이 아직 잘린다
-        val inside = pullBalloonText(px, w, h, topCut = 40, bottomCut = 40, moveBalloons = false) ?: px
-        assertTrue((300 until h).last { inside[it * w + 152] == black } > 588 - 30 && (560 until 588).any { inside[it * w + 152] == black })
+        // 끄면 상자 안에서 줄 사이를 좁혀 아랫줄을 올린다 — 윗줄은 상자 위 테두리에 막혀 조금만
+        val inside = requireNotNull(pullBalloonText(px, w, h, topCut = 40, bottomCut = 40, moveBalloons = false))
+        val insideRows = (533 until 588).filter { inside[it * w + 152] == black }
+        assertTrue("$insideRows", insideRows.first() >= 534 && insideRows.last() < 575)
 
         val out = requireNotNull(pullBalloonText(px, w, h, topCut = 40, bottomCut = 40, moveBalloons = true))
         // 상자째 22줄 올라 아랫줄 글(566~575줄)이 보이는 곳(560줄 위) 안으로 — 위 테두리, 윗줄 글, 아래 테두리도 함께.
