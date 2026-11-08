@@ -147,6 +147,50 @@ class GuttersTest {
         assertEquals(listOf(100, 101, 198, 199, 200, 201, 298, 299), (0 until h).filter { out[it * w + 45] == black })
     }
 
+    /** 칸 A(위 테두리 40줄, 아래 테두리는 [slant]만큼 기울었다)와 그 [gap]줄 아래에서 같은 기울기로 시작해 300줄에서 끝나는 칸 B */
+    private fun IntArray.slantedPanels(gap: Int, slant: (Int) -> Int) {
+        for (x in 10 until 90) {
+            val b = slant(x)
+            for (y in 40 until b + 2) if (y < 42 || y >= b || x < 12 || x >= 88) this[y * w + x] = black
+            for (y in b + 2 + gap until 302) if (y < b + 4 + gap || y >= 300 || x < 12 || x >= 88) this[y * w + x] = black
+        }
+    }
+
+    @Test
+    fun `비스듬한 칸 테두리 사이 여백도 기울기 그대로 붙이고, 아래 칸은 일그러지지 않는다`() {
+        val px = IntArray(w * h) { white }
+        // 아래 테두리가 왼쪽 140줄에서 오른쪽 190줄로 기운다 — 쪽 전체를 가로지르는 빈 줄이 없다
+        val slant = { x: Int -> 140 + (x - 10) * 50 / 79 }
+        px.slantedPanels(gap = 18, slant = slant)
+
+        val out = requireNotNull(collapseGutters(px, w, h))
+
+        fun blackRows(x: Int) = (0 until h).filter { out[it * w + x] == black }
+        for (x in listOf(12, 30, 50, 70, 87)) {
+            val rows = blackRows(x)
+            // 위 테두리 2줄, A 아래 테두리 2줄, B 위 테두리 2줄, B 아래 테두리 2줄 — A·B 사이 빈 줄은 18줄에서 2줄 이하로
+            assertEquals(8, rows.size)
+            assertEquals(true, rows[4] - rows[3] - 1 <= 2)
+            // A 안쪽 높이는 그대로
+            assertEquals(slant(x) - 40, rows[2] - rows[0])
+        }
+        // 칸 B는 통째로 올라왔다 — 아래 테두리가 모든 열에서 같은 줄, 기울기도 그대로
+        assertEquals(1, listOf(12, 30, 50, 70, 87).map { blackRows(it)[6] }.distinct().size)
+        assertEquals(slant(87) - slant(12), blackRows(87)[4] - blackRows(12)[4])
+    }
+
+    @Test
+    fun `그림 속 들쭉날쭉한 흰 틈은 비스듬한 여백으로 보지 않는다`() {
+        val px = IntArray(w * h) { white }
+        // 위아래 칸 사이 흰 틈이 열마다 크게 오르내린다 (그림 속 빈 곳)
+        px.slantedPanels(gap = 18) { x -> 150 + (x * 37) % 23 }
+
+        val out = collapseGutters(px, w, h)
+
+        // 틈은 줄지 않는다 (통째로 옮겨졌을 수는 있다)
+        assertRowsKept(px, out, w, 50)
+    }
+
     @Test
     fun `쪽 끝의 스캔 테두리 줄은 칸으로 치지 않는다`() {
         val px = IntArray(w * h) { white }

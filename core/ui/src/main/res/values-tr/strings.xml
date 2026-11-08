@@ -32,8 +32,8 @@
     <string name="view_on">Açık</string>
     <string name="view_off">Kapalı</string>
     <string name="view_zoom">Yakınlaştırma</string>
-    <string name="view_remove_gutters">Panel aralarını kaldır</string>
-    <string name="view_move_balloons">Balonları da taşı</string>
+    <string name="view_remove_gutters">Panel aralarını kaldır (deneysel)</string>
+    <string name="view_move_balloons">Balonları da taşı (deneysel)</string>
     <string name="view_transition">Sayfa geçişi</string>
     <string name="view_transition_off">Kapalı</string>
     <string name="view_transition_slide">Kaydırma</string>

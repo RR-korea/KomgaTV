@@ -32,8 +32,8 @@
     <string name="view_on">Ativado</string>
     <string name="view_off">Desativado</string>
     <string name="view_zoom">Zoom</string>
-    <string name="view_remove_gutters">Remover espaço entre quadros</string>
-    <string name="view_move_balloons">Mover também os balões</string>
+    <string name="view_remove_gutters">Remover espaço entre quadros (experimental)</string>
+    <string name="view_move_balloons">Mover também os balões (experimental)</string>
     <string name="view_transition">Transição de página</string>
     <string name="view_transition_off">Desativada</string>
     <string name="view_transition_slide">Deslizar</string>

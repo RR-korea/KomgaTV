@@ -32,8 +32,8 @@
     <string name="view_on">開啟</string>
     <string name="view_off">關閉</string>
     <string name="view_zoom">縮放</string>
-    <string name="view_remove_gutters">去除分格間距</string>
-    <string name="view_move_balloons">連對話框一起移動</string>
+    <string name="view_remove_gutters">去除分格間距（實驗性）</string>
+    <string name="view_move_balloons">連對話框一起移動（實驗性）</string>
     <string name="view_transition">翻頁效果</string>
     <string name="view_transition_off">關閉</string>
     <string name="view_transition_slide">滑動</string>
