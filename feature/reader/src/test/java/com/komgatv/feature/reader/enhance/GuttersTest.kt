@@ -3,6 +3,7 @@ package com.komgatv.feature.reader.enhance
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import kotlin.math.abs
 
 class GuttersTest {
 
@@ -209,6 +210,40 @@ class GuttersTest {
 
         // 틈은 줄지 않는다 (통째로 옮겨졌을 수는 있다)
         assertRowsKept(px, out, w, 50)
+    }
+
+    @Test
+    fun `좌우 두 쪽을 한 장에 스캔한 그림은 쪽마다 따로 칸을 붙인다 - 가운데 접힌 곳 그림자는 잉크가 아니다`() {
+        val wide = 260
+        val px = IntArray(wide * h) { white }
+        // 가운데 접힌 곳 그림자 — 100~159열, 가운데로 갈수록 어둡다 (가장 어두운 곳 밝기 150). 칸 안쪽까지 걸친다
+        fun shade(x: Int): Int {
+            val v = 255 - maxOf(0, 30 - abs(x - 130)) * 105 / 30
+            return (0xFF shl 24) or (v shl 16) or (v shl 8) or v
+        }
+        for (y in 0 until h) for (x in 100 until 160) px[y * wide + x] = shade(x)
+        fun box(x0: Int, x1: Int, y0: Int, y1: Int) {
+            for (y in y0 until y1) for (x in x0 until x1) {
+                if (y < y0 + 2 || y >= y1 - 2 || x < x0 + 2 || x >= x1 - 2) px[y * wide + x] = black
+            }
+        }
+        // 왼쪽 쪽: 칸 사이 200~239줄, 오른쪽 쪽: 칸 사이 120~159줄 — 쪽 전체를 가로지르는 여백이 없다
+        box(10, 122, 40, 200)
+        box(10, 122, 240, 360)
+        box(138, 250, 40, 120)
+        box(138, 250, 160, 360)
+
+        val out = requireNotNull(collapseGutters(px, wide, h))
+
+        // 두 쪽 다 칸 둘이 맞붙는다 (높이 280줄)
+        for (x in listOf(60, 200)) {
+            val rows = (0 until h).filter { out[it * wide + x] == black }
+            assertEquals(8, rows.size)
+            assertEquals(rows[3] + 1, rows[4])
+            assertEquals(279, rows.last() - rows.first())
+        }
+        // 그림자는 그대로
+        assertEquals(shade(130), out[200 * wide + 130])
     }
 
     @Test
