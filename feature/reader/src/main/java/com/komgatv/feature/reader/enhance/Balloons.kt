@@ -461,35 +461,120 @@ private class BalloonPage(
         return marks
     }
 
+    /**
+     * 대사 줄들 — 대사 획이 있는 줄이 이어진 곳. [minGap]보다 짧은 빈 줄(글자 속 틈)은 줄 안으로 친다.
+     * @return 줄마다 첫 줄·끝 줄
+     */
+    private fun textLines(group: Group, minGap: Int): List<IntRange> {
+        val inked = BooleanArray(group.bottom - group.top + 1)
+        for (y in group.top..group.bottom) for (x in group.left..group.right) {
+            if (inkLabel[y * width + x] in group.inks) {
+                inked[y - group.top] = true
+                break
+            }
+        }
+        val lines = ArrayList<IntRange>()
+        var start = -1
+        var last = -1
+        for (k in inked.indices) {
+            if (!inked[k]) continue
+            if (start < 0) {
+                start = k
+            } else if (k - last - 1 >= minGap) {
+                lines += (group.top + start)..(group.top + last)
+                start = k
+            }
+            last = k
+        }
+        if (start >= 0) lines += (group.top + start)..(group.top + last)
+        return lines
+    }
+
+    /**
+     * 대사 줄 사이를 [keep] 비율로 좁힐 때 줄마다 더 옮길 거리 (가운데 쪽으로 +) — 잘리는 쪽에서 먼 줄은 그대로,
+     * 잘리는 쪽 줄일수록 좁힌 만큼 가운데 쪽으로 다가간다. 줄 사이는 [minGap]보다 좁히지 않는다.
+     */
+    private fun lineShifts(lines: List<IntRange>, keep: Float, minGap: Int, down: Boolean): IntArray {
+        val shifts = IntArray(lines.size)
+        if (down) {
+            for (k in lines.size - 2 downTo 0) {
+                val gap = lines[k + 1].first - lines[k].last - 1
+                shifts[k] = shifts[k + 1] + (gap - maxOf(minGap, (gap * keep).roundToInt())).coerceAtLeast(0)
+            }
+        } else {
+            for (k in 1 until lines.size) {
+                val gap = lines[k].first - lines[k - 1].last - 1
+                shifts[k] = shifts[k - 1] + (gap - maxOf(minGap, (gap * keep).roundToInt())).coerceAtLeast(0)
+            }
+        }
+        return shifts
+    }
+
     fun moveText(topCut: Int, bottomCut: Int): IntArray? {
         var out: IntArray? = null
         val gap = (pageHeight * GAP_RATIO).roundToInt().coerceAtLeast(2)
+        val lineGap = (pageHeight * LINE_GAP_RATIO).roundToInt().coerceAtLeast(2)
+        val minLineGap = (pageHeight * MIN_LINE_GAP_RATIO).roundToInt().coerceAtLeast(2)
         for (group in groups) {
             val want = wanted(group, topCut, bottomCut)
             if (want == 0) continue
             val marks = marks(group)
             val strokes = marks.filter { inkLabel[it] >= 0 }
+            val down = want > 0
+            val lines = textLines(group, lineGap)
+            // 줄마다 그 줄 획(과 둘레)의 줄 — 줄 사이 빈 곳의 옅은 테두리는 가까운 줄을 따라간다
+            fun lineOf(y: Int): Int {
+                var best = 0
+                for (k in lines.indices) {
+                    val dist = if (y < lines[k].first) lines[k].first - y else if (y > lines[k].last) y - lines[k].last else 0
+                    val bestDist = if (y < lines[best].first) lines[best].first - y else if (y > lines[best].last) y - lines[best].last else 0
+                    if (dist < bestDist) best = k
+                }
+                return best
+            }
+            val rowLine = IntArray(group.bottom - group.top + 1 + 2 * HALO) { lineOf(group.top - HALO + it) }
             fun ok(x: Int, y: Int) = x in 0 until width && y in 0 until height && inside(group, y * width + x, marks)
             // 옮긴 획은 말풍선 안에 — 테두리와 [gap]칸 띄우되, 지금 이미 그보다 가까운 쪽은 더 가까워지지만 않게
             fun clear(x: Int, y: Int, sx: Int, sy: Int) = ok(x, y) || !ok(sx, sy)
-            fun fits(d: Int): Boolean = strokes.all { i ->
+            fun fits(d: Int, shifts: IntArray): Boolean = strokes.all { i ->
                 val sx = i % width
                 val sy = i / width
-                val y = sy + d
+                val y = sy + d + (if (down) 1 else -1) * shifts[rowLine[sy - group.top + HALO]]
                 ok(sx, y) && clear(sx, y - gap, sx, sy - gap) && clear(sx, y + gap, sx, sy + gap) &&
                     clear(sx - gap, y, sx - gap, sy) && clear(sx + gap, y, sx + gap, sy)
             }
-            val step = if (want > 0) 1 else -1
-            var d = want
-            while (d != 0 && !fits(d)) d -= step
-            if (abs(d) < MIN_MOVE) continue
+            // 줄 사이를 그대로 두고, 모자라면 조금씩 좁혀 가며 — 잘리는 쪽 첫 줄이 가장 멀리 가는 것
+            val step = if (down) 1 else -1
+            var best: Pair<Int, IntArray>? = null
+            var bestReach = 0
+            for (keep in LINE_GAP_KEEP) {
+                val shifts = lineShifts(lines, keep, minLineGap, down)
+                val extra = shifts.maxOrNull() ?: 0
+                if (keep < 1f && extra == 0) break
+                // 잘리는 쪽 첫 줄은 [extra]만큼 더 간다 — 모두 합쳐 [want]만큼이면 된다
+                var d = if (down) maxOf(0, want - extra) else minOf(0, want + extra)
+                while (d != 0 && !fits(d, shifts)) d -= step
+                val reach = abs(d) + extra
+                if (abs(d) < MIN_MOVE && extra == 0) continue
+                if (reach > bestReach) {
+                    best = d to shifts
+                    bestReach = reach
+                }
+                if (reach >= abs(want)) break
+            }
+            val (d, shifts) = best ?: continue
+            if (bestReach < MIN_MOVE) continue
             val dst = out ?: pixels.copyOf().also { out = it }
             val paperColor = averagePaper(group)
             for (i in marks) dst[i] = paperColor
-            for (i in marks) dst[i + d * width] = pixels[i]
+            for (i in marks) {
+                val move = d + step * shifts[rowLine[i / width - group.top + HALO]]
+                dst[i + move * width] = pixels[i]
+            }
         }
         return out
     }
+
 
     /**
      * 잘리는 곳에 걸친 말풍선을 쪽 끝 쪽 그림째로 가운데 쪽으로 민다 — 위쪽 말풍선이면 말풍선 아래 끝까지의 열을 아래로.
@@ -648,6 +733,15 @@ private const val RING_RATIO = 0.006f
 /** 글자 둘레의 옅은 테두리(안티에일리어싱)까지 함께 옮긴다 */
 private const val HALO = 4
 
+/** 대사 줄 사이로 볼 가장 짧은 빈 줄 (쪽 높이 비율) — 이보다 짧으면 글자 속 틈 */
+private const val LINE_GAP_RATIO = 0.004f
+
+/** 대사 줄 사이를 좁혀도 이만큼(쪽 높이 비율)은 남긴다 */
+private const val MIN_LINE_GAP_RATIO = 0.003f
+
+/** 대사가 다 안 옮겨지면 줄 사이를 이 비율들로 차례로 좁혀 본다 (1 = 그대로) */
+private val LINE_GAP_KEEP = floatArrayOf(1f, 0.7f, 0.45f, 0.2f)
+
 /** 이보다 조금 옮기는 건 하지 않는다 */
 private const val MIN_MOVE = 2
 
@@ -685,7 +779,7 @@ internal class BalloonTextTransformation(
     private val screenHeightPx: Int,
     private val fitHeight: Boolean,
 ) : Transformation() {
-    override val cacheKey: String = "balloons-2-$zoomPercent-$moveBalloons-${slotWidthPx}x$screenHeightPx-$fitHeight"
+    override val cacheKey: String = "balloons-3-$zoomPercent-$moveBalloons-${slotWidthPx}x$screenHeightPx-$fitHeight"
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width

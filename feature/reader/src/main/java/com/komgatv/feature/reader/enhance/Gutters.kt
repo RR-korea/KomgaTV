@@ -143,8 +143,10 @@ private fun collapsePage(pixels: IntArray, width: Int, height: Int): IntArray? {
 
     // 기울어진 칸 테두리 끝자락 줄은 테두리 쪽(칸)에 남긴다
     val tail = page.borderTails(0, height, edgeX, width - edgeX) { y -> !page.bandInk(y, edgeX) }
+    // 칸 묶음 안 여백보다 짧은 빈 줄로는 띠를 나누지 않는다 — 비스듬한 여백 가운데 몇 줄만 쪽을 가로질러 비면
+    // 띠가 둘로 나뉘어 나머지 비스듬한 부분이 양쪽 띠에 남는다. 한 띠로 두면 비스듬한 여백으로 통째로 뺀다
     val bands = segments(
-        height, minGap, minFlatGap, maxFlatGap,
+        height, minStackGap, minFlatGap, maxFlatGap,
         isContent = { y -> (page.bandInk(y, edgeX) && !page.flatGutter(y, edgeX, width - edgeX)) || tail[y] },
         flatOnly = { y -> page.bandInk(y, edgeX) || tail[y] },
         keepGap = { gap ->
@@ -954,7 +956,7 @@ private const val MIN_SAVED_RATIO = 0.005f
 
 /** 페이지 리더(Coil)용 — 작품 보기 설정 "칸 간격 없애기" */
 internal class GutterTransformation : Transformation() {
-    override val cacheKey: String = "gutters-15"
+    override val cacheKey: String = "gutters-16"
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width
