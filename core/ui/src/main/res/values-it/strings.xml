@@ -32,8 +32,8 @@
     <string name="view_on">Attivo</string>
     <string name="view_off">Disattivo</string>
     <string name="view_zoom">Zoom</string>
-    <string name="view_remove_gutters">Rimuovi spazi vignette</string>
-    <string name="view_move_balloons">Sposta anche i balloon</string>
+    <string name="view_remove_gutters">Rimuovi spazi vignette (sperimentale)</string>
+    <string name="view_move_balloons">Sposta anche i balloon (sperimentale)</string>
     <string name="view_transition">Transizione pagina</string>
     <string name="view_transition_off">Nessuna</string>
     <string name="view_transition_slide">Scorrimento</string>
