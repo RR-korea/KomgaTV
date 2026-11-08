@@ -62,6 +62,26 @@ class GuttersTest {
     }
 
     @Test
+    fun `칸 묶음 사이 여백의 쪽 번호는 여백과 함께 지운다`() {
+        val px = IntArray(w * h) { white }
+        // 오른쪽 세로로 긴 칸, 왼쪽에 작은 칸 둘 (사이 40줄) — 그 사이 여백 왼쪽에 쪽 번호 ("10", 획 높이 10줄)
+        px.box(55, 95, 20, 180)
+        px.box(6, 50, 20, 80)
+        px.box(6, 50, 120, 180)
+        for (y in 95 until 105) {
+            px[y * w + 10] = black
+            for (x in 13..16) if (y == 95 || y == 104 || x == 13 || x == 16) px[y * w + x] = black
+        }
+
+        val out = requireNotNull(collapseGutters(px, w, h))
+
+        // 쪽 번호가 없을 때처럼 작은 칸 둘이 맞붙는다
+        assertEquals(listOf(160, 161, 218, 219, 220, 221, 278, 279), (0 until h).filter { out[it * w + 20] == black })
+        // 쪽 번호는 남지 않는다 (작은 칸 테두리 2줄씩만)
+        assertEquals(listOf(160, 161, 218, 219, 220, 221, 278, 279), (0 until h).filter { out[it * w + 13] == black })
+    }
+
+    @Test
     fun `칸 사이에 걸친 글 상자는 여백으로 보고, 상자는 빈 안쪽만 짧아지며 테두리가 이어진다`() {
         val px = IntArray(w * h) { white }
         px.panel(40)

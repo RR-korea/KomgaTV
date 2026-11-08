@@ -118,7 +118,10 @@ internal fun collapseGutters(pixels: IntArray, width: Int, height: Int): IntArra
             val x1 = col.last + 1
             // 묶음 안에서는 잉크가 조금이라도 있는 줄은 칸 — 위 테두리 없이 쪽 끝까지 이어진 그림·말풍선을 자르지 않게
             val looseInk = ((x1 - x0) * STACK_INK_RATIO).roundToInt().coerceAtLeast(2)
-            fun inked(i: Int) = page.inkContent(band.first + i, x0, x1) || page.inkCount(band.first + i, x0, x1) > looseInk
+            // 다만 위아래가 칸 테두리로 막힌 여백에 쪽 번호 같은 작은 글자만 있으면 여백 — 글자째 뺀다
+            val stray = page.strayInkRows(band.first, band.last + 1, x0, x1)
+            fun inked(i: Int) = !stray[i] &&
+                (page.inkContent(band.first + i, x0, x1) || page.inkCount(band.first + i, x0, x1) > looseInk)
             val parts = segments(
                 bandH, minStackGap, minFlatGap, maxFlatGap,
                 isContent = { i -> inked(i) && !page.flatGutter(band.first + i, x0, x1) },
@@ -313,7 +316,7 @@ private class PageMaps(pixels: IntArray, private val width: Int, private val hei
         flat(y, x0, x1) && abs(median(x1 - x0) { blurH[y * width + x0 + it] } - bg) > FLAT_DIFF
 
     /** 여백 후보가 정말 비었는지 — 빈 줄(고른 색 줄 포함)이 [CLEAN_GAP_RATIO] 이상이고 획이 평균 [GAP_STROKE_RATIO] 이하 */
-    fun cleanGap(rows: IntRange, x0: Int, x1: Int): Boolean {
+    fun cleanGap(rows: IntRange, x0: Int, x1: Int, borderSlack: Int = 0): Boolean {
         val noise = ((x1 - x0) * CLEAN_ROW_RATIO).roundToInt().coerceAtLeast(OVERLAY_NOISE)
         var clean = 0
         var strokes = 0L
@@ -334,10 +337,47 @@ private class PageMaps(pixels: IntArray, private val width: Int, private val hei
         val count = rows.last - rows.first + 1
         if (clean >= count * CLEAN_GAP_RATIO && strokes <= count.toLong() * (x1 - x0) * GAP_STROKE_RATIO) return true
         // 위아래가 칸 테두리로 막혔고 획이 좁은 곳에만 몰려 있으면 여백에 걸친 효과음·말풍선 — 그만큼 짧아져도 여백으로 친다
-        return count <= height * MAX_FLAT_GAP_RATIO &&
-            rows.first > 0 && borderRow(rows.first - 1, x0, x1) && rows.last < height - 1 && borderRow(rows.last + 1, x0, x1) &&
+        // [borderSlack]줄 안에서 찾는다 (기울어진 테두리 끝자락을 여백에서 떼어 냈을 때)
+        val above = (rows.first - 1 downTo rows.first - 1 - borderSlack).any { it >= 0 && borderRow(it, x0, x1) }
+        val below = (rows.last + 1..rows.last + 1 + borderSlack).any { it < height && borderRow(it, x0, x1) }
+        return count <= height * MAX_FLAT_GAP_RATIO && above && below &&
             narrowestSpan(columns, strokes * OVERLAY_STROKE_SHARE) < (x1 - x0) * OVERLAY_SPAN_RATIO
     }
+
+    /**
+     * [y0, y1) 줄 중 칸 테두리 사이 여백에 걸친 작은 글자(쪽 번호)·효과음 줄 — 세로로 긴 잉크도 칸 테두리 같은 가로선도
+     * 지나지 않는 줄들이 이어진 곳마다 [cleanGap]이면 (위아래가 테두리로 막혔고 글자가 좁은 곳에 몰렸거나 대부분 빈 줄) 참.
+     */
+    fun strayInkRows(y0: Int, y1: Int, x0: Int, x1: Int): BooleanArray {
+        val out = BooleanArray(y1 - y0)
+        val margin = minOf((width * EDGE_RATIO).roundToInt(), (x1 - x0) / 4)
+        fun open(y: Int) = !inkContent(y, x0, x1) && !borderRow(y, x0, x1)
+        fun hasWide(y: Int): Boolean {
+            for (x in x0 until x1) if (wide[y * width + x]) return true
+            return false
+        }
+        var y = y0
+        while (y < y1) {
+            if (!open(y)) {
+                y++
+                continue
+            }
+            var first = y
+            while (y < y1 && open(y)) y++
+            var last = y - 1
+            // 기울어진 테두리 끝자락(가로선이 조금 걸친 줄)은 [STRAY_SLACK]줄까지 떼어 낸다 — 테두리 쪽에 남는다
+            var trim = 0
+            while (trim < STRAY_SLACK && first < last && hasWide(first)) { first++; trim++ }
+            trim = 0
+            while (trim < STRAY_SLACK && last > first && hasWide(last)) { last--; trim++ }
+            // 양 끝 [margin]열(가운데 접힌 곳 그림자 얼룩, 스캔 가장자리)은 보지 않는다
+            if (first - 1 > y0 && last + 1 < y1 && cleanGap(first..last, x0 + margin, x1 - margin, STRAY_SLACK)) {
+                for (r in first..last) out[r - y0] = true
+            }
+        }
+        return out
+    }
+
 
     /** [counts]의 합이 [share] 이상인 가장 좁은 연속 구간의 폭 */
     private fun narrowestSpan(counts: IntArray, share: Double): Int {
@@ -765,12 +805,15 @@ private const val RIBBON_SMOOTH_RATIO = 0.8f
 /** 비스듬한 여백 띠가 긴 빈 구간(엇갈린 칸의 세로 여백)을 지날 때의 값 — 짧은 구간으로 이어지는 길을 고른다 */
 private const val RIBBON_LONG_COST = 1000L
 
+/** 칸 묶음 안 여백 양 끝에서 떼어 낼 기울어진 테두리 끝자락 줄 수 */
+private const val STRAY_SLACK = 4
+
 /** 지울 여백이 이보다 적으면 그대로 */
 private const val MIN_SAVED_RATIO = 0.005f
 
 /** 페이지 리더(Coil)용 — 작품 보기 설정 "칸 간격 없애기" */
 internal class GutterTransformation : Transformation() {
-    override val cacheKey: String = "gutters-13"
+    override val cacheKey: String = "gutters-14"
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width
