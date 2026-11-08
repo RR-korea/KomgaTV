@@ -47,14 +47,12 @@ internal fun collapseGutters(pixels: IntArray, width: Int, height: Int): IntArra
     }
 
     /**
-     * [band]의 [groupX0, groupX1) 열에서 비스듬한·엇갈린 여백 띠를 빼고 쪽 가운데 쪽으로 붙인다 — [block]에 쓴다.
+     * [band]의 [x0, x1) 열에서 비스듬한·엇갈린 여백 띠를 빼고 쪽 가운데 쪽으로 붙인다 — [block]에 쓴다.
      * 열마다 같은 줄 수를 빼므로 아래 칸은 일그러지지 않는다. 비는 곳은 뺀 여백의 평균 색.
      */
-    fun collapseRibbons(block: IntArray, band: IntRange, groupX0: Int, groupX1: Int): Boolean {
-        val ribbons = findRibbons(page, groupX0, groupX1, band.first, band.last + 1, minStackGap, maxFlatGap)
+    fun collapseRibbons(block: IntArray, band: IntRange, x0: Int, x1: Int): Boolean {
+        val ribbons = findRibbons(page, x0, x1, band.first, band.last + 1, minStackGap, maxFlatGap, width, edgeX)
         if (ribbons.isEmpty()) return false
-        val x0 = ribbons[0].x0
-        val x1 = ribbons[0].x1
         val bandH = band.last - band.first + 1
         val total = ribbons.sumOf { it.rows }
         val top = towardCentre(band, total)
@@ -234,6 +232,20 @@ private class PageMaps(pixels: IntArray, private val width: Int, private val hei
         return inkContent(y, 0, width) || borderRow(y, edgeX, width - edgeX)
     }
 
+    fun lumAt(x: Int, y: Int): Int = lum[y.coerceIn(0, height - 1) * width + x]
+
+    /** [x] 열의 [y0, y1) 줄들의 가장 밝고 어두운 곳 차이 — 작으면 위아래로 밋밋하다 (그림자, 빈 종이) */
+    fun rowRange(x: Int, y0: Int, y1: Int): Int {
+        var min = 255
+        var max = 0
+        for (y in y0.coerceAtLeast(0) until y1.coerceAtMost(height)) {
+            val v = lum[y * width + x]
+            if (v < min) min = v
+            if (v > max) max = v
+        }
+        return max - min
+    }
+
     /**
      * [x] 열의 [y0, y1) 안 빈 구간들, 위에서부터 — 그 열의 밝은 곳([COLUMN_PAPER_SHARE])에 가까우면 빈 곳.
      * 쪽 전체 종이색이 아니라 열마다 보므로 가운데 접힌 곳 그림자 속 여백도 빈 곳이다.
@@ -244,7 +256,8 @@ private class PageMaps(pixels: IntArray, private val width: Int, private val hei
         var paper = 255
         var seen = 0
         while (paper > 0 && seen + hist[paper] <= (y1 - y0) * (1 - COLUMN_PAPER_SHARE)) seen += hist[paper--]
-        val min = paper - INK_DIFF
+        // 위아래로 다 어두운 열(칸 세로 테두리, 검은 칸)의 종이색은 쪽 바탕색에서 [MAX_SHADE_DIFF]까지만 어둡게 본다
+        val min = maxOf(paper, bg - MAX_SHADE_DIFF) - INK_DIFF
         val runs = ArrayList<IntRange>()
         var start = -1
         for (y in y0..y1) {
@@ -476,103 +489,163 @@ private fun segments(
 }
 
 /** 비스듬한·엇갈린 여백 띠 — [x0]부터 열마다 뺄 줄의 시작 [start] (쪽 기준)과 뺄 줄 수 [rows] */
-private class Ribbon(val x0: Int, val start: IntArray, val rows: Int) {
-    val x1: Int get() = x0 + start.size
-}
+private class Ribbon(val x0: Int, val start: IntArray, val rows: Int)
 
 /**
- * [groupX0, groupX1) 열을 왼쪽 끝부터 오른쪽 끝까지 가로지르는 빈 띠들 — 줄이 아니라 열마다 빈 구간을 하나씩 골라 잇는다.
+ * [x0, x1) 열을 왼쪽 끝부터 오른쪽 끝까지 가로지르는 빈 띠들 — 줄이 아니라 열마다 빈 구간을 하나씩 골라 잇는다.
  * 칸 사이처럼 [maxGap] 이하로 짧고 위아래가 잉크로 막힌 구간이 대부분([RIBBON_SHORT_RATIO])이며 그 위아래 끝이
  * 매끈해야(칸 테두리) 한다 — 긴 구간(아래 칸 흰 바탕과 이어진 곳, 엇갈린 칸 사이 세로 여백)은 잇는 데만 쓴다.
  * 모든 열에서 같은 줄 수를 빼되, 열마다 앞·이·다음 열이 함께 빈 곳에서 빼므로 빼고 나서 이웃 열끼리 어긋나는 곳은 빈 곳뿐이다.
+ * 양 끝 [RIBBON_EDGE_RATIO] 안에서는 길이 늦게 시작하거나 일찍 끝나도 된다 — 거기(가운데 접힌 곳 그림자, 쪽 여백)서는
+ * 길 끝 자리에서 같은 줄 수를 빼되, 그 자리가 위아래로 밋밋해야 한다.
  */
-private fun findRibbons(page: PageMaps, groupX0: Int, groupX1: Int, y0: Int, y1: Int, minGap: Int, maxGap: Int): List<Ribbon> {
-    fun short(r: IntRange) = r.last - r.first + 1 in minGap..maxGap && r.first > y0 && r.last < y1 - 1
-    // 칸 사이 같은 짧은 빈 구간이 하나도 없는 양 끝 열(빈 쪽 여백, 가운데 접힌 곳 그림자)은 걷어 낸다 — 여백 띠가 거기서 시작·끝날 수 없다
-    val limit = ((groupX1 - groupX0) * MAX_SHADE_RATIO).roundToInt()
-    fun filler(x: Int) = page.cleanRuns(x, y0, y1).none { short(it) }
-    var x0 = groupX0
-    while (x0 < groupX0 + limit && filler(x0)) x0++
-    var x1 = groupX1
-    while (x1 > groupX1 - limit && filler(x1 - 1)) x1--
+private fun findRibbons(
+    page: PageMaps,
+    x0: Int,
+    x1: Int,
+    y0: Int,
+    y1: Int,
+    minGap: Int,
+    maxGap: Int,
+    pageWidth: Int,
+    scanEdge: Int,
+): List<Ribbon> {
     val n = x1 - x0
     if (n < 3) return emptyList()
+    fun short(r: IntRange) = r.last - r.first + 1 in minGap..maxGap && r.first > y0 && r.last < y1 - 1
+    val edge = (n * RIBBON_EDGE_RATIO).roundToInt()
     val runs = Array(n) { i -> page.cleanRuns(x0 + i, y0, y1).filter { it.last - it.first + 1 >= minGap } }
     fun overlap(a: IntRange, b: IntRange) = minOf(a.last, b.last) - maxOf(a.first, b.first) + 1
-    fun step(run: IntRange) = if (short(run)) 0L else RIBBON_LONG_COST
+    // 긴 구간을 지나는 값 — 양 끝 [edge] 안(쪽 여백)에서는 따지지 않는다. 거기선 덜 오르내리는 길이 낫다 (끝의 잡티 사이로 가지 않게)
+    fun step(i: Int, run: IntRange) = if (short(run) || i < edge || i >= n - edge) 0L else RIBBON_LONG_COST
     fun shift(a: IntRange, b: IntRange) = (abs(a.first - b.first) + abs(a.last - b.last)).toLong()
 
-    /** 길 위의 이웃한 두 열 구간 — 앞 열 구간 [p], 이 열 구간 [q], 여기까지의 값, 앞 열 상태 [back] */
-    class Step(val p: Int, val q: Int, val cost: Long, val back: Int)
+    /**
+     * 길 위의 이웃한 두 열 구간 — 앞 열 구간 [p], 이 열 구간 [q], 여기까지의 값, 앞 열 상태 [back].
+     * [fresh]면 이 열에서 시작한 길 ([p]도 이 열 구간).
+     */
+    class Step(val p: Int, val q: Int, val cost: Long, val back: Int, val fresh: Boolean)
     // 열마다 구간까지 오는 가장 싼 길 — 긴 구간을 덜 지나고, 덜 오르내리는 길. 앞·이·다음 열 구간이 [minGap] 이상 함께 비어야 잇는다.
-    // 왼쪽 끝 열의 모든 빈 구간에서 한꺼번에 떠난다 (아래 칸 흰 바탕과 이어져 긴 구간이 된 여백에서도)
+    // 왼쪽 끝 열의 모든 빈 구간(아래 칸 흰 바탕과 이어져 긴 구간이 된 여백도)과, 왼쪽 끝 가까이의 짧은 구간에서 떠난다
     val steps = arrayOfNulls<List<Step>>(n)
-    steps[1] = buildList {
-        for ((p, a) in runs[0].withIndex()) for ((q, b) in runs[1].withIndex()) {
-            if (overlap(a, b) >= minGap) add(Step(p, q, step(a) + step(b) + shift(a, b), -1))
-        }
-    }
-    for (i in 2 until n) {
+    for (i in 0 until n) {
         val best = HashMap<Long, Step>()
-        for ((s, before) in steps[i - 1]!!.withIndex()) {
-            val a = runs[i - 2][before.p]
-            val b = runs[i - 1][before.q]
-            for ((r, c) in runs[i].withIndex()) {
-                val together = minOf(a.last, b.last, c.last) - maxOf(a.first, b.first, c.first) + 1
-                if (together < minGap) continue
-                val cost = before.cost + step(c) + shift(b, c)
-                val key = before.q.toLong() shl 32 or r.toLong()
-                if ((best[key]?.cost ?: Long.MAX_VALUE) > cost) best[key] = Step(before.q, r, cost, s)
+        fun offer(key: Long, s: Step) {
+            if ((best[key]?.cost ?: Long.MAX_VALUE) > s.cost) best[key] = s
+        }
+        for ((q, run) in runs[i].withIndex()) {
+            if (i == 0 || (i <= edge && short(run))) offer(-1L - q, Step(q, q, i * RIBBON_EDGE_COST + step(i, run), -1, fresh = true))
+        }
+        if (i > 0) {
+            for ((s, before) in steps[i - 1]!!.withIndex()) {
+                val b = runs[i - 1][before.q]
+                val a = if (before.fresh) b else runs[i - 2][before.p]
+                for ((r, c) in runs[i].withIndex()) {
+                    val together = minOf(a.last, b.last, c.last) - maxOf(a.first, b.first, c.first) + 1
+                    if (together < minGap) continue
+                    offer(before.q.toLong() shl 32 or r.toLong(), Step(before.q, r, before.cost + step(i, c) + shift(b, c), s, fresh = false))
+                }
             }
         }
         steps[i] = best.values.toList()
     }
     val found = ArrayList<Pair<Long, Ribbon>>()
-    // 오른쪽 끝 열의 짧은 구간마다 거기까지 온 가장 싼 길 하나
-    val ends = steps[n - 1]!!.filter { short(runs[n - 1][it.q]) }.groupBy { it.q }.values.map { it.minBy { s -> s.cost } }
-    for (last in ends) {
-        val chosen = ArrayList<IntRange>(n)
-        var at: Step = last
-        chosen += runs[n - 1][at.q]
-        for (i in n - 1 downTo 1) {
-            chosen += runs[i - 1][at.p]
-            if (i > 1) at = steps[i - 1]!![at.back]
+    // 오른쪽 끝 가까이의 짧은 구간마다 거기까지 온 가장 싼 길 하나
+    for (end in n - 1 downTo maxOf(1, n - 1 - edge)) {
+        val ends = steps[end]!!.filter { !it.fresh && short(runs[end][it.q]) }.groupBy { it.q }.values.map { it.minBy { s -> s.cost } }
+        for (last in ends) {
+            val chosen = ArrayList<IntRange>()
+            var at: Step = last
+            var col = end
+            chosen += runs[col][at.q]
+            while (!at.fresh) {
+                col--
+                at = steps[col]!![at.back]
+                chosen += runs[col][at.q]
+            }
+            chosen.reverse()
+            // 길은 짧은 구간이 매끈하게 [RIBBON_ANCHOR]열 넘게 이어지는 첫 곳부터 마지막 곳까지 —
+            // 그 바깥(쪽 여백, 쪽 끝 잡티 사이)은 길로 치지 않고 아래처럼 길 끝 자리를 그대로 잇는다
+            fun anchored(m: Int) = m + RIBBON_ANCHOR <= chosen.size && (m until m + RIBBON_ANCHOR).all { k ->
+                short(chosen[k]) && (k == m || (abs(chosen[k].first - chosen[k - 1].first) <= RIBBON_STEP && abs(chosen[k].last - chosen[k - 1].last) <= RIBBON_STEP))
+            }
+            val head = chosen.indices.firstOrNull { anchored(it) } ?: continue
+            val tail = chosen.size - 1 - (chosen.indices.last { anchored(it) } + RIBBON_ANCHOR - 1)
+            val start = col + head
+            val stop = end - tail
+            val path = chosen.subList(head, chosen.size - tail)
+            val len = path.size
+            if (start > edge || stop < n - 1 - edge || len < 3) continue
+            // 칸 사이 여백답게 — 짧은 구간이 대부분이고(긴 구간은 엇갈린 칸 사이 세로 여백 몇 곳뿐),
+            // 그 위아래 끝(칸 테두리)이 매끈하며, 크게 오르내리지 않는다 (칸 안 빈 곳을 타고 내려가는 길이 아니다)
+            if (path.count { short(it) } < len * RIBBON_SHORT_RATIO) continue
+            if (path.count { !short(it) } > len * RIBBON_MAX_LONG_RATIO) continue
+            if (abs(path.last().first - path.first().first) > len * RIBBON_MAX_SLOPE) continue
+            var pairs = 0
+            var smooth = 0
+            for (m in 1 until len) {
+                val a = path[m - 1]
+                val b = path[m]
+                if (!short(a) || !short(b)) continue
+                pairs++
+                if (abs(a.first - b.first) <= RIBBON_STEP && abs(a.last - b.last) <= RIBBON_STEP) smooth++
+            }
+            if (smooth < pairs * RIBBON_SMOOTH_RATIO) continue
+            // 열마다 앞·이 열·다음 열이 함께 빈 곳 안에서 뺀다 — 그러면 빼고 나서 이웃 열끼리 어긋나는 곳(두 자리 사이)은
+            // 두 열 모두 빈 곳뿐이다. 뺄 줄 수는 그 함께 빈 곳의 가장 좁은 곳
+            val low = IntArray(len)
+            val high = IntArray(len)
+            var rows = Int.MAX_VALUE
+            for (m in 0 until len) {
+                var a = path[m].first
+                var b = path[m].last
+                if (m > 0) { a = maxOf(a, path[m - 1].first); b = minOf(b, path[m - 1].last) }
+                if (m < len - 1) { a = maxOf(a, path[m + 1].first); b = minOf(b, path[m + 1].last) }
+                low[m] = a
+                high[m] = b
+                rows = minOf(rows, b - a + 1)
+            }
+            // 여백을 [RIBBON_KEEP]줄 남긴다 — 길 밖 끝 열에서 자리를 옮겨도 이웃 열과 빈 곳끼리 맞닿는다
+            rows -= RIBBON_KEEP
+            if (rows < minGap) continue
+            // 자리는 앞 열 자리에 가장 가깝게(덜 오르내린다), 남기는 줄은 위아래로 나눠 테두리에서 한 줄씩 띄운다
+            val lo = IntArray(n)
+            val keep = RIBBON_KEEP / 2
+            for (m in 0 until len) {
+                val prev = if (m > 0) lo[start + m - 1] else low[0] + keep
+                lo[start + m] = prev.coerceIn(low[m] + keep, high[m] - rows + 1 - (RIBBON_KEEP - keep))
+            }
+            // 길 밖 양 끝 열은 길 끝 자리에서 한 열씩 바깥으로, 밋밋하고 이음새가 안 보이는 자리를 [RIBBON_STEP]줄 안에서
+            // 가까운 곳부터 골라 따라간다. 쪽 좌우 끝 [scanEdge]열(스캔 가장자리)은 보지 않고 그대로 잇는다
+            fun follow(from: Int, until: Int, dir: Int): Boolean {
+                var m = from + dir
+                while (m != until) {
+                    val prev = lo[m - dir]
+                    val x = x0 + m
+                    if (x < scanEdge || x >= pageWidth - scanEdge) {
+                        lo[m] = prev
+                        m += dir
+                        continue
+                    }
+                    // 뺄 줄의 위아래 끝 1줄(테두리 가장자리의 옅은 칸)은 보지 않는다
+                    fun range(at: Int) = page.rowRange(x, at + 1, at + rows - 1)
+                    // 빼고 난 두 열이 자리가 달라 어긋나는 줄에서 밝기가 비슷해야 한다
+                    fun out(column: Int, at: Int, y: Int) = page.lumAt(column, if (y < at) y else y + rows)
+                    fun seamless(at: Int) = (minOf(prev, at) until maxOf(prev, at)).all { y ->
+                        abs(out(x, at, y) - out(x - dir, prev, y)) <= RIBBON_FLAT_DIFF
+                    }
+                    // 가까운 자리부터
+                    val best = (0..RIBBON_STEP).flatMap { d -> if (d == 0) listOf(prev) else listOf(prev - d, prev + d) }
+                        .firstOrNull { it >= y0 && it + rows <= y1 && range(it) <= RIBBON_FLAT_DIFF && seamless(it) } ?: return false
+                    lo[m] = best
+                    m += dir
+                }
+                return true
+            }
+            val flat = follow(start, -1, -1) && follow(stop, n, 1)
+            if (!flat) continue
+            found += last.cost + (n - 1 - stop) * RIBBON_EDGE_COST to Ribbon(x0, lo, rows)
         }
-        chosen.reverse()
-        // 칸 사이 여백답게 — 짧은 구간이 대부분이고, 그 위아래 끝(칸 테두리)이 매끈하다
-        if (chosen.count { short(it) } < n * RIBBON_SHORT_RATIO) continue
-        var pairs = 0
-        var smooth = 0
-        for (i in 1 until n) {
-            val a = chosen[i - 1]
-            val b = chosen[i]
-            if (!short(a) || !short(b)) continue
-            pairs++
-            if (abs(a.first - b.first) <= RIBBON_STEP && abs(a.last - b.last) <= RIBBON_STEP) smooth++
-        }
-        if (smooth < pairs * RIBBON_SMOOTH_RATIO) continue
-        // 열마다 앞·이 열·다음 열이 함께 빈 곳 안에서 뺀다 — 그러면 빼고 나서 이웃 열끼리 어긋나는 곳(두 자리 사이)은
-        // 두 열 모두 빈 곳뿐이다. 뺄 줄 수는 그 함께 빈 곳의 가장 좁은 곳
-        val low = IntArray(n)
-        val high = IntArray(n)
-        var rows = Int.MAX_VALUE
-        for (m in 0 until n) {
-            var a = chosen[m].first
-            var b = chosen[m].last
-            if (m > 0) { a = maxOf(a, chosen[m - 1].first); b = minOf(b, chosen[m - 1].last) }
-            if (m < n - 1) { a = maxOf(a, chosen[m + 1].first); b = minOf(b, chosen[m + 1].last) }
-            low[m] = a
-            high[m] = b
-            rows = minOf(rows, b - a + 1)
-        }
-        if (rows < minGap) continue
-        // 자리는 앞 열 자리에 가장 가깝게 — 덜 오르내린다
-        val lo = IntArray(n)
-        for (m in 0 until n) {
-            val prev = if (m > 0) lo[m - 1] else low[0]
-            lo[m] = prev.coerceIn(low[m], high[m] - rows + 1)
-        }
-        found += last.cost to Ribbon(x0, lo, rows)
     }
     // 싼 길부터 — 이미 고른 띠와 어느 열에서든 겹치거나 위아래가 엇갈리면 같은 여백을 다르게 지나는 길이라 버린다
     val out = ArrayList<Ribbon>()
@@ -653,14 +726,35 @@ private const val STACK_INK_RATIO = 0.01f
 /** 이보다 짧은 빈 곳은 이미 붙어 있는 것으로 보고 둔다 */
 private const val MIN_GAP_RATIO = 0.002f
 
+/** 열의 종이색은 쪽 바탕색보다 이만큼까지만 어둡다 (가운데 접힌 곳 그림자) */
+private const val MAX_SHADE_DIFF = 100
+
 /** 열의 종이색은 밝은 쪽에서 이 비율 자리의 밝기 */
 private const val COLUMN_PAPER_SHARE = 0.95f
 
-/** 칸 묶음 양 끝에서 걷어 낼 수 있는 여백·그림자 열의 폭 (묶음 폭 비율) */
-private const val MAX_SHADE_RATIO = 0.08f
+/** 비스듬한 여백 띠는 양 끝 이 폭(칸 묶음 폭 비율) 안에서 늦게 시작하거나 일찍 끝나도 된다 (접힌 곳 그림자, 쪽 여백) */
+private const val RIBBON_EDGE_RATIO = 0.08f
+
+/** 띠가 양 끝에서 덜 지난 열마다의 값 — 긴 구간을 지나서라도 끝까지 이어진 길을 고른다 */
+private const val RIBBON_EDGE_COST = 2000L
+
+/** 비스듬한 여백 띠는 칸 사이를 이만큼 남기고 뺀다 */
+private const val RIBBON_KEEP = 2
+
+/** 비스듬한 여백 띠의 양 끝은 짧은 구간이 매끈하게 이만큼 이어지는 곳 */
+private const val RIBBON_ANCHOR = 8
+
+/** 띠가 지나지 못한 양 끝 열에서 뺄 자리는 밝기 차이가 이 이하로 밋밋해야 한다 */
+private const val RIBBON_FLAT_DIFF = 48
 
 /** 비스듬한 여백 띠는 열의 이만큼 이상이 칸 사이처럼 짧고 막힌 빈 구간이어야 한다 */
 private const val RIBBON_SHORT_RATIO = 0.6f
+
+/** 비스듬한 여백 띠가 지나는 긴 구간(엇갈린 칸 사이 세로 여백) 열은 이 비율까지 */
+private const val RIBBON_MAX_LONG_RATIO = 0.05f
+
+/** 비스듬한 여백 띠는 왼쪽 끝에서 오른쪽 끝까지 이 기울기보다 덜 오르내린다 (칸 테두리의 기울기) */
+private const val RIBBON_MAX_SLOPE = 0.2f
 
 /** 비스듬한 여백 띠의 위아래 끝은 이웃 열끼리 이만큼까지만 달라진다 (칸 테두리의 기울기) */
 private const val RIBBON_STEP = 2
@@ -676,7 +770,7 @@ private const val MIN_SAVED_RATIO = 0.005f
 
 /** 페이지 리더(Coil)용 — 작품 보기 설정 "칸 간격 없애기" */
 internal class GutterTransformation : Transformation() {
-    override val cacheKey: String = "gutters-12"
+    override val cacheKey: String = "gutters-13"
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width
