@@ -85,6 +85,7 @@ private fun luminance(c: Int) = (((c shr 16) and 0xFF) * 299 + ((c shr 8) and 0x
 /** 한 쪽의 칸 사이 여백을 붙인다 ([collapseGutters]) */
 private fun collapsePage(pixels: IntArray, width: Int, height: Int): IntArray? {
     val page = PageMaps(pixels, width, height)
+    val frames = Frames(width, height, page.paper)
     val edgeX = (width * EDGE_RATIO).roundToInt()
     val minGap = (height * MIN_GAP_RATIO).roundToInt().coerceAtLeast(2)
     val minGapX = (width * MIN_GAP_RATIO).roundToInt().coerceAtLeast(2)
@@ -203,21 +204,44 @@ private fun collapsePage(pixels: IntArray, width: Int, height: Int): IntArray? {
                 if (collapseRibbons(block, band, x0, x1)) columnsMoved = true
                 continue
             }
-            val top = towardCentre(band, bandH - rows.size)
+            // 맞닿는 위 칸 아래 테두리와 아래 칸 위 테두리는 겹친다
+            val overlaps = IntArray(parts.size) { k ->
+                if (k == 0) {
+                    0
+                } else {
+                    frames.overlap(
+                        pixels, band.first + parts[k - 1].first, band.first + parts[k - 1].last + 1,
+                        pixels, band.first + parts[k].first, band.first + parts[k].last + 1, x0, x1,
+                    )
+                }
+            }
+            val top = towardCentre(band, bandH - rows.size + overlaps.sum())
             // 비는 곳은 이 묶음의 원래 여백 중 가장 고른 줄의 대표 색으로 채운다 (검은 틈이면 검정)
             val kept = rows.toHashSet()
             val pad = page.evenest((0 until bandH).filter { it !in kept }.map { band.first + it }, x0, x1) - band.first
             val padColor = page.typicalColor(pixels, band.first + pad, x0, x1)
             for (i in 0 until bandH) block.fill(padColor, i * width + x0, i * width + x1)
-            rows.forEachIndexed { i, r ->
-                System.arraycopy(pixels, (band.first + r) * width + x0, block, (top + i) * width + x0, x1 - x0)
+            var o = top
+            parts.forEachIndexed { k, part ->
+                for (r in part) {
+                    val skip = r - part.first
+                    if (skip < overlaps[k]) {
+                        frames.merge(block, o - overlaps[k] + skip, pixels, band.first + r, x0, x1)
+                    } else {
+                        System.arraycopy(pixels, (band.first + r) * width + x0, block, o++ * width + x0, x1 - x0)
+                    }
+                }
             }
             columnsMoved = true
         }
         block
     }
 
-    val total = blocks.sumOf { it.size / width }
+    // 띠끼리 맞닿는 테두리도 겹친다
+    val joins = IntArray(blocks.size) { i ->
+        if (i == 0) 0 else frames.overlap(blocks[i - 1], 0, blocks[i - 1].size / width, blocks[i], 0, blocks[i].size / width, 0, width)
+    }
+    val total = blocks.sumOf { it.size / width } - joins.sum()
     val removed = (0 until height).filter { y -> bands.none { y in it } }
     if (!columnsMoved && removed.size < height * MIN_SAVED_RATIO) return null
     // 위아래 빈 곳은 쪽 위·아래 절반의 원래 여백 중 가장 고른 줄의 대표 색 (위는 검정 틈, 아래는 흰 종이인 쪽도 있다)
@@ -231,9 +255,11 @@ private fun collapsePage(pixels: IntArray, width: Int, height: Int): IntArray? {
     }
     out.fill(padColor(removed.filter { it < height / 2 }), 0, start * width)
     var y = start
-    blocks.forEach { block ->
-        System.arraycopy(block, 0, out, y * width, block.size)
-        y += block.size / width
+    blocks.forEachIndexed { i, block ->
+        val join = joins[i]
+        for (r in 0 until join) frames.merge(out, y - join + r, block, r, 0, width)
+        System.arraycopy(block, join * width, out, y * width, block.size - join * width)
+        y += block.size / width - join
     }
     out.fill(padColor(removed.filter { it >= height / 2 }), y * width, out.size)
     return out
@@ -308,6 +334,9 @@ private class PageMaps(pixels: IntArray, private val width: Int, private val hei
     fun bandInk(y: Int, edgeX: Int): Boolean {
         return inkContent(y, 0, width) || borderRow(y, edgeX, width - edgeX)
     }
+
+    /** 쪽 바탕 밝기 */
+    val paper: Int get() = bg
 
     fun lumAt(x: Int, y: Int): Int = lum[y.coerceIn(0, height - 1) * width + x]
 
@@ -631,6 +660,62 @@ private fun segments(
     return out
 }
 
+/**
+ * 맞닿는 칸 겹치기 — 위 조각 끝과 아래 조각 처음을 몇 줄 겹쳐, 남은 여백 끝자락(비스듬하거나 흐린 테두리 가장자리)을
+ * 없애고 위 칸 아래 테두리와 아래 칸 위 테두리를 한 줄로 만든다. 겹친 줄은 둘 중 어두운 칸을 쓴다.
+ *
+ * 열마다 끝에 남은 옅은 줄 수와 그 너머 테두리 두께([frame]까지)를 재어, 그 열에서 겹쳐도 되는 줄 수
+ * (위·아래 옅은 줄 + 둘 다 테두리면 얇은 쪽 테두리)를 구하고, 열들 중 [OVERLAP_PERCENTILE] 자리 값만큼 겹친다 —
+ * 몇 안 되는 열(글자, 그림이 맞닿은 곳)은 어두운 칸끼리 조금 겹칠 수 있다.
+ */
+private class Frames(private val width: Int, height: Int, private val bg: Int) {
+    private val reach = (height * MAX_OVERLAP_RATIO).roundToInt().coerceAtLeast(2)
+    private val frame = (height * FRAME_OVERLAP_RATIO).roundToInt().coerceAtLeast(1)
+
+    private fun dark(c: Int) = luminance(c) < bg - INK_DIFF
+
+    /** [rows](끝에서부터의 줄)에서 [x] 열의 옅은 줄 수와 그 너머 잉크(테두리) 줄 수 */
+    private fun edge(px: IntArray, rows: IntArray, x: Int): Pair<Int, Int> {
+        var light = 0
+        while (light < rows.size && !dark(px[rows[light] * width + x])) light++
+        var ink = 0
+        while (ink < frame && light + ink < rows.size && dark(px[rows[light + ink] * width + x])) ink++
+        return light to ink
+    }
+
+    /**
+     * 위 조각 [upper]의 [upperStart, upperEnd) 줄 끝과 아래 조각 [lower]의 [lowerStart, lowerEnd) 줄 처음을 겹칠 줄 수.
+     * 검은 바탕 쪽은 겹치지 않는다.
+     */
+    fun overlap(upper: IntArray, upperStart: Int, upperEnd: Int, lower: IntArray, lowerStart: Int, lowerEnd: Int, x0: Int, x1: Int): Int {
+        if (bg < MIN_COLUMN_PAPER_BG || x1 <= x0) return 0
+        val n = minOf(reach, upperEnd - upperStart, lowerEnd - lowerStart)
+        if (n <= 0) return 0
+        val up = IntArray(n) { upperEnd - 1 - it }
+        val down = IntArray(n) { lowerStart + it }
+        var framed = 0
+        val allow = IntArray(x1 - x0) { i ->
+            val (lu, iu) = edge(upper, up, x0 + i)
+            val (ld, id) = edge(lower, down, x0 + i)
+            if (iu > 0 && id > 0) framed++
+            lu + ld + if (iu > 0 && id > 0) minOf(iu, id) else 0
+        }
+        // 위아래 칸 테두리가 맞닿는 곳만 — 글 줄 사이 같은 곳은 겹치지 않는다
+        if (framed < (x1 - x0) * MIN_FRAMED_RATIO) return 0
+        allow.sort()
+        return allow[((allow.size - 1) * OVERLAP_PERCENTILE).roundToInt()].coerceAtMost(n)
+    }
+
+    /** [dst]의 [dstRow] 줄에 [src]의 [srcRow] 줄을 겹친다 — [x0, x1)에서 어두운 쪽 */
+    fun merge(dst: IntArray, dstRow: Int, src: IntArray, srcRow: Int, x0: Int, x1: Int) {
+        for (x in x0 until x1) {
+            val a = dst[dstRow * width + x]
+            val b = src[srcRow * width + x]
+            if (luminance(b) < luminance(a)) dst[dstRow * width + x] = b
+        }
+    }
+}
+
 /** 비스듬한·엇갈린 여백 띠 — [x0]부터 열마다 뺄 줄의 시작 [start] (쪽 기준)과 뺄 줄 수 [rows] */
 private class Ribbon(val x0: Int, val start: IntArray, val rows: Int)
 
@@ -879,6 +964,18 @@ private const val MIN_STACK_GAP_RATIO = 0.006f
 /** 띠 높이의 이만큼 넘게 잉크인 열은 칸 세로 테두리 */
 private const val BORDER_COLUMN_INK = 0.9f
 
+/** 맞닿는 칸 테두리를 이만큼(쪽 높이 비율)까지 겹친다 — 칸 테두리 굵기 */
+private const val FRAME_OVERLAP_RATIO = 0.003f
+
+/** 맞닿는 칸은 이만큼(쪽 높이 비율)까지 겹친다 — 남은 여백 끝자락 + 테두리 */
+private const val MAX_OVERLAP_RATIO = 0.012f
+
+/** 위아래 둘 다 [MAX_OVERLAP_RATIO] 안에 테두리(잉크)가 있는 열이 이만큼은 돼야 겹친다 */
+private const val MIN_FRAMED_RATIO = 0.5f
+
+/** 열마다 겹쳐도 되는 줄 수 중 이 자리(아래에서부터 비율) 값만큼 겹친다 */
+private const val OVERLAP_PERCENTILE = 0.1f
+
 /** 칸 묶음 안 칸 조각은 쪽 높이의 이만큼은 된다 */
 private const val MIN_STACK_PART_RATIO = 0.02f
 
@@ -956,7 +1053,7 @@ private const val MIN_SAVED_RATIO = 0.005f
 
 /** 페이지 리더(Coil)용 — 작품 보기 설정 "칸 간격 없애기" */
 internal class GutterTransformation : Transformation() {
-    override val cacheKey: String = "gutters-16"
+    override val cacheKey: String = "gutters-17"
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width

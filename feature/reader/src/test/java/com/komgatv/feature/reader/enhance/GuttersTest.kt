@@ -32,7 +32,7 @@ class GuttersTest {
 
         // 칸 100줄 + 칸 100줄 = 200줄이 붙고, 위아래 100줄씩 비운다
         val blackRows = (0 until h).filter { out[it * w + 45] == black }
-        assertEquals(listOf(100, 101, 198, 199, 200, 201, 298, 299), blackRows)
+        assertEquals(listOf(100, 101, 198, 199, 200, 297, 298), blackRows)
         // 좌우는 그대로
         assertEquals(black, out[150 * w + 10])
         assertEquals(white, out[150 * w + 9])
@@ -59,7 +59,7 @@ class GuttersTest {
         // 띠 160줄이 가운데(120~279)로. 긴 칸은 그대로
         assertEquals(listOf(120, 121, 278, 279), (0 until h).filter { out[it * w + 70] == black })
         // 작은 칸 둘은 맞붙고, 위쪽 띠라 아래(쪽 가운데 쪽)로 붙는다
-        assertEquals(listOf(160, 161, 218, 219, 220, 221, 278, 279), (0 until h).filter { out[it * w + 20] == black })
+        assertEquals(listOf(161, 162, 219, 220, 221, 278, 279), (0 until h).filter { out[it * w + 20] == black })
     }
 
     @Test
@@ -77,9 +77,9 @@ class GuttersTest {
         val out = requireNotNull(collapseGutters(px, w, h))
 
         // 쪽 번호가 없을 때처럼 작은 칸 둘이 맞붙는다
-        assertEquals(listOf(160, 161, 218, 219, 220, 221, 278, 279), (0 until h).filter { out[it * w + 20] == black })
+        assertEquals(listOf(161, 162, 219, 220, 221, 278, 279), (0 until h).filter { out[it * w + 20] == black })
         // 쪽 번호는 남지 않는다 (작은 칸 테두리 2줄씩만)
-        assertEquals(listOf(160, 161, 218, 219, 220, 221, 278, 279), (0 until h).filter { out[it * w + 13] == black })
+        assertEquals(listOf(161, 162, 219, 220, 221, 278, 279), (0 until h).filter { out[it * w + 13] == black })
     }
 
     @Test
@@ -93,10 +93,10 @@ class GuttersTest {
         val out = requireNotNull(collapseGutters(px, w, h))
 
         // 칸은 첫 시험과 같은 자리로 붙는다
-        assertEquals(listOf(100, 101, 198, 199, 200, 201, 298, 299), (0 until h).filter { out[it * w + 45] == black })
-        // 상자 왼쪽 테두리는 끊기지 않고 160~249로 이어진다 (칸 A 위 테두리 100·101, 칸 B 아래 테두리 298·299)
+        assertEquals(listOf(100, 101, 198, 199, 200, 297, 298), (0 until h).filter { out[it * w + 45] == black })
+        // 상자 왼쪽 테두리는 끊기지 않고 160~248로 이어진다 (칸 A 위 테두리 100·101, 칸 B 아래 테두리 297·298)
         val boxRows = (0 until h).filter { out[it * w + 60] == black }
-        assertEquals(listOf(100, 101) + (160..249).toList() + listOf(298, 299), boxRows)
+        assertEquals(listOf(100, 101) + (160..248).toList() + listOf(297, 298), boxRows)
     }
 
     @Test
@@ -113,12 +113,13 @@ class GuttersTest {
 
         val out = requireNotNull(collapseGutters(px, w, h))
 
-        // 오른쪽 끝(x=80) 테두리 줄이 하나도 잘리지 않는다
-        assertEquals((0 until h).count { px[it * w + 80] == black }, (0 until h).count { out[it * w + 80] == black })
-        // 칸 사이 흰 곳은 없어진다 — 칸 A 아래 테두리 끝(142)과 칸 B 위 테두리 시작(196) 사이 53줄이 빠진다
+        // 오른쪽 끝(x=80) 테두리 줄은 맞닿는 테두리가 1줄 겹치는 것 말고는 잘리지 않는다
+        assertEquals((0 until h).count { px[it * w + 80] == black } - 1, (0 until h).count { out[it * w + 80] == black })
+        // 칸 사이 흰 곳은 없어진다 — 칸 A 아래 테두리 끝(142)과 칸 B 위 테두리 시작(196) 사이 53줄에 더해
+        // 기울어진 테두리 끝자락과 맞닿는 테두리가 4줄 겹친다
         val before = (0 until h).filter { px[it * w + 80] == black }
         val after = (0 until h).filter { out[it * w + 80] == black }
-        assertEquals(53, (before.last() - before.first()) - (after.last() - after.first()))
+        assertEquals(57, (before.last() - before.first()) - (after.last() - after.first()))
     }
 
     @Test
@@ -135,7 +136,7 @@ class GuttersTest {
 
         // 왼쪽 칸은 그대로, 오른쪽 칸 둘은 맞붙어 가운데로
         assertEquals(listOf(0, 1, 398, 399), (0 until h).filter { out[it * w + 9] == black })
-        assertEquals(listOf(20, 21, 198, 199, 200, 201, 378, 379), (0 until h).filter { out[it * w + 58] == black })
+        assertEquals(listOf(20, 21, 198, 199, 200, 377, 378), (0 until h).filter { out[it * w + 58] == black })
     }
 
     @Test
@@ -150,8 +151,8 @@ class GuttersTest {
         val out = requireNotNull(collapseGutters(px, wide, h))
 
         // 칸 안쪽 빈 곳은 그대로 두고 사이 여백만 없앤다
-        assertEquals(listOf(100, 101, 198, 199, 200, 201, 298, 299), (0 until h).filter { out[it * wide + 200] == black })
-        assertEquals(200, (0 until h).count { out[it * wide + 2] == black })
+        assertEquals(listOf(100, 101, 198, 199, 200, 297, 298), (0 until h).filter { out[it * wide + 200] == black })
+        assertEquals(199, (0 until h).count { out[it * wide + 2] == black })
     }
 
     @Test
@@ -164,8 +165,8 @@ class GuttersTest {
 
         val out = requireNotNull(collapseGutters(px, w, h))
 
-        // 칸 100줄 + 칸 100줄이 맞붙어 가운데(100~299)로
-        assertEquals(listOf(100, 101, 198, 199, 200, 201, 298, 299), (0 until h).filter { out[it * w + 45] == black })
+        // 칸 100줄 + 칸 100줄이 맞붙어 가운데로 — 맞닿는 테두리는 1줄 겹친다
+        assertEquals(listOf(100, 101, 198, 199, 200, 297, 298), (0 until h).filter { out[it * w + 45] == black })
     }
 
     /** 칸 A(위 테두리 40줄, 아래 테두리는 [slant]만큼 기울었다)와 그 [gap]줄 아래에서 같은 기울기로 시작해 300줄에서 끝나는 칸 B */
@@ -235,12 +236,13 @@ class GuttersTest {
 
         val out = requireNotNull(collapseGutters(px, wide, h))
 
-        // 두 쪽 다 칸 둘이 맞붙는다 (높이 280줄)
+        // 두 쪽 다 칸 둘이 맞붙어 맞닿는 테두리가 1줄 겹친다 (높이 279줄)
         for (x in listOf(60, 200)) {
             val rows = (0 until h).filter { out[it * wide + x] == black }
-            assertEquals(8, rows.size)
+            assertEquals(7, rows.size)
+            assertEquals(rows[2] + 1, rows[3])
             assertEquals(rows[3] + 1, rows[4])
-            assertEquals(279, rows.last() - rows.first())
+            assertEquals(278, rows.last() - rows.first())
         }
         // 그림자는 그대로
         assertEquals(shade(130), out[200 * wide + 130])
@@ -256,7 +258,7 @@ class GuttersTest {
 
         val out = requireNotNull(collapseGutters(px, w, h))
         val blackRows = (0 until h).filter { out[it * w + 45] == black }
-        assertEquals(listOf(100, 101, 198, 199, 200, 201, 298, 299), blackRows)
+        assertEquals(listOf(100, 101, 198, 199, 200, 297, 298), blackRows)
     }
 
     @Test
@@ -270,7 +272,7 @@ class GuttersTest {
         val out = requireNotNull(collapseGutters(px, w, h))
 
         // 칸 둘(200줄)이 맞붙어 가운데(100~299)로, 검은 틈은 없어진다
-        assertEquals(listOf(100, 101, 198, 199, 200, 201, 298, 299), (0 until h).filter { out[it * w + 45] == black })
+        assertEquals(listOf(100, 101, 198, 199, 200, 297, 298), (0 until h).filter { out[it * w + 45] == black })
         assertEquals(emptyList<Int>(), (0 until h).filter { out[it * w + 5] == black })
     }
 
