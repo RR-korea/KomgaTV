@@ -543,8 +543,15 @@ private class BalloonPage(
                 ok(sx, y) && clear(sx, y - gap, sx, sy - gap) && clear(sx, y + gap, sx, sy + gap) &&
                     clear(sx - gap, y, sx - gap, sy) && clear(sx + gap, y, sx + gap, sy)
             }
-            // 줄 사이를 그대로 두고, 모자라면 조금씩 좁혀 가며 — 잘리는 쪽 첫 줄이 가장 멀리 가는 것
+            // 줄 사이를 그대로 두고, 모자라면 조금씩 좁혀 가며 — 잘리는 쪽 첫 줄이 가장 멀리 가는 것.
+            // 말풍선 안 대사는 말풍선의 쪽 가운데 쪽 끝까지 붙인다 (위쪽 말풍선이면 아래로). 칸 안 해설 글은 필요한 만큼만
             val step = if (down) 1 else -1
+            val box = paperBox[group.balloon]
+            val far = when {
+                !group.isBalloon -> 0
+                down -> box[1] - group.bottom
+                else -> group.top - box[0]
+            }
             var best: Pair<Int, IntArray>? = null
             var bestReach = 0
             for (keep in LINE_GAP_KEEP) {
@@ -552,10 +559,11 @@ private class BalloonPage(
                 val extra = shifts.maxOrNull() ?: 0
                 if (keep < 1f && extra == 0) break
                 // 잘리는 쪽 첫 줄은 [extra]만큼 더 간다 — 모두 합쳐 [want]만큼이면 된다
-                var d = if (down) maxOf(0, want - extra) else minOf(0, want + extra)
+                val need = maxOf(abs(want) - extra, if (keep == 1f) far else 0, 0)
+                var d = step * need
                 while (d != 0 && !fits(d, shifts)) d -= step
                 val reach = abs(d) + extra
-                if (abs(d) < MIN_MOVE && extra == 0) continue
+                if (reach < MIN_MOVE) continue
                 if (reach > bestReach) {
                     best = d to shifts
                     bestReach = reach
@@ -779,7 +787,7 @@ internal class BalloonTextTransformation(
     private val screenHeightPx: Int,
     private val fitHeight: Boolean,
 ) : Transformation() {
-    override val cacheKey: String = "balloons-3-$zoomPercent-$moveBalloons-${slotWidthPx}x$screenHeightPx-$fitHeight"
+    override val cacheKey: String = "balloons-4-$zoomPercent-$moveBalloons-${slotWidthPx}x$screenHeightPx-$fitHeight"
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width

@@ -31,15 +31,15 @@ class BalloonsTest {
     }
 
     @Test
-    fun `잘리는 곳에 걸린 대사를 말풍선 안에서 쪽 가운데 쪽으로 옮긴다`() {
+    fun `잘리는 곳에 걸린 대사를 말풍선 안에서 쪽 가운데 쪽 끝으로 붙인다`() {
         val px = IntArray(w * h) { white }
         px.ellipse(200, 45, 80, 40)
         px.text(170, 230, 20)
 
         val out = requireNotNull(pullBalloonText(px, w, h, topCut = 40, bottomCut = 40, moveBalloons = false))
 
-        // 위로 40줄이 잘린다 — 대사(20~29줄)를 잘리는 선 + 여백(6줄) 아래(46~55줄)로
-        assertEquals((46..55).toList(), (12 until 78).filter { out[it * w + 170] == black })
+        // 위로 40줄이 잘린다 — 대사(20~29줄)를 말풍선 아래쪽 끝까지 (테두리에서 2줄 띄워 69~78줄로)
+        assertEquals((69..78).toList(), (12 until 80).filter { out[it * w + 170] == black })
         // 원래 자리는 비고, 말풍선 테두리는 그대로
         assertTrue((20..29).none { out[it * w + 172] == black })
         assertEquals((0 until h).filter { px[it * w + 200] == black && it !in 10..80 }, (0 until h).filter { out[it * w + 200] == black && it !in 10..80 })
