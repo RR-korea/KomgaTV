@@ -321,6 +321,22 @@ class GuttersTest {
         assertEquals(60, (0 until h).count { out[it * w + 5] == black })
     }
 
+    @Test
+    fun `그림 속 검은 세로 줄기는 칸 묶음 사이 여백이 아니다 - 옆의 글과 검은 바탕 사이를 줄이지 않는다`() {
+        val px = IntArray(w * h) { white }
+        px.panel(20)
+        // 왼쪽에 해설 글(140~175), 그 아래 흰 바탕을 건너 검은 바탕(220~319) — 띠 높이 내내 검은 줄기(38~49)로 오른쪽 칸과 이어진다
+        for (y in 140 until 176) for (x in 6 until 14) if (((x * 7919 + y * 104729) xor (x * y)) % 9 < 6) px[y * w + x] = black
+        for (y in 220 until 320) for (x in 2 until 38) px[y * w + x] = black
+        for (y in 130 until 320) for (x in 38 until 50) px[y * w + x] = black
+        px.box(50, 96, 130, 320)
+        for (y in 134 until 316) for (x in 54 until 92) if ((x + y) % 9 == 0) px[y * w + x] = black
+
+        val out = collapseGutters(px, w, h)
+
+        assertRowsKept(px, out, w, 8)
+    }
+
     /** [x] 열에서 검은 줄들이 (통째로 옮겨졌을 수는 있어도) 간격 그대로인지 */
     private fun assertRowsKept(input: IntArray, out: IntArray?, width: Int, x: Int) {
         val before = (0 until h).filter { input[it * width + x] == black }
