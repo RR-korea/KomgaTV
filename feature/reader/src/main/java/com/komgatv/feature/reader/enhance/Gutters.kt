@@ -179,7 +179,11 @@ private fun collapsePage(pixels: IntArray, width: Int, height: Int): IntArray? {
         // 좁은 조각으로 나뉘면 칸 묶음이 아니라 그림이 갈라진 것 — 띠를 그대로 둔다
         if (columns.isEmpty() || columns.any { it.last - it.first + 1 < width * MIN_STACK_WIDTH_RATIO }) return@map block
         if (columns.size == 1) {
-            if (collapseRibbons(block, band, columns[0].first, columns[0].last + 1)) columnsMoved = true
+            if (collapseRibbons(block, band, columns[0].first, columns[0].last + 1)) {
+                columnsMoved = true
+            } else if (packCells(pixels, block, page, band, width, height, up = band.first + band.last >= height)) {
+                columnsMoved = true
+            }
             return@map block
         }
         for (col in columns) {
@@ -334,6 +338,8 @@ private class PageMaps(pixels: IntArray, private val width: Int, private val hei
     fun bandInk(y: Int, edgeX: Int): Boolean {
         return inkContent(y, 0, width) || borderRow(y, edgeX, width - edgeX)
     }
+
+    fun inkAt(i: Int): Boolean = ink[i]
 
     /** 쪽 바탕 밝기 */
     val paper: Int get() = bg
@@ -716,6 +722,293 @@ private class Frames(private val width: Int, height: Int, private val bg: Int) {
     }
 }
 
+/**
+ * 띠 안의 칸을 칸마다 따로 쪽 가운데 쪽으로 붙인다 ([up]이면 위로) — 칸 사이 여백이 가로·세로 모두 비스듬해
+ * 곧은 줄로도, 띠 전체를 가로지르는 비스듬한 여백으로도 나눌 수 없을 때 (킹덤처럼 비스듬한 칸이 엇갈린 쪽).
+ *
+ * 여백: 쪽 좌우 끝에서 이어진 종이 (테두리 틈으로 새지 않게 2칸 넘게 빈 곳으로만 잇는다). 칸: 여백 아닌 곳의 덩어리 중
+ * 쪽 너비의 [MIN_CELL_WIDTH_RATIO]·높이의 [MIN_CELL_HEIGHT_RATIO] 넘는 것, 더 작은 덩어리(말풍선 글자 등)는 둘러싼 칸에 붙인다.
+ * 위쪽 칸부터, 위 테두리가 곧거나 비스듬한 선인 칸만 위 칸(또는 띠 끝)에 닿을 때까지 — [MAX_FLAT_GAP_RATIO]까지 — 민다.
+ * 빈 곳은 여백 색으로 채운다. 바뀐 것이 있으면 [block]에 쓰고 true.
+ */
+private fun packCells(
+    pixels: IntArray,
+    block: IntArray,
+    page: PageMaps,
+    band: IntRange,
+    width: Int,
+    height: Int,
+    up: Boolean,
+): Boolean {
+    val y0 = band.first
+    val bh = band.last - band.first + 1
+    val n = width * bh
+    fun at(i: Int) = (y0 + i / width) * width + i % width
+    // 여백 — 둘레 1칸이 모두 빈 곳을 따라 쪽 좌우 끝에서 채운 뒤 1칸 넓힌다
+    val clean = BooleanArray(n) { !page.inkAt(at(it)) }
+    val core = BooleanArray(n) { i ->
+        val x = i % width
+        val y = i / width
+        clean[i] && (x == 0 || clean[i - 1]) && (x == width - 1 || clean[i + 1]) &&
+            (y == 0 || clean[i - width]) && (y == bh - 1 || clean[i + width])
+    }
+    val gutter = BooleanArray(n)
+    val queue = IntArray(n)
+    var tail = 0
+    for (y in 0 until bh) for (x in intArrayOf(0, width - 1)) {
+        val i = y * width + x
+        if (core[i] && !gutter[i]) { gutter[i] = true; queue[tail++] = i }
+    }
+    var head = 0
+    while (head < tail) {
+        val i = queue[head++]
+        val x = i % width
+        val y = i / width
+        for ((dx, dy) in CELL_NEIGHBOURS) {
+            val nx = x + dx
+            val ny = y + dy
+            if (nx < 0 || ny < 0 || nx >= width || ny >= bh) continue
+            val j = ny * width + nx
+            if (core[j] && !gutter[j]) { gutter[j] = true; queue[tail++] = j }
+        }
+    }
+    for (i in 0 until n) if (!gutter[i] && clean[i]) {
+        val x = i % width
+        val y = i / width
+        if ((x > 0 && gutter[i - 1] && core[i - 1]) || (x < width - 1 && gutter[i + 1] && core[i + 1]) ||
+            (y > 0 && gutter[i - width] && core[i - width]) || (y < bh - 1 && gutter[i + width] && core[i + width])
+        ) {
+            gutter[i] = true
+        }
+    }
+    // 칸 덩어리 (8방향)
+    val label = IntArray(n) { -1 }
+    var count = 0
+    for (start in 0 until n) {
+        if (gutter[start] || label[start] >= 0) continue
+        label[start] = count
+        head = 0
+        tail = 0
+        queue[tail++] = start
+        while (head < tail) {
+            val i = queue[head++]
+            val x = i % width
+            val y = i / width
+            for (dy in -1..1) for (dx in -1..1) {
+                val nx = x + dx
+                val ny = y + dy
+                if (nx < 0 || ny < 0 || nx >= width || ny >= bh) continue
+                val j = ny * width + nx
+                if (!gutter[j] && label[j] < 0) { label[j] = count; queue[tail++] = j }
+            }
+        }
+        count++
+    }
+    if (count < 2) return false
+    val box = Array(count) { intArrayOf(Int.MAX_VALUE, -1, Int.MAX_VALUE, -1) }
+    for (i in 0 until n) {
+        val l = label[i]
+        if (l < 0) continue
+        val x = i % width
+        val y = i / width
+        val b = box[l]
+        if (y < b[0]) b[0] = y
+        if (y > b[1]) b[1] = y
+        if (x < b[2]) b[2] = x
+        if (x > b[3]) b[3] = x
+    }
+    val big = (0 until count).filter {
+        box[it][3] - box[it][2] + 1 >= width * MIN_CELL_WIDTH_RATIO && box[it][1] - box[it][0] + 1 >= height * MIN_CELL_HEIGHT_RATIO
+    }
+    if (big.size < 2) return false
+    // 칸 짜임새일 때만 — 칸마다 둘레 상자를 거의 채우고(네모·사다리꼴), 칸들이 띠 넓이 대부분을 덮는다.
+    // 테두리 없는 그림 조각이나 인물 소개 쪽의 사진 상자 + 글은 옮기지 않는다
+    val area = IntArray(count)
+    for (i in 0 until n) if (label[i] >= 0) area[label[i]]++
+    fun boxArea(c: Int) = (box[c][1] - box[c][0] + 1).toLong() * (box[c][3] - box[c][2] + 1)
+    if (big.any { area[it] < boxArea(it) * MIN_CELL_FILL }) return false
+    if (big.sumOf { area[it].toLong() } < n * MIN_CELLS_COVER) return false
+    // 작은 덩어리는 가운데가 든 가장 작은 칸에, 없으면 가장 가까운 칸에
+    val owner = IntArray(count) { -1 }
+    for (c in big) owner[c] = c
+    for (c in 0 until count) {
+        if (owner[c] >= 0) continue
+        val cx = (box[c][2] + box[c][3]) / 2
+        val cy = (box[c][0] + box[c][1]) / 2
+        owner[c] = big.minBy { b ->
+            val bb = box[b]
+            val dx = maxOf(bb[2] - cx, 0, cx - bb[3])
+            val dy = maxOf(bb[0] - cy, 0, cy - bb[1])
+            val inside = dx == 0 && dy == 0
+            if (inside) (bb[1] - bb[0] + 1).toLong() * (bb[3] - bb[2] + 1) - Long.MAX_VALUE / 2 else (dx + dy).toLong()
+        }
+    }
+    // 작은 덩어리는 모두 어느 칸 상자 안에 있어야 한다 — 칸 밖 글·그림이 있으면 칸만 옮길 수 없다
+    for (c in 0 until count) {
+        if (owner[c] == c) continue
+        val o = box[owner[c]]
+        val b = box[c]
+        if (b[0] < o[0] || b[1] > o[1] || b[2] < o[2] || b[3] > o[3]) return false
+    }
+    val cellOf = IntArray(n) { if (label[it] < 0) -1 else owner[label[it]] }
+    // 작은 덩어리(글자)가 맞닿은 여백 칸 — 칸마다 (x, y)
+    val touches = Array(count) { ArrayList<Int>() }
+    val side = (width * CELL_SIDE_RATIO).roundToInt()
+    for (i in 0 until n) {
+        val l = label[i]
+        if (l < 0 || owner[l] == l) continue
+        val x = i % width
+        val y = i / width
+        val o = box[owner[l]]
+        if (x < o[2] + side || x > o[3] - side) continue
+        if ((x > 0 && gutter[i - 1]) || (x < width - 1 && gutter[i + 1]) || (y > 0 && gutter[i - width]) || (y < bh - 1 && gutter[i + width])) {
+            touches[owner[l]] += i
+        }
+    }
+    // 칸마다 열별 쪽 가운데 쪽 끝 (위로 밀면 위 끝)
+    fun frontOf(c: Int): IntArray {
+        val b = box[c]
+        val front = IntArray(b[3] - b[2] + 1) { -1 }
+        for (x in b[2]..b[3]) {
+            val ys = if (up) b[0]..b[1] else b[1] downTo b[0]
+            for (y in ys) if (cellOf[y * width + x] == c) { front[x - b[2]] = y; break }
+        }
+        return front
+    }
+    val maxShift = (height * MAX_FLAT_GAP_RATIO).roundToInt()
+    fun breaksOut(start: List<Int>, b: IntArray, front: IntArray): Boolean {
+        if (start.isEmpty()) return false
+        val valid = front.filter { it >= 0 }
+        val edge = if (up) valid.min() else valid.max()
+        val first = front.indexOfFirst { it >= 0 && abs(it - edge) <= maxShift } + b[2]
+        val last = front.indexOfLast { it >= 0 && abs(it - edge) <= maxShift } + b[2]
+        val seen = HashSet<Int>()
+        val stack = ArrayDeque(start.flatMap { i ->
+            listOf(i - 1, i + 1, i - width, i + width).filter { it in 0 until n && gutter[it] }
+        })
+        while (stack.isNotEmpty()) {
+            val i = stack.removeLast()
+            if (!seen.add(i)) continue
+            val x = i % width
+            val y = i / width
+            if (x < b[2] || x > b[3] || y < b[0] || y > b[1]) continue
+            if (x in first..last && (if (up) y <= edge else y >= edge)) return true
+            if (seen.size > n / 4) return true
+            for (j in intArrayOf(i - 1, i + 1, i - width, i + width)) if (j in 0 until n && gutter[j] && j !in seen) stack.addLast(j)
+        }
+        return false
+    }
+    // 위 테두리가 선이다 — 쪽 가운데 쪽 끝에 가까운 열(가파른 옆 테두리는 빼고)이 칸 너비의 [CELL_FRAME_WIDTH_RATIO] 넘고,
+    // 그 열들이 이웃끼리 [RIBBON_STEP]줄 안에서 이어진다
+    fun framed(front: IntArray): Boolean {
+        val valid = front.filter { it >= 0 }
+        if (valid.isEmpty()) return false
+        val edge = if (up) valid.min() else valid.max()
+        fun near(f: Int) = f >= 0 && abs(f - edge) <= maxShift
+        if (front.count { near(it) } < front.size * CELL_FRAME_WIDTH_RATIO) return false
+        // 테두리는 한 줄로 이어진다 — 가운데가 깊게 패였으면 테두리 밖으로 나온 말풍선 등이 여백과 이어진 것이라 옮기지 않는다
+        val first = front.indexOfFirst { near(it) }
+        val last = front.indexOfLast { near(it) }
+        if ((first..last).count { !near(front[it]) } > front.size * CELL_NOTCH_RATIO) return false
+        var pairs = 0
+        var smooth = 0
+        for (k in 1 until front.size) {
+            if (!near(front[k]) || !near(front[k - 1])) continue
+            pairs++
+            if (abs(front[k] - front[k - 1]) <= RIBBON_STEP) smooth++
+        }
+        return pairs > 0 && smooth >= pairs * CELL_FRAME_SMOOTH_RATIO
+    }
+    val minShift = (height * MIN_GAP_RATIO).roundToInt().coerceAtLeast(2)
+    val shift = IntArray(count)
+    val order = if (up) big.sortedBy { box[it][0] } else big.sortedByDescending { box[it][1] }
+    // 자리 잡은 칸들 — 옮긴 자리 기준
+    val occupied = BooleanArray(n)
+    var moved = false
+    val step = if (up) -1 else 1
+    for (c in order) {
+        val b = box[c]
+        val front = frontOf(c)
+        var d = 0
+        // 글자가 맞닿은 여백이 칸 상자 안에서 위 테두리 쪽(옮기는 쪽) 끝까지 이어지면 — 위 테두리를 뚫고 나온 말풍선 속 글자 —
+        // 옮기지 않는다 (말풍선 안쪽은 여백이라 함께 옮겨지지 않는다). 옆 테두리로 열린 말풍선은 괜찮다
+        val loose = breaksOut(touches[c], b, front)
+        if (!loose && framed(front)) {
+            // 열마다 칸 끝에서 쪽 가운데 쪽으로 비어 있는 줄 수 — 그 가장 적은 곳만큼
+            d = maxShift
+            for (x in b[2]..b[3]) {
+                val f = front[x - b[2]]
+                if (f < 0) continue
+                var free = 0
+                var y = f + step
+                while (free < d && y in 0 until bh && !occupied[y * width + x]) { free++; y += step }
+                d = minOf(d, free)
+                if (d < minShift) break
+            }
+            if (d < minShift) d = 0
+        }
+        shift[c] = d
+        if (d > 0) moved = true
+        // 자리 잡기 (작은 덩어리 포함)
+        for (yy in b[0]..b[1]) for (x in 0 until width) {
+            val i = yy * width + x
+            if (cellOf[i] == c) {
+                val ny = yy + step * d
+                if (ny in 0 until bh) occupied[ny * width + x] = true
+            }
+        }
+        // 칸 상자 밖의 작은 덩어리도
+        for (i in 0 until n) if (cellOf[i] == c && (i / width < b[0] || i / width > b[1])) {
+            val ny = i / width + step * d
+            if (ny in 0 until bh) occupied[ny * width + i % width] = true
+        }
+    }
+    if (!moved) return false
+    // 여백 색 — 여백 칸의 평균
+    var r = 0L
+    var g = 0L
+    var bl = 0L
+    var m = 0L
+    for (i in 0 until n) if (gutter[i]) {
+        val c = pixels[at(i)]
+        r += (c shr 16) and 0xFF
+        g += (c shr 8) and 0xFF
+        bl += c and 0xFF
+        m++
+    }
+    val pad = if (m == 0L) -1 else (0xFF shl 24) or ((r / m).toInt() shl 16) or ((g / m).toInt() shl 8) or (bl / m).toInt()
+    // 옮길 칸은 열마다 칸의 첫 칸부터 끝 칸까지 통째로 (칸 안의 말풍선 속·글자 둘레 옅은 칸까지) — 다른 칸 것은 빼고.
+    // 지운 뒤 새 자리에 그린다
+    val moving = IntArray(n) { -1 }
+    for (c in big) {
+        if (shift[c] == 0) continue
+        val b = box[c]
+        for (x in b[2]..b[3]) {
+            var top = -1
+            var bottom = -1
+            for (y in b[0]..b[1]) if (cellOf[y * width + x] == c) {
+                if (top < 0) top = y
+                bottom = y
+            }
+            if (top < 0) continue
+            for (y in top..bottom) {
+                val i = y * width + x
+                if (cellOf[i] < 0 || cellOf[i] == c) moving[i] = c
+            }
+        }
+    }
+    for (i in 0 until n) if (moving[i] >= 0) block[i] = pad
+    for (i in 0 until n) {
+        val c = moving[i]
+        if (c < 0) continue
+        val ny = i / width + step * shift[c]
+        if (ny in 0 until bh) block[ny * width + i % width] = pixels[at(i)]
+    }
+    return true
+}
+
+private val CELL_NEIGHBOURS = arrayOf(1 to 0, -1 to 0, 0 to 1, 0 to -1)
+
 /** 비스듬한·엇갈린 여백 띠 — [x0]부터 열마다 뺄 줄의 시작 [start] (쪽 기준)과 뺄 줄 수 [rows] */
 private class Ribbon(val x0: Int, val start: IntArray, val rows: Int)
 
@@ -976,6 +1269,28 @@ private const val MIN_FRAMED_RATIO = 0.5f
 /** 열마다 겹쳐도 되는 줄 수 중 이 자리(아래에서부터 비율) 값만큼 겹친다 */
 private const val OVERLAP_PERCENTILE = 0.1f
 
+/** 칸 덩어리는 쪽 너비의 이만큼, 높이의 [MIN_CELL_HEIGHT_RATIO]만큼은 된다 — 더 작으면 글자·티끌 */
+private const val MIN_CELL_WIDTH_RATIO = 0.1f
+private const val MIN_CELL_HEIGHT_RATIO = 0.05f
+
+/** 칸은 둘레 상자를 이만큼은 채운다 (네모, 기울어진 사다리꼴) */
+private const val MIN_CELL_FILL = 0.65f
+
+/** 칸들이 띠 넓이를 이만큼은 덮어야 칸 짜임새 */
+private const val MIN_CELLS_COVER = 0.7f
+
+/** 칸 위 테두리는 이웃 열끼리 이만큼 매끈하게 이어진다 */
+private const val CELL_FRAME_SMOOTH_RATIO = 0.8f
+
+/** 칸 좌우 끝 이만큼(쪽 너비 비율)에서 여백에 맞닿은 글자는 쪽 끝으로 열린 말풍선 속 글자로 본다 */
+private const val CELL_SIDE_RATIO = 0.06f
+
+/** 칸 위 테두리 가운데 패인 열이 칸 너비의 이만큼 넘으면 테두리가 끊긴 칸 */
+private const val CELL_NOTCH_RATIO = 0.02f
+
+/** 칸 위 테두리는 칸 너비의 이만큼은 된다 */
+private const val CELL_FRAME_WIDTH_RATIO = 0.3f
+
 /** 칸 묶음 안 칸 조각은 쪽 높이의 이만큼은 된다 */
 private const val MIN_STACK_PART_RATIO = 0.02f
 
@@ -1053,7 +1368,7 @@ private const val MIN_SAVED_RATIO = 0.005f
 
 /** 페이지 리더(Coil)용 — 작품 보기 설정 "칸 간격 없애기" */
 internal class GutterTransformation : Transformation() {
-    override val cacheKey: String = "gutters-17"
+    override val cacheKey: String = "gutters-18"
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width
