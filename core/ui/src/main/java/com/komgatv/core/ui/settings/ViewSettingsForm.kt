@@ -139,6 +139,17 @@ fun ViewSettingsForm(
                         value = settings.removeGutters,
                         onChange = { onChange(settings.copy(removeGutters = it)) },
                     )
+                    // 칸 줄(단)끼리 쪽 높이의 몇 %를 포개고 가운데 줄을 위에 그린다 — 칸 간격도 함께 없앤다
+                    SettingRow(
+                        title = stringResource(R.string.view_panel_overlap),
+                        value = if (settings.panelOverlapPercent == 0) {
+                            stringResource(R.string.view_off)
+                        } else {
+                            stringResource(R.string.view_percent_value, settings.panelOverlapPercent)
+                        },
+                        onPrevious = { onChange(settings.copy(panelOverlapPercent = stepOverlap(settings.panelOverlapPercent, -1))) },
+                        onNext = { onChange(settings.copy(panelOverlapPercent = stepOverlap(settings.panelOverlapPercent, 1))) },
+                    )
                     // 확대하면 쪽 끝에서 잘리는 대사는 늘 말풍선 안에서 옮긴다. 켜면 쪽 끝에 걸린 말풍선은 말풍선째
                     OnOffRow(
                         title = stringResource(R.string.view_move_balloons),
@@ -213,6 +224,9 @@ private fun stepBrightness(current: Int, delta: Int): Int =
 
 private fun stepZoom(current: Int, delta: Int): Int =
     (current + delta).coerceIn(ReaderSettings.MIN_ZOOM_PERCENT, ReaderSettings.MAX_ZOOM_PERCENT)
+
+private fun stepOverlap(current: Int, delta: Int): Int =
+    (current + delta).coerceIn(0, ReaderSettings.MAX_PANEL_OVERLAP_PERCENT)
 
 /**
  * 값 목록 중 하나를 고르는 줄. 좌 = 이전 값, 우·OK = 다음 값.

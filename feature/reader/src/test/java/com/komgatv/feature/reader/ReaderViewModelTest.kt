@@ -1006,6 +1006,23 @@ class ReaderViewModelTest {
     }
 
     @Test
+    fun `칸 겹치기 - 비율을 바꾸면 이 작품에만 저장되고 0~10 안에 머문다`() = runTest(testDispatcher) {
+        openBook()
+        advanceUntilIdle()
+        assertEquals(0, reading.panelOverlapPercent)
+
+        viewModel.applySettings(reading.settings.copy(panelOverlapPercent = 5))
+        advanceUntilIdle()
+        assertEquals(5, reading.panelOverlapPercent)
+        assertEquals(5, readerPreferences.series.value["s1"]!!.panelOverlapPercent)
+        assertEquals(0, readerPreferences.readerSettings.first().panelOverlapPercent)
+
+        viewModel.setPanelOverlapPercent(50)
+        advanceUntilIdle()
+        assertEquals(10, reading.panelOverlapPercent)
+    }
+
+    @Test
     fun `자동 채색 - 켜면 이 작품에만 저장된다`() = runTest(testDispatcher) {
         openBook()
         advanceUntilIdle()

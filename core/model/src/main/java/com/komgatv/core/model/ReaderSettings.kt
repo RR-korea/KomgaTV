@@ -132,6 +132,11 @@ data class ReaderSettings(
     val moveBalloons: Boolean = false,
     /** 흑백 쪽을 자동으로 칠한다 (작품별, 페이지 넘김) — 처음 켤 때 채색 모델을 받는다 */
     val colorize: Boolean = false,
+    /**
+     * 칸 겹치기 % (작품별, 페이지 넘김, 0~[MAX_PANEL_OVERLAP_PERCENT]) — 칸 줄(단)끼리 쪽 높이의 이만큼 포개고
+     * 가운데 줄을 위에 그린다. 칸 사이 여백도 함께 없앤다. 0이면 안 함.
+     */
+    val panelOverlapPercent: Int = 0,
     /** 페이지 넘김 화면 전환 효과 */
     val pageTransition: PageTransition = PageTransition.SLIDE,
 ) {
@@ -147,5 +152,6 @@ data class ReaderSettings(
         const val ZOOM_PAN_STEP = 25
         const val MAX_BRIGHTNESS_PERCENT = 150
         const val BRIGHTNESS_STEP = 5
+        const val MAX_PANEL_OVERLAP_PERCENT = 10
     }
 }

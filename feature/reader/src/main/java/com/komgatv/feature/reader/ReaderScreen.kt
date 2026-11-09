@@ -221,11 +221,11 @@ private fun ReaderContent(
     val colorModelPath = (colorModel as? ColorModel.State.Ready)?.path?.takeIf { state.colorize && !continuous }
     LaunchedEffect(
         state.preloadSpreads, state.spreadPageUrls, state.scaleType, state.imageEnhancement, state.removeGutters,
-        state.zoomPercent, state.moveBalloons, colorModelPath, screenWidthPx, screenHeightPx,
+        state.panelOverlapPercent, state.zoomPercent, state.moveBalloons, colorModelPath, screenWidthPx, screenHeightPx,
     ) {
         val imageLoader = SingletonImageLoader.get(context)
-        val variant = "${state.scaleType}|${state.imageEnhancement}|${state.removeGutters}|${state.zoomPercent}|${state.moveBalloons}|" +
-            "${screenWidthPx}x$screenHeightPx"
+        val variant = "${state.scaleType}|${state.imageEnhancement}|${state.removeGutters}|${state.panelOverlapPercent}|" +
+            "${state.zoomPercent}|${state.moveBalloons}|${screenWidthPx}x$screenHeightPx"
         // 칠한 쪽도 미리 칠해 둔다 (흑백 쪽은 칠하는 동안 보여 준다)
         val colors = listOf(null, colorModelPath).distinct()
         val wanted = state.preloadSpreads.flatMap { urls ->
@@ -244,7 +244,7 @@ private fun ReaderContent(
             preloads[key] = imageLoader.enqueue(
                 pageRequest(
                     context, url, state.scaleType, slotWidth(screenWidthPx, slots), screenHeightPx,
-                    state.imageEnhancement, state.removeGutters, state.zoomPercent, state.moveBalloons, color,
+                    state.imageEnhancement, state.removeGutters, state.panelOverlapPercent, state.zoomPercent, state.moveBalloons, color,
                 )
             )
         }
@@ -539,22 +539,22 @@ private fun SpreadPages(
             val pageUrl = if (useRendered) url.removeSuffix("/raw") else url
             val request = remember(
                 pageUrl, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement, state.removeGutters,
-                state.zoomPercent, state.moveBalloons,
+                state.panelOverlapPercent, state.zoomPercent, state.moveBalloons,
             ) {
                 pageRequest(
                     context, pageUrl, state.scaleType, slotWidthPx, screenHeightPx,
-                    state.imageEnhancement, state.removeGutters, state.zoomPercent, state.moveBalloons, null,
+                    state.imageEnhancement, state.removeGutters, state.panelOverlapPercent, state.zoomPercent, state.moveBalloons, null,
                 )
             }
             // 칠한 쪽 — 칠하는 동안(TV에서 쪽마다 수 초~십수 초)은 아래 흑백 쪽이 보인다
             val colorRequest = colorModelPath?.let { path ->
                 remember(
                     pageUrl, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement, state.removeGutters,
-                    state.zoomPercent, state.moveBalloons, path,
+                    state.panelOverlapPercent, state.zoomPercent, state.moveBalloons, path,
                 ) {
                     pageRequest(
                         context, pageUrl, state.scaleType, slotWidthPx, screenHeightPx,
-                        state.imageEnhancement, state.removeGutters, state.zoomPercent, state.moveBalloons, path,
+                        state.imageEnhancement, state.removeGutters, state.panelOverlapPercent, state.zoomPercent, state.moveBalloons, path,
                     )
                 }
             }
@@ -691,6 +691,7 @@ private fun pageRequest(
     screenHeightPx: Int,
     enhancement: ImageEnhancement,
     removeGutters: Boolean,
+    panelOverlapPercent: Int,
     zoomPercent: Int,
     moveBalloons: Boolean,
     colorModelPath: String?,
@@ -711,7 +712,8 @@ private fun pageRequest(
             listOfNotNull(
                 // 칸 사이 여백을 먼저 줄이고(쪽 크기는 그대로), 확대로 잘릴 쪽 끝 대사를 옮기고,
                 // 화면 크기로 Lanczos 리샘플링한 뒤 선명하게
-                if (removeGutters) GutterTransformation() else null,
+                // 칸 겹치기는 여백을 없앤 칸 줄을 포개므로 간격 없애기가 꺼져 있어도 함께 한다
+                if (removeGutters || panelOverlapPercent > 0) GutterTransformation(panelOverlapPercent) else null,
                 // 확대는 화면 고정(맞춤·높이 맞춤)에서만 위아래가 잘린다
                 if (zoomPercent > ReaderSettings.MIN_ZOOM_PERCENT && (scaleType == ScaleType.SCREEN || scaleType == ScaleType.FIT_HEIGHT)) {
                     BalloonTextTransformation(zoomPercent, moveBalloons, slotWidthPx, screenHeightPx, fitHeight = scaleType == ScaleType.FIT_HEIGHT)

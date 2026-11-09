@@ -33,6 +33,7 @@
     <string name="view_off">Aus</string>
     <string name="view_zoom">Zoom</string>
     <string name="view_remove_gutters">Panel-Abstände entfernen (experimentell)</string>
+    <string name="view_panel_overlap">Panelreihen überlappen (experimentell)</string>
     <string name="view_move_balloons">Sprechblasen mitverschieben (experimentell)</string>
     <string name="view_colorize">Automatisch kolorieren (experimentell)</string>
     <string name="view_transition">Seitenübergang</string>
