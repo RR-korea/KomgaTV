@@ -34,6 +34,7 @@
     <string name="view_zoom">Zoom</string>
     <string name="view_remove_gutters">Remover espaço entre quadros (experimental)</string>
     <string name="view_move_balloons">Mover também os balões (experimental)</string>
+    <string name="view_colorize">Colorir automaticamente (experimental)</string>
     <string name="view_transition">Transição de página</string>
     <string name="view_transition_off">Desativada</string>
     <string name="view_transition_slide">Deslizar</string>

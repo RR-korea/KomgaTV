@@ -34,6 +34,7 @@
     <string name="view_zoom">Powiększenie</string>
     <string name="view_remove_gutters">Usuń odstępy kadrów (eksperymentalne)</string>
     <string name="view_move_balloons">Przesuwaj też dymki (eksperymentalne)</string>
+    <string name="view_colorize">Automatyczne kolorowanie (eksperymentalne)</string>
     <string name="view_transition">Przejście stron</string>
     <string name="view_transition_off">Wyłączone</string>
     <string name="view_transition_slide">Przesunięcie</string>

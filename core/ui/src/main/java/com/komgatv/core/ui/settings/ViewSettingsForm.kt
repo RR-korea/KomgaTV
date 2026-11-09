@@ -145,6 +145,12 @@ fun ViewSettingsForm(
                         value = settings.moveBalloons,
                         onChange = { onChange(settings.copy(moveBalloons = it)) },
                     )
+                    // 흑백 쪽을 칠한다 — 처음 켜면 채색 모델(약 60MB)을 받는다
+                    OnOffRow(
+                        title = stringResource(R.string.view_colorize),
+                        value = settings.colorize,
+                        onChange = { onChange(settings.copy(colorize = it)) },
+                    )
                 }
             }
 
@@ -270,7 +276,7 @@ private fun SettingRow(
                     else -> false
                 }
             }
-            .padding(horizontal = 14.dp, vertical = 3.dp),
+            .padding(horizontal = 14.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {

@@ -34,6 +34,7 @@
     <string name="view_zoom">Thu phóng</string>
     <string name="view_remove_gutters">Bỏ khoảng cách khung (thử nghiệm)</string>
     <string name="view_move_balloons">Di chuyển cả bóng thoại (thử nghiệm)</string>
+    <string name="view_colorize">Tự động tô màu (thử nghiệm)</string>
     <string name="view_transition">Chuyển trang</string>
     <string name="view_transition_off">Tắt</string>
     <string name="view_transition_slide">Trượt</string>

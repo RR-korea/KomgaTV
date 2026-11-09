@@ -33,4 +33,7 @@
     <string name="start_page_first_book">このシリーズの最初の巻です。</string>
     <string name="start_page_hint_previous">%1$s / OK: 前の巻の最後のページ · Back: 閉じる</string>
     <string name="start_page_hint_first">%1$s: 最初のページに戻る · Back: 閉じる</string>
+    <string name="reader_colorize_downloading">カラー化モデルをダウンロード中… %1$d%%</string>
+    <string name="reader_colorize_failed">カラー化モデルをダウンロードできませんでした。オフにしてからオンにすると再試行します。</string>
+    <string name="reader_colorize_working">カラー化中…</string>
 </resources>

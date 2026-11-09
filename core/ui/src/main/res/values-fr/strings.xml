@@ -34,6 +34,7 @@
     <string name="view_zoom">Zoom</string>
     <string name="view_remove_gutters">Resserrer les cases (expérimental)</string>
     <string name="view_move_balloons">Déplacer aussi les bulles (expérimental)</string>
+    <string name="view_colorize">Colorisation auto (expérimental)</string>
     <string name="view_transition">Transition de page</string>
     <string name="view_transition_off">Aucune</string>
     <string name="view_transition_slide">Glissement</string>

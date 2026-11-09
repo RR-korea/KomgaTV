@@ -101,6 +101,8 @@ sealed interface ReaderUiState {
         val removeGutters: Boolean = false,
         /** 확대해서 잘리는 쪽 끝 말풍선을 말풍선째 옮기기 */
         val moveBalloons: Boolean = false,
+        /** 흑백 쪽 자동 채색 */
+        val colorize: Boolean = false,
         /** 페이지 넘김 화면 전환 효과 */
         val pageTransition: PageTransition = PageTransition.SLIDE,
         /**
@@ -137,6 +139,7 @@ sealed interface ReaderUiState {
                 zoomPanPercent = zoomPanPercent,
                 removeGutters = removeGutters,
                 moveBalloons = moveBalloons,
+                colorize = colorize,
                 pageTransition = pageTransition,
             )
     }
@@ -243,6 +246,7 @@ class ReaderViewModel @Inject constructor(
     private var currentZoomPanPercent: Int = 0
     private var currentRemoveGutters: Boolean = false
     private var currentMoveBalloons: Boolean = false
+    private var currentColorize: Boolean = false
     private var currentPageTransition: PageTransition = PageTransition.SLIDE
     private var pageStep = 0
     private var currentSeriesId: String = ""
@@ -814,6 +818,7 @@ class ReaderViewModel @Inject constructor(
         if (new.zoomPanPercent != currentZoomPanPercent) setZoomPanPercent(new.zoomPanPercent)
         if (new.removeGutters != currentRemoveGutters) setRemoveGutters(new.removeGutters)
         if (new.moveBalloons != currentMoveBalloons) setMoveBalloons(new.moveBalloons)
+        if (new.colorize != currentColorize) setColorize(new.colorize)
         if (new.pageTransition != currentPageTransition) setPageTransition(new.pageTransition)
     }
 
@@ -856,6 +861,14 @@ class ReaderViewModel @Inject constructor(
     fun setRemoveGutters(enabled: Boolean) {
         if (currentRemoveGutters == enabled) return
         currentRemoveGutters = enabled
+        updateReadingState()
+        saveSeriesSettings()
+    }
+
+    /** 흑백 쪽 자동 채색 — 이 작품에 저장 */
+    fun setColorize(enabled: Boolean) {
+        if (currentColorize == enabled) return
+        currentColorize = enabled
         updateReadingState()
         saveSeriesSettings()
     }
@@ -922,6 +935,7 @@ class ReaderViewModel @Inject constructor(
         currentZoomPanPercent = settings.zoomPanPercent
         currentRemoveGutters = settings.removeGutters
         currentMoveBalloons = settings.moveBalloons
+        currentColorize = settings.colorize
         currentPageTransition = settings.pageTransition
     }
 
@@ -939,6 +953,7 @@ class ReaderViewModel @Inject constructor(
         zoomPanPercent = currentZoomPanPercent,
         removeGutters = currentRemoveGutters,
         moveBalloons = currentMoveBalloons,
+        colorize = currentColorize,
         pageTransition = currentPageTransition,
     )
 
@@ -1189,6 +1204,7 @@ class ReaderViewModel @Inject constructor(
             zoomPanPercent = currentZoomPanPercent,
             removeGutters = currentRemoveGutters,
             moveBalloons = currentMoveBalloons,
+            colorize = currentColorize,
             pageTransition = currentPageTransition,
             pageStep = pageStep,
             seriesCustomized = seriesCustomized,
