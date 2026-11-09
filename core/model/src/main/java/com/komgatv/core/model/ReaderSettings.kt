@@ -130,6 +130,8 @@ data class ReaderSettings(
      * 꺼져 있어도 확대하면 말풍선 안에서 대사는 옮긴다.
      */
     val moveBalloons: Boolean = false,
+    /** 흑백 쪽을 자동으로 칠한다 (작품별, 페이지 넘김) — 처음 켤 때 채색 모델을 받는다 */
+    val colorize: Boolean = false,
     /** 페이지 넘김 화면 전환 효과 */
     val pageTransition: PageTransition = PageTransition.SLIDE,
 ) {

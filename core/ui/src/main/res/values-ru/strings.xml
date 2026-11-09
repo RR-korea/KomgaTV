@@ -34,6 +34,7 @@
     <string name="view_zoom">Увеличение</string>
     <string name="view_remove_gutters">Убрать зазоры кадров (экспериментально)</string>
     <string name="view_move_balloons">Сдвигать и облачка (экспериментально)</string>
+    <string name="view_colorize">Автоматическая раскраска (эксперимент)</string>
     <string name="view_transition">Переход страниц</string>
     <string name="view_transition_off">Выкл.</string>
     <string name="view_transition_slide">Сдвиг</string>

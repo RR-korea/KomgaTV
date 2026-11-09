@@ -1006,6 +1006,19 @@ class ReaderViewModelTest {
     }
 
     @Test
+    fun `자동 채색 - 켜면 이 작품에만 저장된다`() = runTest(testDispatcher) {
+        openBook()
+        advanceUntilIdle()
+        assertEquals(false, reading.colorize)
+
+        viewModel.applySettings(reading.settings.copy(colorize = true))
+        advanceUntilIdle()
+        assertEquals(true, reading.colorize)
+        assertEquals(true, readerPreferences.series.value["s1"]!!.colorize)
+        assertEquals(false, readerPreferences.readerSettings.first().colorize)
+    }
+
+    @Test
     fun `확대 - 저장된 작품 확대로 열고, 기본값으로 되돌리면 100`() = runTest(testDispatcher) {
         readerPreferences.series.value = mapOf("s1" to ReaderSettings(zoomPercent = 125))
         openBook()

@@ -33,4 +33,7 @@
     <string name="start_page_first_book">C\'est le premier livre de la série.</string>
     <string name="start_page_hint_previous">%1$s / OK : dernière page du livre précédent · Back : fermer</string>
     <string name="start_page_hint_first">%1$s : revenir à la première page · Back : fermer</string>
+    <string name="reader_colorize_downloading">Téléchargement du modèle de colorisation… %1$d%%</string>
+    <string name="reader_colorize_failed">Impossible de télécharger le modèle de colorisation. Désactivez puis réactivez pour réessayer.</string>
+    <string name="reader_colorize_working">Colorisation…</string>
 </resources>

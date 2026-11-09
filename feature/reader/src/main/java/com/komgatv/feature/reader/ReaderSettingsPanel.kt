@@ -79,7 +79,7 @@ fun ReaderSettingsPanel(
                 .fillMaxWidth(0.4f)
                 .background(Color(0xFF1E1E1E))
                 .padding(horizontal = 20.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
                 text = stringResource(R.string.reader_settings_title_series),

@@ -34,6 +34,7 @@
     <string name="view_zoom">ズーム</string>
     <string name="view_remove_gutters">コマ間を詰める（実験的）</string>
     <string name="view_move_balloons">吹き出しごと動かす（実験的）</string>
+    <string name="view_colorize">自動カラー化（実験的）</string>
     <string name="view_transition">ページ切り替え効果</string>
     <string name="view_transition_off">オフ</string>
     <string name="view_transition_slide">スライド</string>

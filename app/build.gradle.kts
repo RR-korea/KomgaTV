@@ -7,8 +7,8 @@ plugins {
 }
 
 // 버전 — APK 파일 이름에도 들어간다 (KomgaTV-v0.2.9-b11-debug.apk)
-val appVersionCode = 44
-val appVersionName = "1.0.29"
+val appVersionCode = 45
+val appVersionName = "1.0.30"
 
 base {
     archivesName = "TVReaderForKomga-v$appVersionName-b$appVersionCode"
@@ -51,6 +51,15 @@ android {
 
     buildFeatures {
         buildConfig = true
+    }
+
+    // 자동 채색용 ONNX Runtime 네이티브 라이브러리(ABI마다 25~40MB)는 압축해서 넣는다.
+    // 32비트 x86 TV는 없어 그 라이브러리는 뺀다 (그런 기기에서는 채색만 되지 않는다)
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+            excludes += "lib/x86/libonnxruntime*.so"
+        }
     }
 }
 

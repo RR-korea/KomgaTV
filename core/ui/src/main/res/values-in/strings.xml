@@ -34,6 +34,7 @@
     <string name="view_zoom">Zoom</string>
     <string name="view_remove_gutters">Hapus jarak antarpanel (eksperimental)</string>
     <string name="view_move_balloons">Pindahkan balon juga (eksperimental)</string>
+    <string name="view_colorize">Warnai otomatis (eksperimental)</string>
     <string name="view_transition">Transisi halaman</string>
     <string name="view_transition_off">Mati</string>
     <string name="view_transition_slide">Geser</string>

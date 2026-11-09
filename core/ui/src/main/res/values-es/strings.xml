@@ -34,6 +34,7 @@
     <string name="view_zoom">Zoom</string>
     <string name="view_remove_gutters">Quitar espacio entre viñetas (experimental)</string>
     <string name="view_move_balloons">Mover también los bocadillos (experimental)</string>
+    <string name="view_colorize">Colorear automáticamente (experimental)</string>
     <string name="view_transition">Transición de página</string>
     <string name="view_transition_off">Desactivada</string>
     <string name="view_transition_slide">Deslizar</string>
