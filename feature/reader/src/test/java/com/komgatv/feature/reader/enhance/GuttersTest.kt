@@ -249,6 +249,38 @@ class GuttersTest {
     }
 
     @Test
+    fun `세로 여백도 비스듬해 줄로 나눌 수 없는 칸은 칸마다 이웃 칸에 닿을 때까지 쪽 가운데 쪽으로 민다`() {
+        val wide = 200
+        val px = IntArray(wide * h) { white }
+        // 왼쪽 칸 둘 (위 20~119, 아래 140~299, 사이 20줄)과 오른쪽 긴 칸 (20~299) — 그 사이 세로 여백이 비스듬하다
+        fun leftEdge(y: Int) = 90 + (y - 20) / 10
+        for (y in 20 until 300) for (x in 10 until 190) {
+            val right = leftEdge(y)
+            val inLeft = x < right && (y in 20 until 120 || y in 140 until 300)
+            val inRight = x >= right + 12
+            if (!inLeft && !inRight) continue
+            val top = if (inRight) 20 else if (y < 120) 20 else 140
+            val bottom = if (inRight) 299 else if (y < 120) 119 else 299
+            val edge = y < top + 2 || y > bottom - 2 || x < 12 || x >= 188 || (inLeft && x >= right - 2) || (inRight && x < right + 14)
+            // 칸 안 그림 (빗금)
+            if (edge || (x + y) % 9 == 0) px[y * wide + x] = black
+        }
+
+        val out = requireNotNull(collapseGutters(px, wide, h))
+
+        // 가로 테두리 줄 (왼쪽 칸 안쪽 20~60열이 모두 검정) — 위 칸 위·아래, 아래 칸 위·아래
+        fun borders(img: IntArray) = (0 until h).filter { y -> (20 until 60).all { img[y * wide + it] == black } }
+        val before = borders(px)
+        val after = borders(out)
+        assertEquals(listOf(20, 21, 118, 119, 140, 141, 298, 299), before)
+        // 쪽 위쪽 띠라 위 왼쪽 칸이 아래 왼쪽 칸 바로 위로 내려왔다 — 두 칸 사이 20줄 여백이 없어지고, 칸 높이는 그대로
+        assertEquals(8, after.size)
+        assertEquals("$after", true, after[4] - after[3] in 1..2)
+        assertEquals(before[7] - before[4], after[7] - after[4])
+        assertEquals(before[3] - before[0], after[3] - after[0])
+    }
+
+    @Test
     fun `쪽 끝의 스캔 테두리 줄은 칸으로 치지 않는다`() {
         val px = IntArray(w * h) { white }
         px.panel(40)
