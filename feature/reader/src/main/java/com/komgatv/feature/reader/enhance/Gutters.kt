@@ -170,10 +170,10 @@ private fun collapsePage(pixels: IntArray, width: Int, height: Int): IntArray? {
             isContent = { x -> wideInk(x) && !page.flatColumn(x, band.first, band.last + 1) },
             flatOnly = { x -> wideInk(x) },
             // 칸 묶음 사이 세로 여백은 대부분 비었다 — 큰 그림 속 가로선 없는 세로 줄기는 여백이 아니다.
-            // 띠 높이 내내 이어지는 칸 세로 테두리 열은 빼고 본다
+            // 띠 높이 내내 이어지는 칸 세로 테두리 열은 빼고 본다 — 모두 그런 열이면 여백이 아니라 그림 속 검은 줄기
             keepGap = { gap ->
                 val inks = gap.map { page.columnInk(it, band.first, band.last + 1) }.filter { it < bandH * BORDER_COLUMN_INK }
-                inks.isNotEmpty() && inks.sum() > inks.size * bandH * MAX_COLUMN_GAP_INK
+                inks.isEmpty() || inks.sum() > inks.size * bandH * MAX_COLUMN_GAP_INK
             },
         )
         // 좁은 조각으로 나뉘면 칸 묶음이 아니라 그림이 갈라진 것 — 띠를 그대로 둔다
@@ -1368,7 +1368,7 @@ private const val MIN_SAVED_RATIO = 0.005f
 
 /** 페이지 리더(Coil)용 — 작품 보기 설정 "칸 간격 없애기" */
 internal class GutterTransformation : Transformation() {
-    override val cacheKey: String = "gutters-18"
+    override val cacheKey: String = "gutters-19"
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width
