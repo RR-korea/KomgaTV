@@ -33,6 +33,7 @@
     <string name="view_off">Off</string>
     <string name="view_zoom">Zoom</string>
     <string name="view_remove_gutters">Remove panel gaps (experimental)</string>
+    <string name="view_panel_overlap">Overlap panel rows (experimental)</string>
     <string name="view_move_balloons">Move balloons too (experimental)</string>
     <string name="view_colorize">Auto colorize (experimental)</string>
     <string name="view_transition">Page transition</string>

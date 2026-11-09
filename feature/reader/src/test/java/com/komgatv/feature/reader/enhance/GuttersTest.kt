@@ -38,6 +38,30 @@ class GuttersTest {
         assertEquals(white, out[150 * w + 9])
     }
 
+    @Test
+    fun `칸 겹치기 - 칸 줄끼리 쪽 높이의 그만큼 포개고 가운데 줄을 위에 그린다`() {
+        val px = IntArray(w * h) { white }
+        px.panel(20)
+        px.panel(150)
+        px.panel(280)
+        // 가운데 칸 안은 빗금 — 어느 칸이 위에 그려졌는지 본다
+        for (y in 152 until 248) for (x in 12 until 88) if ((x + y) % 4 == 0) px[y * w + x] = black
+
+        val out = requireNotNull(collapseGutters(px, w, h, overlapPercent = 5))
+
+        // 100줄 칸 셋이 20줄(5%)씩 포개져 260줄 — 가운데(70~329). 1단 70~169, 2단 150~249, 3단 230~329
+        assertEquals((70..329).toList(), (0 until h).filter { out[it * w + 10] == black })
+        // 2단이 1단 위 — 1단 아래 테두리(168·169) 자리에 2단의 빗금이 보인다
+        assertEquals(black, out[168 * w + 12])
+        assertEquals(white, out[168 * w + 13])
+        // 2단이 3단 위 — 3단 위 테두리(230·231) 자리에도 2단의 빗금
+        assertEquals(white, out[230 * w + 13])
+        assertEquals(black, out[230 * w + 14])
+        // 2단의 위·아래 테두리는 그대로
+        assertEquals(black, out[150 * w + 45])
+        assertEquals(black, out[249 * w + 45])
+    }
+
     /** 테두리 2px짜리 칸: 가로 [x0]~[x1] 앞, 세로 [y0]~[y1] 앞 */
     private fun IntArray.box(x0: Int, x1: Int, y0: Int, y1: Int) {
         for (y in y0 until y1) for (x in x0 until x1) {

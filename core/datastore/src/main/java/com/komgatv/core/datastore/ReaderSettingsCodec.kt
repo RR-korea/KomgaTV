@@ -28,6 +28,7 @@ internal object ReaderSettingsCodec {
         "removeGutters" to s.removeGutters.toString(),
         "moveBalloons" to s.moveBalloons.toString(),
         "colorize" to s.colorize.toString(),
+        "panelOverlap" to s.panelOverlapPercent.toString(),
         "pageTransition" to s.pageTransition.name,
     ).joinToString(";") { (k, v) -> "$k=$v" }
 
@@ -58,6 +59,8 @@ internal object ReaderSettingsCodec {
             removeGutters = map["removeGutters"]?.toBooleanStrictOrNull() ?: d.removeGutters,
             moveBalloons = map["moveBalloons"]?.toBooleanStrictOrNull() ?: d.moveBalloons,
             colorize = map["colorize"]?.toBooleanStrictOrNull() ?: d.colorize,
+            panelOverlapPercent = map["panelOverlap"]?.toIntOrNull()
+                ?.coerceIn(0, ReaderSettings.MAX_PANEL_OVERLAP_PERCENT) ?: d.panelOverlapPercent,
         )
     }
 

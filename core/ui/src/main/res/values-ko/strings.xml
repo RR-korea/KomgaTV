@@ -33,6 +33,7 @@
     <string name="view_off">꺼짐</string>
     <string name="view_zoom">확대</string>
     <string name="view_remove_gutters">칸 간격 없애기 (실험적)</string>
+    <string name="view_panel_overlap">칸 겹치기 (실험적)</string>
     <string name="view_move_balloons">말풍선까지 옮기기 (실험적)</string>
     <string name="view_colorize">자동 채색 (실험적)</string>
     <string name="view_transition">화면 전환</string>

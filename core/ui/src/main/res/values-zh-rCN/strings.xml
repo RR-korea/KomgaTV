@@ -33,6 +33,7 @@
     <string name="view_off">关闭</string>
     <string name="view_zoom">缩放</string>
     <string name="view_remove_gutters">去除分格间距（实验性）</string>
+    <string name="view_panel_overlap">分格行重叠（实验性）</string>
     <string name="view_move_balloons">连对话框一起移动（实验性）</string>
     <string name="view_colorize">自动上色（实验性）</string>
     <string name="view_transition">翻页效果</string>

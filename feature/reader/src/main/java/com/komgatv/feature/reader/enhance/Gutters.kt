@@ -29,17 +29,21 @@ import kotlinx.coroutines.sync.withLock
  *
  * 좌우 두 쪽을 한 장에 스캔한 그림([spreadSpine])은 가운데에서 나눠 쪽마다 따로 붙이고 다시 합친다.
  *
+ * 칸 겹치기([overlapPercent] > 0): 여백을 없앤 칸 줄(띠)끼리 쪽 높이의 그만큼 포개고, 가운데 줄을 위에 그린다 —
+ * 2단이면 2단이 1단 위, 3단이면 2단이 1·3단 위, 4단이면 가운데 둘이 바깥 둘 위.
+ *
+ * @param overlapPercent 칸 줄끼리 포갤 비율 % (쪽 높이 기준), 0이면 포개지 않고 맞닿는 테두리만 겹친다
  * @return 바꾼 픽셀, 바꿀 것이 거의 없으면 null
  */
-internal fun collapseGutters(pixels: IntArray, width: Int, height: Int): IntArray? {
+internal fun collapseGutters(pixels: IntArray, width: Int, height: Int, overlapPercent: Int = 0): IntArray? {
     if (width < 8 || height < 32) return null
-    val spine = spreadSpine(pixels, width, height) ?: return collapsePage(pixels, width, height)
+    val spine = spreadSpine(pixels, width, height) ?: return collapsePage(pixels, width, height, overlapPercent)
     var out: IntArray? = null
     for ((x0, x1) in listOf(0 to spine, spine to width)) {
         val w = x1 - x0
         val half = IntArray(w * height)
         for (y in 0 until height) System.arraycopy(pixels, y * width + x0, half, y * w, w)
-        val done = collapsePage(half, w, height) ?: continue
+        val done = collapsePage(half, w, height, overlapPercent) ?: continue
         val dst = out ?: pixels.copyOf().also { out = it }
         for (y in 0 until height) System.arraycopy(done, y * w, dst, y * width + x0, w)
     }
@@ -83,7 +87,9 @@ private fun spreadSpine(pixels: IntArray, width: Int, height: Int): Int? {
 private fun luminance(c: Int) = (((c shr 16) and 0xFF) * 299 + ((c shr 8) and 0xFF) * 587 + (c and 0xFF) * 114) / 1000
 
 /** 한 쪽의 칸 사이 여백을 붙인다 ([collapseGutters]) */
-private fun collapsePage(pixels: IntArray, width: Int, height: Int): IntArray? {
+private fun collapsePage(pixels: IntArray, width: Int, height: Int, overlapPercent: Int): IntArray? {
+    // 칸 겹치기 — 띠끼리 포갤 줄 수
+    val layerRows = (height * overlapPercent / 100f).roundToInt().coerceAtLeast(0)
     val page = PageMaps(pixels, width, height)
     val frames = Frames(width, height, page.paper)
     val edgeX = (width * EDGE_RATIO).roundToInt()
@@ -241,32 +247,63 @@ private fun collapsePage(pixels: IntArray, width: Int, height: Int): IntArray? {
         block
     }
 
-    // 띠끼리 맞닿는 테두리도 겹친다
+    // 띠끼리 맞닿는 테두리도 겹친다 — 칸 겹치기면 그만큼 포갠다 (가운데 띠를 위에 그린다)
+    val layered = layerRows > 0 && blocks.size > 1
     val joins = IntArray(blocks.size) { i ->
-        if (i == 0) 0 else frames.overlap(blocks[i - 1], 0, blocks[i - 1].size / width, blocks[i], 0, blocks[i].size / width, 0, width)
+        when {
+            i == 0 -> 0
+            layered -> minOf(layerRows, blocks[i - 1].size / width, blocks[i].size / width)
+            else -> frames.overlap(blocks[i - 1], 0, blocks[i - 1].size / width, blocks[i], 0, blocks[i].size / width, 0, width)
+        }
     }
     val total = blocks.sumOf { it.size / width } - joins.sum()
     val removed = (0 until height).filter { y -> bands.none { y in it } }
-    if (!columnsMoved && removed.size < height * MIN_SAVED_RATIO) return null
+    if (!columnsMoved && !layered && removed.size < height * MIN_SAVED_RATIO) return null
     // 위아래 빈 곳은 쪽 위·아래 절반의 원래 여백 중 가장 고른 줄의 대표 색 (위는 검정 틈, 아래는 흰 종이인 쪽도 있다)
-    fun padColor(rows: List<Int>) = page.typicalColor(pixels, page.evenest(rows.ifEmpty { removed }, 0, width), 0, width)
+    fun padColor(rows: List<Int>): Int {
+        val sample = rows.ifEmpty { removed }
+        return page.typicalColor(pixels, if (sample.isEmpty()) 0 else page.evenest(sample, 0, width), 0, width)
+    }
     val start = (height - total) / 2
     val out = IntArray(pixels.size)
-    if (removed.isEmpty()) {
+    if (removed.isEmpty() && !layered) {
         // 쪽 전체 여백은 없고 칸 묶음만 움직였다
         blocks.forEachIndexed { i, block -> System.arraycopy(block, 0, out, bands[i].first * width, block.size) }
         return out
     }
     out.fill(padColor(removed.filter { it < height / 2 }), 0, start * width)
+    // 띠마다 놓일 첫 줄 — 앞 띠 끝에서 겹칠 줄 수만큼 올라간다
     var y = start
-    blocks.forEachIndexed { i, block ->
-        val join = joins[i]
-        for (r in 0 until join) frames.merge(out, y - join + r, block, r, 0, width)
-        System.arraycopy(block, join * width, out, y * width, block.size - join * width)
-        y += block.size / width - join
+    val tops = IntArray(blocks.size) { i ->
+        y -= joins[i]
+        y.also { y += blocks[i].size / width }
+    }
+    if (layered) {
+        // 바깥 띠부터 그려 가운데 띠가 이웃 띠 위에 포개진다 (2단이면 2단이 1단 위, 3단이면 2단이 1·3단 위)
+        for (i in layerOrder(blocks.size)) System.arraycopy(blocks[i], 0, out, tops[i] * width, blocks[i].size)
+    } else {
+        blocks.forEachIndexed { i, block ->
+            val join = joins[i]
+            for (r in 0 until join) frames.merge(out, tops[i] + r, block, r, 0, width)
+            System.arraycopy(block, join * width, out, (tops[i] + join) * width, block.size - join * width)
+        }
     }
     out.fill(padColor(removed.filter { it >= height / 2 }), y * width, out.size)
     return out
+}
+
+/** 칸 겹치기에서 띠를 그리는 차례 — 바깥(첫·끝)부터 안쪽으로, 나중에 그린 가운데 띠가 위에 온다 */
+private fun layerOrder(count: Int): List<Int> {
+    val order = ArrayList<Int>(count)
+    var lo = 0
+    var hi = count - 1
+    while (lo <= hi) {
+        order += lo
+        if (hi != lo) order += hi
+        lo++
+        hi--
+    }
+    return order
 }
 
 /** 쪽을 보는 표들 — 잉크(바탕과 다른 곳), 세로·가로로 길게 이어진 잉크, 살짝 흐리게 한 밝기 */
@@ -1367,8 +1404,8 @@ private const val MAX_SPINE_CROSS_RATIO = 0.02f
 private const val MIN_SAVED_RATIO = 0.005f
 
 /** 페이지 리더(Coil)용 — 작품 보기 설정 "칸 간격 없애기" */
-internal class GutterTransformation : Transformation() {
-    override val cacheKey: String = "gutters-19"
+internal class GutterTransformation(private val overlapPercent: Int = 0) : Transformation() {
+    override val cacheKey: String = "gutters-19" + if (overlapPercent > 0) "-o$overlapPercent" else ""
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width
@@ -1376,7 +1413,7 @@ internal class GutterTransformation : Transformation() {
         val out = pageWorkLock.withLock {
             val pixels = IntArray(w * h)
             input.getPixels(pixels, 0, w, 0, 0, w, h)
-            collapseGutters(pixels, w, h)
+            collapseGutters(pixels, w, h, overlapPercent)
         } ?: return input
         val config = if (input.config == Bitmap.Config.RGB_565) Bitmap.Config.RGB_565 else Bitmap.Config.ARGB_8888
         return createBitmap(w, h, config).apply { setPixels(out, 0, w, 0, 0, w, h) }

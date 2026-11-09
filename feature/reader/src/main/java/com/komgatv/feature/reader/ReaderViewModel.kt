@@ -103,6 +103,8 @@ sealed interface ReaderUiState {
         val moveBalloons: Boolean = false,
         /** 흑백 쪽 자동 채색 */
         val colorize: Boolean = false,
+        /** 칸 줄(단) 겹치기 % (0이면 안 함) */
+        val panelOverlapPercent: Int = 0,
         /** 페이지 넘김 화면 전환 효과 */
         val pageTransition: PageTransition = PageTransition.SLIDE,
         /**
@@ -140,6 +142,7 @@ sealed interface ReaderUiState {
                 removeGutters = removeGutters,
                 moveBalloons = moveBalloons,
                 colorize = colorize,
+                panelOverlapPercent = panelOverlapPercent,
                 pageTransition = pageTransition,
             )
     }
@@ -247,6 +250,7 @@ class ReaderViewModel @Inject constructor(
     private var currentRemoveGutters: Boolean = false
     private var currentMoveBalloons: Boolean = false
     private var currentColorize: Boolean = false
+    private var currentPanelOverlapPercent: Int = 0
     private var currentPageTransition: PageTransition = PageTransition.SLIDE
     private var pageStep = 0
     private var currentSeriesId: String = ""
@@ -819,6 +823,7 @@ class ReaderViewModel @Inject constructor(
         if (new.removeGutters != currentRemoveGutters) setRemoveGutters(new.removeGutters)
         if (new.moveBalloons != currentMoveBalloons) setMoveBalloons(new.moveBalloons)
         if (new.colorize != currentColorize) setColorize(new.colorize)
+        if (new.panelOverlapPercent != currentPanelOverlapPercent) setPanelOverlapPercent(new.panelOverlapPercent)
         if (new.pageTransition != currentPageTransition) setPageTransition(new.pageTransition)
     }
 
@@ -869,6 +874,15 @@ class ReaderViewModel @Inject constructor(
     fun setColorize(enabled: Boolean) {
         if (currentColorize == enabled) return
         currentColorize = enabled
+        updateReadingState()
+        saveSeriesSettings()
+    }
+
+    /** 칸 줄(단) 겹치기 % — 이 작품에 저장 */
+    fun setPanelOverlapPercent(percent: Int) {
+        val clamped = percent.coerceIn(0, ReaderSettings.MAX_PANEL_OVERLAP_PERCENT)
+        if (currentPanelOverlapPercent == clamped) return
+        currentPanelOverlapPercent = clamped
         updateReadingState()
         saveSeriesSettings()
     }
@@ -936,6 +950,7 @@ class ReaderViewModel @Inject constructor(
         currentRemoveGutters = settings.removeGutters
         currentMoveBalloons = settings.moveBalloons
         currentColorize = settings.colorize
+        currentPanelOverlapPercent = settings.panelOverlapPercent
         currentPageTransition = settings.pageTransition
     }
 
@@ -954,6 +969,7 @@ class ReaderViewModel @Inject constructor(
         removeGutters = currentRemoveGutters,
         moveBalloons = currentMoveBalloons,
         colorize = currentColorize,
+        panelOverlapPercent = currentPanelOverlapPercent,
         pageTransition = currentPageTransition,
     )
 
@@ -1205,6 +1221,7 @@ class ReaderViewModel @Inject constructor(
             removeGutters = currentRemoveGutters,
             moveBalloons = currentMoveBalloons,
             colorize = currentColorize,
+            panelOverlapPercent = currentPanelOverlapPercent,
             pageTransition = currentPageTransition,
             pageStep = pageStep,
             seriesCustomized = seriesCustomized,
