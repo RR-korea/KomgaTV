@@ -157,9 +157,9 @@ private fun collapsePage(pixels: IntArray, width: Int, height: Int, overlapPerce
         isContent = { y -> (page.bandInk(y, edgeX) && !page.flatGutter(y, edgeX, width - edgeX)) || tail[y] },
         flatOnly = { y -> page.bandInk(y, edgeX) || tail[y] },
         keepGap = { gap ->
-            // 떼어 낸 테두리 끝자락 줄만큼 건너 테두리를 찾는다
-            val above = (gap.first - 1 downTo 0).takeWhile { tail[it] }.count()
-            val below = (gap.last + 1 until height).takeWhile { tail[it] }.count()
+            // 떼어 낸 테두리 끝자락 줄만큼 건너 테두리를 찾는다 (최소 STRAY_SLACK 여유)
+            val above = maxOf(STRAY_SLACK, (gap.first - 1 downTo 0).takeWhile { tail[it] }.count())
+            val below = maxOf(STRAY_SLACK, (gap.last + 1 until height).takeWhile { tail[it] }.count())
             !page.cleanGap(gap, edgeX, width - edgeX, above, below)
         },
     )
@@ -358,10 +358,13 @@ private class PageMaps(pixels: IntArray, private val width: Int, private val hei
             }
         }
         if (first < 0) return false
-        if (last - first + 1 >= (x1 - x0) * OVERLAY_SPAN_RATIO) return true
-        var loose = 0
-        for (x in first..last) if (ink[base + x] && !tall[base + x]) loose++
-        return loose > OVERLAY_NOISE
+        val span = last - first + 1
+        if (span >= (x1 - x0) * OVERLAY_SPAN_RATIO) return true
+        // 좁은 구간(말풍선) 밖에 잉크가 거의 없으면 여백에 걸친 말풍선 — 칸 내용이 아니다
+        var outsideLoose = 0
+        for (x in x0 until first) if (ink[base + x]) outsideLoose++
+        for (x in last + 1 until x1) if (ink[base + x]) outsideLoose++
+        return outsideLoose > OVERLAY_NOISE
     }
 
     /** 칸 테두리 같은 가로선이 줄의 [BORDER_ROW_RATIO] 이상을 지나간다 */
@@ -371,9 +374,18 @@ private class PageMaps(pixels: IntArray, private val width: Int, private val hei
         return n >= (x1 - x0) * BORDER_ROW_RATIO
     }
 
-    /** 쪽 전체 띠를 나눌 때의 잉크 줄 — 세로로 긴 잉크가 지나가거나, 칸 테두리 같은 가로선이 길게 지나간다 (기울어진 스캔의 테두리 끝자락) */
+    /** 그림 획이 줄의 [STROKE_ROW_RATIO] 이상을 지나간다 — 테두리 없는 그림 */
+    private fun strokeRow(y: Int, x0: Int, x1: Int): Boolean {
+        var n = 0
+        val base = y * width
+        for (x in x0 until x1) if (stroke[base + x]) n++
+        return n >= (x1 - x0) * STROKE_ROW_RATIO
+    }
+
+    /** 쪽 전체 띠를 나눌 때의 잉크 줄 — 세로로 긴 잉크가 지나가거나, 칸 테두리 같은 가로선(또는 검은 바탕 쪽의 그림 획)이 길게 지나간다 */
     fun bandInk(y: Int, edgeX: Int): Boolean {
-        return inkContent(y, 0, width) || borderRow(y, edgeX, width - edgeX)
+        return inkContent(y, 0, width) || borderRow(y, edgeX, width - edgeX) ||
+            (bg < MIN_COLUMN_PAPER_BG && strokeRow(y, edgeX, width - edgeX))
     }
 
     fun inkAt(i: Int): Boolean = ink[i]
@@ -1271,13 +1283,15 @@ private const val FLAT_DIFF = 30
 private const val FLAT_OUTLIER_RATIO = 0.03f
 
 /** 고른 색 빈 곳이 쪽 높이의 이만큼보다 얇으면 틈이 아니라 칸 테두리 */
-private const val MIN_FLAT_GAP_RATIO = 0.008f
+private const val MIN_FLAT_GAP_RATIO = 0.003f
 
 /** 고른 색 빈 곳이 쪽 높이의 이만큼보다 길면 틈이 아니라 그림 속 고른 곳 */
 private const val MAX_FLAT_GAP_RATIO = 0.06f
 
 /** 가로로 긴 잉크가 줄의 이만큼을 덮으면 칸 테두리가 지나가는 줄 */
 private const val BORDER_ROW_RATIO = 0.1f
+/** 그림 획이 줄의 이만큼을 덮으면 칸 내용이 지나가는 줄 */
+private const val STROKE_ROW_RATIO = 0.1f
 
 /** 여백 후보의 줄 중 이만큼은 빈 줄이어야 여백 — 글 쪽·한 장 그림은 빈 줄이 드물다 */
 private const val CLEAN_GAP_RATIO = 0.6f
@@ -1289,7 +1303,7 @@ private const val CLEAN_ROW_RATIO = 0.01f
 private const val GAP_STROKE_RATIO = 0.1f
 
 /** 칸 묶음 안에서 여백으로 볼 가장 짧은 빈 곳 — 그림 속 흰 줄은 이보다 짧다 */
-private const val MIN_STACK_GAP_RATIO = 0.006f
+private const val MIN_STACK_GAP_RATIO = 0.003f
 
 /** 띠 높이의 이만큼 넘게 잉크인 열은 칸 세로 테두리 */
 private const val BORDER_COLUMN_INK = 0.9f
@@ -1332,7 +1346,7 @@ private const val CELL_FRAME_WIDTH_RATIO = 0.3f
 private const val MIN_STACK_PART_RATIO = 0.02f
 
 /** 칸 묶음 사이 세로 여백은 잉크가 이 비율 이하 */
-private const val MAX_COLUMN_GAP_INK = 0.05f
+private const val MAX_COLUMN_GAP_INK = 0.20f
 
 /** 칸 묶음은 쪽 너비의 이만큼은 돼야 한다 */
 private const val MIN_STACK_WIDTH_RATIO = 0.1f
@@ -1405,7 +1419,7 @@ private const val MIN_SAVED_RATIO = 0.005f
 
 /** 페이지 리더(Coil)용 — 작품 보기 설정 "칸 간격 없애기" */
 internal class GutterTransformation(private val overlapPercent: Int = 0) : Transformation() {
-    override val cacheKey: String = "gutters-19" + if (overlapPercent > 0) "-o$overlapPercent" else ""
+    override val cacheKey: String = "gutters-20" + if (overlapPercent > 0) "-o$overlapPercent" else ""
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width

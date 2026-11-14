@@ -404,4 +404,68 @@ class GuttersTest {
         val px = IntArray(w * h) { i -> if (i % w % 10 < 3) black else white }
         assertNull(collapseGutters(px, w, h))
     }
+
+    @Test
+    fun `스택 내 작은 칸들의 가로선이 세로 여백에 걸쳐 있어도 세로 칸 묶음을 나누어 가로 여백을 붙인다`() {
+        val px = IntArray(w * h) { white }
+        // 오른쪽 세로로 긴 칸(55~95, 20~220), 왼쪽에 작은 칸 둘(6~50, 20~80 및 120~220, 사이 40줄 여백)
+        px.box(55, 95, 20, 220)
+        px.box(6, 50, 20, 80)
+        px.box(6, 50, 120, 220)
+        // 세로 여백(50..55)을 가로지르는 가로 선 (스택 컷 테두리 연장선)
+        for (x in 50 until 55) {
+            px[80 * w + x] = black
+            px[120 * w + x] = black
+        }
+
+        val out = requireNotNull(collapseGutters(px, w, h))
+        val outOverlap = requireNotNull(collapseGutters(px, w, h, overlapPercent = 5))
+
+        // 작은 칸 둘 사이의 40줄 여백이 줄어들어 붙는다
+        val blackRows = (0 until h).filter { out[it * w + 20] == black }
+        assertEquals(listOf(100, 101, 158, 159, 200, 201, 298, 299), blackRows)
+
+        // overlapPercent=5에서도 정상 동작
+        val blackRowsOverlap = (0 until h).filter { outOverlap[it * w + 20] == black }
+        assertEquals(blackRows.size, blackRowsOverlap.size)
+    }
+
+    @Test
+    fun `칸 사이 가로 여백이 좁아도 테두리 사이 여백을 찾아 붙인다`() {
+        // 높이 1000px, 너비 400px에서 8px짜리 좁은 가로 여백
+        val w2 = 400
+        val h2 = 1000
+        val px = IntArray(w2 * h2) { white }
+        for (y in 50 until 450) for (x in 40 until 360) {
+            if (y < 52 || y >= 448 || x < 42 || x >= 358) px[y * w2 + x] = black
+        }
+        for (y in 458 until 858) for (x in 40 until 360) {
+            if (y < 460 || y >= 856 || x < 42 || x >= 358) px[y * w2 + x] = black
+        }
+
+        val out = requireNotNull(collapseGutters(px, w2, h2))
+        // 8줄 여백이 제거되어 두 칸 테두리가 맞붙는다
+        val blackRows = (0 until h2).filter { out[it * w2 + 200] == black }
+        assertEquals(listOf(101, 102, 499, 500, 897, 898), blackRows)
+    }
+
+    @Test
+    fun `검은 바탕 쪽에서 테두리 없는 그림 칸 사이의 검은 여백도 붙인다`() {
+        val px = IntArray(w * h) { black }
+        // 검은 바탕에 위 칸(y=30..150), 아래 칸(y=200..320) — 테두리 없이 안쪽만 흰색 빗금 그림
+        for (y in 30 until 150) for (x in 15 until 85) {
+            if ((x + y) % 6 < 3) px[y * w + x] = white
+        }
+        for (y in 200 until 320) for (x in 15 until 85) {
+            if ((x + y) % 6 < 3) px[y * w + x] = white
+        }
+
+        val out = requireNotNull(collapseGutters(px, w, h))
+        val whiteRows = (0 until h).filter { out[it * w + 50] == white }
+        val beforeGap = 200 - 150
+        val afterTopEnd = whiteRows.filter { it < 200 }.maxOrNull() ?: 0
+        val afterBottomStart = whiteRows.filter { it > 200 }.minOrNull() ?: h
+        val afterGap = afterBottomStart - afterTopEnd
+        assert(afterGap < beforeGap)
+    }
 }
