@@ -48,24 +48,38 @@ internal fun findBorders(pixels: IntArray, width: Int, height: Int, topBottom: B
 
     fun isDark(level: Int) = level <= MAX_DARK_BORDER
 
-    // 네 변의 맨 바깥 줄 중 셋 이상이 검으면 검은 바탕에 스캔한 쪽
+    /** 맨 바깥 줄과 그 안쪽 줄 중 더 어두운 레벨 (가장자리 빛샘·노이즈 방어) */
+    fun edgeLevel(start: Int, step: Int, count: Int, inward: Int): Int {
+        val l0 = commonLevel(start, step, count)
+        val l1 = commonLevel(start + inward, step, count)
+        return if (isDark(l0) || isDark(l1)) minOf(l0, l1) else l0
+    }
+
+    // 네 변 중 셋 이상의 바깥 레벨이 검으면 검은 바탕에 스캔한 쪽
     val darkPage = listOf(
-        commonLevel(0, 1, width),
-        commonLevel((height - 1) * width, 1, width),
-        commonLevel(0, width, height),
-        commonLevel(width - 1, width, height),
+        edgeLevel(0, 1, width, width),
+        edgeLevel((height - 1) * width, 1, width, -width),
+        edgeLevel(0, width, height, 1),
+        edgeLevel(width - 1, width, height, -1),
     ).count { isDark(it) } >= 3
 
     /**
      * 한 변의 테두리 두께. 변을 따라 [count]개 선(열 또는 줄)이 있고, k번째 선의 쪽 끝 픽셀은 [first] + k×[across],
      * 안쪽으로 한 픽셀 갈 때마다 [inward]만큼 움직인다. [depthLimit]까지, 변에 수직인 길이 [length].
+     * [strict]: 좌우 변처럼 칸 밖으로 나온 그림을 자르지 않아야 할 때 true (1줄 먼지 완화 후 최소 여백 깊이)
      */
-    fun sideDepth(first: Int, across: Int, count: Int, inward: Int, length: Int, depthLimit: Int, cover: Float): Int {
+    fun sideDepth(first: Int, across: Int, count: Int, inward: Int, length: Int, depthLimit: Int, cover: Float, strict: Boolean = false): Int {
         if (count <= 0) return 0
-        // 흰 종이 쪽 끝의 얇은 검은 스캔 선은 건넌다
+        // 흰 종이 쪽 끝의 얇은 검은 스캔 선 또는 검은 바탕 가장자리 빛샘 건넌다
         var skip = 0
         var level = commonLevel(first, across, count)
-        if (isDark(level) && !darkPage) {
+        if (darkPage && !isDark(level)) {
+            val innerLevel = commonLevel(first + inward, across, count)
+            if (isDark(innerLevel)) {
+                skip = 1
+                level = innerLevel
+            }
+        } else if (isDark(level) && !darkPage) {
             skip = ceil(length * THIN_EDGE_RATIO).toInt()
             level = commonLevel(first + skip * inward, across, count)
         }
@@ -77,9 +91,23 @@ internal fun findBorders(pixels: IntArray, width: Int, height: Int, topBottom: B
             while (d < depthLimit && abs(lum[edge + d * inward] - level) <= BORDER_TOLERANCE) d++
             d
         }
-        depths.sortDescending()
-        // 선 중 [cover]가 이만큼 이상 여백인 깊이
-        val depth = depths[(count * cover).toInt().coerceAtMost(count - 1)]
+        val depth = if (strict) {
+            // 좌우 변: 1줄짜리 고립된 먼지 스파이크는 이웃 줄로 완화한 뒤, 그림이 시작되는 최소 깊이까지
+            val smoothed = IntArray(count) { i ->
+                val prev = if (i > 0) depths[i - 1] else depths[i]
+                val next = if (i < count - 1) depths[i + 1] else depths[i]
+                if (depths[i] < prev && depths[i] < next) {
+                    maxOf(depths[i], minOf(prev, next))
+                } else {
+                    depths[i]
+                }
+            }
+            smoothed.minOrNull() ?: 0
+        } else {
+            // 위아래 변: 선 중 [cover]가 이만큼 이상 여백인 깊이 (칸 밖 머리·옷자락·쪽 번호 무시)
+            depths.sortDescending()
+            depths[(count * cover).toInt().coerceAtMost(count - 1)]
+        }
         // 아주 얇은 것은 그림 결이다 (쪽 끝까지 그린 그림의 잔 무늬)
         return if (depth > skip && depth >= length * MIN_BORDER_RATIO) depth else 0
     }
@@ -89,16 +117,16 @@ internal fun findBorders(pixels: IntArray, width: Int, height: Int, topBottom: B
     var top = 0
     var bottom = 0
     if (topBottom) {
-        top = sideDepth(0, 1, width, width, height, maxY, COVER_RATIO)
-        bottom = sideDepth((height - 1) * width, 1, width, -width, height, maxY, COVER_RATIO)
+        top = sideDepth(0, 1, width, width, height, maxY, COVER_RATIO, strict = false)
+        bottom = sideDepth((height - 1) * width, 1, width, -width, height, maxY, COVER_RATIO, strict = false)
     }
     var left = 0
     var right = 0
     if (leftRight) {
         // 위아래 여백(쪽 번호 등)을 뺀 줄 사이에서만 본다
         val rows = height - top - bottom
-        left = sideDepth(top * width, width, rows, 1, width, maxX, STRICT_COVER_RATIO)
-        right = sideDepth(top * width + width - 1, width, rows, -1, width, maxX, STRICT_COVER_RATIO)
+        left = sideDepth(top * width, width, rows, 1, width, maxX, STRICT_COVER_RATIO, strict = true)
+        right = sideDepth(top * width + width - 1, width, rows, -1, width, maxX, STRICT_COVER_RATIO, strict = true)
     }
     if (top + bottom < height * MIN_CROP_RATIO && left + right < width * MIN_CROP_RATIO) return null
     return intArrayOf(top, bottom, left, right)
@@ -132,7 +160,7 @@ private const val STRICT_COVER_RATIO = 0.99f
 private const val MIN_LIGHT_BORDER = 180
 
 /** 이만큼 어두우면 검은 테두리 */
-private const val MAX_DARK_BORDER = 60
+private const val MAX_DARK_BORDER = 75
 
 /** 흰 종이 쪽에서도 쪽 끝에서 이만큼 안의 검은 줄은 스캔 선으로 보고 뺀다 */
 private const val THIN_EDGE_RATIO = 0.01f
@@ -167,7 +195,7 @@ internal class CropBorderTransformation(
     private val left: Boolean,
     private val variant: String,
 ) : Transformation() {
-    override val cacheKey: String = "crop-borders-2-$mode" + if (partner != null) "-${partner.hashCode()}-${if (left) "L" else "R"}" else ""
+    override val cacheKey: String = "crop-borders-3-$mode" + if (partner != null) "-${partner.hashCode()}-${if (left) "L" else "R"}" else ""
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width

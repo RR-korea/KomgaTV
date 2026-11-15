@@ -132,4 +132,36 @@ class CropBordersTest {
         // 한 쪽 보기면 이 쪽 그대로
         assertArrayEquals(floatArrayOf(0.02f, 0f, 0f, 0f), matchCrop(floatArrayOf(0.02f, 0f, 0f, 0f), null), 0f)
     }
+
+    @Test
+    fun `검은 바탕에 스캔한 쪽의 외곽 줄에 센서 빛샘이나 노이즈가 있어도 검은 테두리를 잰다`() {
+        val px = IntArray(w * h) { black }
+        px.panel(15, 190, 25, 280, frame = white)
+        // 오른쪽 맨 바깥 줄(x=w-1)에 스캐너 반사광/센서 빛샘 (밝기 110)
+        val bleed = 0xFF6E6E6E.toInt() // lum ~110
+        for (y in 0 until h) px[y * w + w - 1] = bleed
+
+        // 오른쪽은 빛샘 1줄을 건너뛰고도 검은 테두리 10을 잰다
+        assertArrayEquals(intArrayOf(25, 20, 15, 10), borders(px))
+    }
+
+    @Test
+    fun `좌우 변에서 컷 밖으로 튀어나온 그림은 몇 줄 되지 않아도 자르지 않는다`() {
+        val px = IntArray(w * h) { white }
+        px.panel(20, 180, 30, 270)
+        // 오른쪽 여백으로 나온 칼끝이 단 2줄 (전체 높이의 1% 미만이어도 자르지 않아야 함)
+        for (y in 100 until 102) for (x in 180 until 190) px[y * w + x] = black
+
+        assertArrayEquals(intArrayOf(30, 30, 20, 10), borders(px))
+    }
+
+    @Test
+    fun `좌우 변에서 1줄짜리 고립된 먼지 점은 봐주고 테두리까지 잰다`() {
+        val px = IntArray(w * h) { white }
+        px.panel(20, 180, 30, 270)
+        // 오른쪽 여백 한가운데에 1줄짜리 먼지 점 1개 (x=190, y=100)
+        px[100 * w + 190] = black
+
+        assertArrayEquals(intArrayOf(30, 30, 20, 20), borders(px))
+    }
 }
