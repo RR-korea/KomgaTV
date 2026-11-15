@@ -74,6 +74,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Precision
 import timber.log.Timber
+import com.komgatv.core.model.CropBorders
 import com.komgatv.core.model.ImageEnhancement
 import com.komgatv.core.model.PageTransition
 import com.komgatv.core.model.ReaderSettings
@@ -84,8 +85,7 @@ import com.komgatv.core.ui.components.ProgressBar
 import com.komgatv.core.ui.components.loadErrorText
 import com.komgatv.feature.reader.continuous.ContinuousPages
 import com.komgatv.feature.reader.enhance.BalloonTextTransformation
-import com.komgatv.feature.reader.enhance.ColorModel
-import com.komgatv.feature.reader.enhance.ColorizeTransformation
+import com.komgatv.feature.reader.enhance.CropBorderTransformation
 import com.komgatv.feature.reader.enhance.GutterTransformation
 import com.komgatv.feature.reader.enhance.ImageEnhancer
 import com.komgatv.feature.reader.enhance.LanczosTransformation
@@ -213,26 +213,17 @@ private fun ReaderContent(
     // 더는 가까이 있지 않은 쪽은 취소한다: 빨리 넘기거나 10쪽씩 건너뛰어도 받을 쪽이 쌓이지 않게
     // (PDF는 서버가 쪽마다 2~3초씩 그려서, 쌓이면 지금 쪽이 그 뒤에서 한참 기다린다)
     val preloads = remember { mutableMapOf<String, Disposable>() }
-    // 자동 채색 — 켜면 모델을 받고(처음 한 번), 받아 둔 모델로 칠한 쪽을 흑백 쪽 위에 겹친다
-    val colorModel by ColorModel.state.collectAsState()
-    LaunchedEffect(state.colorize) {
-        if (state.colorize) ColorModel.ensure(context)
-    }
-    val colorModelPath = (colorModel as? ColorModel.State.Ready)?.path?.takeIf { state.colorize && !continuous }
     LaunchedEffect(
         state.preloadSpreads, state.spreadPageUrls, state.scaleType, state.imageEnhancement, state.removeGutters,
-        state.panelOverlapPercent, state.zoomPercent, state.moveBalloons, colorModelPath, screenWidthPx, screenHeightPx,
+        state.panelOverlapPercent, state.cropBorders, state.zoomPercent, state.moveBalloons, screenWidthPx, screenHeightPx,
     ) {
         val imageLoader = SingletonImageLoader.get(context)
-        val variant = "${state.scaleType}|${state.imageEnhancement}|${state.removeGutters}|${state.panelOverlapPercent}|" +
+        val variant = "${state.scaleType}|${state.imageEnhancement}|${state.removeGutters}|${state.panelOverlapPercent}|${state.cropBorders}|" +
             "${state.zoomPercent}|${state.moveBalloons}|${screenWidthPx}x$screenHeightPx"
-        // 칠한 쪽도 미리 칠해 둔다 (흑백 쪽은 칠하는 동안 보여 준다)
-        val colors = listOf(null, colorModelPath).distinct()
-        val wanted = state.preloadSpreads.flatMap { urls ->
-            urls.flatMap { url -> colors.map { color -> "$url|${urls.size}|$variant|$color" to Triple(url, urls.size, color) } }
-        }.toMap()
+        val wanted = state.preloadSpreads.flatMap { urls -> urls.map { url -> "$url|${urls.size}|$variant" to (url to urls) } }
+            .toMap()
         // 지금 보이는 쪽은 화면이 같은 주소를 받는 중일 수 있어 끊지 않는다 (같은 요청은 한 번만 받는다)
-        val current = state.spreadPageUrls.flatMap { url -> colors.map { "$url|${state.spreadPageUrls.size}|$variant|$it" } }.toSet()
+        val current = state.spreadPageUrls.map { "$it|${state.spreadPageUrls.size}|$variant" }.toSet()
         preloads.entries.removeAll { (key, disposable) ->
             val drop = disposable.isDisposed || (key !in wanted && key !in current)
             if (drop) disposable.dispose()
@@ -240,11 +231,12 @@ private fun ReaderContent(
         }
         wanted.forEach { (key, page) ->
             if (key in preloads) return@forEach
-            val (url, slots, color) = page
+            val (url, spread) = page
             preloads[key] = imageLoader.enqueue(
                 pageRequest(
-                    context, url, state.scaleType, slotWidth(screenWidthPx, slots), screenHeightPx,
-                    state.imageEnhancement, state.removeGutters, state.panelOverlapPercent, state.zoomPercent, state.moveBalloons, color,
+                    context, url, state.scaleType, slotWidth(screenWidthPx, spread.size), screenHeightPx,
+                    state.imageEnhancement, state.removeGutters, state.panelOverlapPercent, state.cropBorders, state.zoomPercent, state.moveBalloons,
+                    spreadPartner(spread, url, state.readingDirection),
                 )
             )
         }
@@ -345,7 +337,6 @@ private fun ReaderContent(
                     screenWidthPx = screenWidthPx,
                     screenHeightPx = screenHeightPx,
                     scrollable = scrollable,
-                    colorModelPath = colorModelPath,
                 )
             }
         }
@@ -403,8 +394,6 @@ private fun ReaderContent(
                 spreadContent()
             }
         }
-
-        if (state.colorize && !continuous) ColorModelStatus(colorModel, Modifier.align(Alignment.TopEnd))
 
         // 정보 오버레이
         AnimatedVisibility(
@@ -509,7 +498,6 @@ private fun SpreadPages(
     screenWidthPx: Int,
     screenHeightPx: Int,
     scrollable: Boolean,
-    colorModelPath: String?,
 ) {
     val context = LocalContext.current
     val urls = if (state.readingDirection == ReadingDirection.RIGHT_TO_LEFT) {
@@ -539,26 +527,14 @@ private fun SpreadPages(
             val pageUrl = if (useRendered) url.removeSuffix("/raw") else url
             val request = remember(
                 pageUrl, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement, state.removeGutters,
-                state.panelOverlapPercent, state.zoomPercent, state.moveBalloons,
+                state.panelOverlapPercent, state.cropBorders, state.zoomPercent, state.moveBalloons,
             ) {
                 pageRequest(
                     context, pageUrl, state.scaleType, slotWidthPx, screenHeightPx,
-                    state.imageEnhancement, state.removeGutters, state.panelOverlapPercent, state.zoomPercent, state.moveBalloons, null,
+                    state.imageEnhancement, state.removeGutters, state.panelOverlapPercent, state.cropBorders, state.zoomPercent, state.moveBalloons,
+                    spreadPartner(state.spreadPageUrls, url, state.readingDirection),
                 )
             }
-            // 칠한 쪽 — 칠하는 동안(TV에서 쪽마다 수 초~십수 초)은 아래 흑백 쪽이 보인다
-            val colorRequest = colorModelPath?.let { path ->
-                remember(
-                    pageUrl, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement, state.removeGutters,
-                    state.panelOverlapPercent, state.zoomPercent, state.moveBalloons, path,
-                ) {
-                    pageRequest(
-                        context, pageUrl, state.scaleType, slotWidthPx, screenHeightPx,
-                        state.imageEnhancement, state.removeGutters, state.panelOverlapPercent, state.zoomPercent, state.moveBalloons, path,
-                    )
-                }
-            }
-            var colorState by remember(colorRequest) { mutableStateOf<AsyncImagePainter.State>(AsyncImagePainter.State.Empty) }
             // 받는 중이면 스피너, 실패하면 문구 — 빨리 넘길 때 검은 화면이 멈춘 것처럼 보이지 않게
             var loadState by remember(request) { mutableStateOf<AsyncImagePainter.State>(AsyncImagePainter.State.Empty) }
             Box(
@@ -585,26 +561,10 @@ private fun SpreadPages(
                     },
                     modifier = pageModifier,
                 )
-                if (colorRequest != null) {
-                    AsyncImage(
-                        model = colorRequest,
-                        contentDescription = null,
-                        contentScale = contentScale,
-                        alignment = alignment,
-                        filterQuality = ImageEnhancer.filterQuality(state.imageEnhancement),
-                        colorFilter = ImageEnhancer.colorFilter(state.contrastPercent, state.brightnessPercent),
-                        onState = { colorState = it },
-                        modifier = pageModifier,
-                    )
-                }
                 when (loadState) {
                     is AsyncImagePainter.State.Loading, AsyncImagePainter.State.Empty -> PageLoadingIndicator()
                     is AsyncImagePainter.State.Error -> PageLoadFailed()
-                    else -> if (colorRequest != null && colorState !is AsyncImagePainter.State.Success &&
-                        colorState !is AsyncImagePainter.State.Error
-                    ) {
-                        ColorizingBadge(Modifier.align(Alignment.TopCenter))
-                    }
+                    else -> Unit
                 }
             }
         }
@@ -676,6 +636,17 @@ private fun ReaderOverlay(state: ReaderUiState.Reading) {
     }
 }
 
+/** 펼침에서 [self] 쪽과 함께 보이는 쪽 ([other], 한 쪽이면 null), [self]가 화면 왼쪽인지 — 테두리 잘라내기를 두 쪽에 맞춘다 */
+private data class SpreadPartner(val self: String, val other: String?, val left: Boolean)
+
+/** [urls]는 읽는 차례 — 오른쪽에서 왼쪽으로 읽으면 첫 쪽이 화면 오른쪽 */
+private fun spreadPartner(urls: List<String>, self: String, direction: ReadingDirection): SpreadPartner {
+    if (urls.size < 2) return SpreadPartner(self, null, left = true)
+    val shown = if (direction == ReadingDirection.RIGHT_TO_LEFT) urls.reversed() else urls
+    val index = shown.indexOf(self)
+    return SpreadPartner(self, shown[1 - index.coerceIn(0, 1)], left = index == 0)
+}
+
 private fun slotWidth(screenWidthPx: Int, pagesInSpread: Int): Int =
     if (pagesInSpread >= 2) screenWidthPx / 2 else screenWidthPx
 
@@ -692,9 +663,10 @@ private fun pageRequest(
     enhancement: ImageEnhancement,
     removeGutters: Boolean,
     panelOverlapPercent: Int,
+    cropBorders: CropBorders,
     zoomPercent: Int,
     moveBalloons: Boolean,
-    colorModelPath: String?,
+    partner: SpreadPartner,
 ): ImageRequest {
     val size = when (scaleType) {
         ScaleType.SCREEN -> CoilSize(slotWidthPx, screenHeightPx)
@@ -714,49 +686,26 @@ private fun pageRequest(
                 // 화면 크기로 Lanczos 리샘플링한 뒤 선명하게
                 // 칸 겹치기는 여백을 없앤 칸 줄을 포개므로 간격 없애기가 꺼져 있어도 함께 한다
                 if (removeGutters || panelOverlapPercent > 0) GutterTransformation(panelOverlapPercent) else null,
+                // 테두리는 여백을 붙인 뒤 자른다 — 붙이고 남은 위아래 빈 곳도 함께 빠진다
+                if (cropBorders != CropBorders.OFF) {
+                    CropBorderTransformation(
+                        cropBorders, partner.self, partner.other, partner.left,
+                        variant = "$removeGutters|$panelOverlapPercent|$scaleType|${slotWidthPx}x$screenHeightPx",
+                    )
+                } else {
+                    null
+                },
                 // 확대는 화면 고정(맞춤·높이 맞춤)에서만 위아래가 잘린다
                 if (zoomPercent > ReaderSettings.MIN_ZOOM_PERCENT && (scaleType == ScaleType.SCREEN || scaleType == ScaleType.FIT_HEIGHT)) {
                     BalloonTextTransformation(zoomPercent, moveBalloons, slotWidthPx, screenHeightPx, fitHeight = scaleType == ScaleType.FIT_HEIGHT)
                 } else {
                     null
                 },
-                // 칠하기는 칸·대사를 옮긴 뒤 (흑백 밝기로 칸과 말풍선을 찾는다)
-                colorModelPath?.let { ColorizeTransformation(it) },
                 ImageEnhancer.lanczos(enhancement)?.let { LanczosTransformation(scaleType, it) },
                 ImageEnhancer.sharpenAmount(enhancement)?.let { SharpenTransformation(it) },
             ),
         )
         .build()
-}
-
-/** 자동 채색 모델을 받는 중이거나 받지 못했을 때 화면 구석에 알린다 */
-@Composable
-private fun ColorModelStatus(model: ColorModel.State, modifier: Modifier = Modifier) {
-    val text = when (model) {
-        is ColorModel.State.Downloading -> stringResource(R.string.reader_colorize_downloading, model.percent)
-        ColorModel.State.Failed -> stringResource(R.string.reader_colorize_failed)
-        else -> return
-    }
-    StatusChip(text, modifier)
-}
-
-/** 이 쪽을 칠하는 중 */
-@Composable
-private fun ColorizingBadge(modifier: Modifier = Modifier) {
-    StatusChip(stringResource(R.string.reader_colorize_working), modifier)
-}
-
-@Composable
-private fun StatusChip(text: String, modifier: Modifier = Modifier) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        color = Color.White,
-        modifier = modifier
-            .padding(16.dp)
-            .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-    )
 }
 
 /**

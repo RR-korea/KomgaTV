@@ -37,6 +37,8 @@ class KomgaTVApp : Application(), SingletonImageLoader.Factory {
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
         }
+        // 자동 채색(1.0.30~1.0.32)을 뺐다 — 받아 둔 채색 모델(약 60MB)을 지운다
+        Thread { noBackupFilesDir.resolve("models").deleteRecursively() }.start()
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.komgatv.core.datastore
 
+import com.komgatv.core.model.CropBorders
 import com.komgatv.core.model.ImageEnhancement
 import com.komgatv.core.model.PageLayout
 import com.komgatv.core.model.PageTransition
@@ -29,7 +30,7 @@ class ReaderSettingsCodecTest {
             zoomPanPercent = -50,
             removeGutters = true,
             moveBalloons = true,
-            colorize = true,
+            cropBorders = CropBorders.ALL,
             panelOverlapPercent = 7,
             pageTransition = PageTransition.FADE,
         )

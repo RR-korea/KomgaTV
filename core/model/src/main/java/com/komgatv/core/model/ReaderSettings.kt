@@ -91,6 +91,24 @@ enum class PageTransition {
 }
 
 /**
+ * 테두리 잘라내기 — 쪽 둘레의 빈 테두리(흰·검은 스캔 여백)를 어느 변에서 자를지.
+ * 두 쪽 보기에서 한 쪽만 테두리가 있으면 다른 쪽도 같은 만큼 잘라 두 쪽을 맞춘다.
+ */
+enum class CropBorders {
+    /** 자르지 않는다 */
+    OFF,
+
+    /** 위아래만 */
+    TOP_BOTTOM,
+
+    /** 좌우만 */
+    LEFT_RIGHT,
+
+    /** 네 변 모두 */
+    ALL,
+}
+
+/**
  * 리더 보기 설정 모델 (앱 전체 기본값, 또는 한 작품의 설정)
  *
  * @property readerType 리더 종류 (기본값: PAGED)
@@ -130,13 +148,13 @@ data class ReaderSettings(
      * 꺼져 있어도 확대하면 말풍선 안에서 대사는 옮긴다.
      */
     val moveBalloons: Boolean = false,
-    /** 흑백 쪽을 자동으로 칠한다 (작품별, 페이지 넘김) — 처음 켤 때 채색 모델을 받는다 */
-    val colorize: Boolean = false,
     /**
      * 칸 겹치기 % (작품별, 페이지 넘김, 0~[MAX_PANEL_OVERLAP_PERCENT]) — 칸 줄(단)끼리 쪽 높이의 이만큼 포개고
      * 가운데 줄을 위에 그린다. 칸 사이 여백도 함께 없앤다. 0이면 안 함.
      */
     val panelOverlapPercent: Int = 0,
+    /** 쪽 둘레의 빈 테두리(흰·검은 스캔 여백)를 잘라내 쪽을 화면에 더 크게 (작품별, 페이지 넘김) */
+    val cropBorders: CropBorders = CropBorders.OFF,
     /** 페이지 넘김 화면 전환 효과 */
     val pageTransition: PageTransition = PageTransition.SLIDE,
 ) {

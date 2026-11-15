@@ -12,6 +12,7 @@ import com.komgatv.core.datastore.ReaderPreferences
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.BookMetadata
 import com.komgatv.core.model.BookPage
+import com.komgatv.core.model.CropBorders
 import com.komgatv.core.model.ImageEnhancement
 import com.komgatv.core.model.LoadError
 import com.komgatv.core.model.PageLayout
@@ -1023,16 +1024,16 @@ class ReaderViewModelTest {
     }
 
     @Test
-    fun `자동 채색 - 켜면 이 작품에만 저장된다`() = runTest(testDispatcher) {
+    fun `테두리 잘라내기 - 고르면 이 작품에만 저장된다`() = runTest(testDispatcher) {
         openBook()
         advanceUntilIdle()
-        assertEquals(false, reading.colorize)
+        assertEquals(CropBorders.OFF, reading.cropBorders)
 
-        viewModel.applySettings(reading.settings.copy(colorize = true))
+        viewModel.applySettings(reading.settings.copy(cropBorders = CropBorders.TOP_BOTTOM))
         advanceUntilIdle()
-        assertEquals(true, reading.colorize)
-        assertEquals(true, readerPreferences.series.value["s1"]!!.colorize)
-        assertEquals(false, readerPreferences.readerSettings.first().colorize)
+        assertEquals(CropBorders.TOP_BOTTOM, reading.cropBorders)
+        assertEquals(CropBorders.TOP_BOTTOM, readerPreferences.series.value["s1"]!!.cropBorders)
+        assertEquals(CropBorders.OFF, readerPreferences.readerSettings.first().cropBorders)
     }
 
     @Test

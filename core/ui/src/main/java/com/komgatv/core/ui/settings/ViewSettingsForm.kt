@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.komgatv.core.model.CropBorders
 import com.komgatv.core.model.ImageEnhancement
 import com.komgatv.core.model.PageLayout
 import com.komgatv.core.model.PageTransition
@@ -133,6 +134,18 @@ fun ViewSettingsForm(
                         onPrevious = { onChange(settings.copy(zoomPercent = stepZoom(settings.zoomPercent, -1))) },
                         onNext = { onChange(settings.copy(zoomPercent = stepZoom(settings.zoomPercent, 1))) },
                     )
+                    // 쪽 둘레의 흰·검은 빈 테두리를 잘라내 쪽을 더 크게 — 위아래, 좌우, 네 변
+                    OptionRow(
+                        title = stringResource(R.string.view_crop_borders),
+                        options = listOf(
+                            CropBorders.OFF to stringResource(R.string.view_off),
+                            CropBorders.TOP_BOTTOM to stringResource(R.string.view_crop_top_bottom),
+                            CropBorders.LEFT_RIGHT to stringResource(R.string.view_crop_left_right),
+                            CropBorders.ALL to stringResource(R.string.view_crop_all),
+                        ),
+                        current = settings.cropBorders,
+                        onChange = { onChange(settings.copy(cropBorders = it)) },
+                    )
                     // 칸 사이 위아래 여백을 없애 칸들을 쪽 가운데로 모은다 (확대와 함께 쓰면 칸이 화면을 더 채운다)
                     OnOffRow(
                         title = stringResource(R.string.view_remove_gutters),
@@ -155,12 +168,6 @@ fun ViewSettingsForm(
                         title = stringResource(R.string.view_move_balloons),
                         value = settings.moveBalloons,
                         onChange = { onChange(settings.copy(moveBalloons = it)) },
-                    )
-                    // 흑백 쪽을 칠한다 — 처음 켜면 채색 모델(약 60MB)을 받는다
-                    OnOffRow(
-                        title = stringResource(R.string.view_colorize),
-                        value = settings.colorize,
-                        onChange = { onChange(settings.copy(colorize = it)) },
                     )
                 }
             }

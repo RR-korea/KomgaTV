@@ -34,8 +34,11 @@
     <string name="view_zoom">Zoom</string>
     <string name="view_remove_gutters">Panel-Abstände entfernen (experimentell)</string>
     <string name="view_panel_overlap">Panelreihen überlappen (experimentell)</string>
+    <string name="view_crop_borders">Ränder abschneiden</string>
+    <string name="view_crop_top_bottom">Oben &amp; unten</string>
+    <string name="view_crop_left_right">Links &amp; rechts</string>
+    <string name="view_crop_all">Alle Seiten</string>
     <string name="view_move_balloons">Sprechblasen mitverschieben (experimentell)</string>
-    <string name="view_colorize">Automatisch kolorieren (experimentell)</string>
     <string name="view_transition">Seitenübergang</string>
     <string name="view_transition_off">Aus</string>
     <string name="view_transition_slide">Schieben</string>
