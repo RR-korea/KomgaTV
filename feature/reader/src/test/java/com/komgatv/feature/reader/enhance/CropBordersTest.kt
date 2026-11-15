@@ -63,6 +63,19 @@ class CropBordersTest {
     }
 
     @Test
+    fun `위아래에 칸 테두리 선이 없으면(열린 칸, 칸 밖 글) 모든 열이 여백인 곳까지만 자른다`() {
+        val px = IntArray(w * h) { white }
+        // 테두리 없이 위아래로 열린 칸 — 가는 세로 획(머리카락·빗줄기)만 y=20..259, 가로로 긴 선은 없다 (나루토 1권 58쪽)
+        for (x in 20..180 step 20) for (y in 20 until 260) {
+            px[y * w + x] = black
+            px[y * w + x + 1] = black
+        }
+
+        // 30% 열은 더 깊이 비었지만 테두리 선이 아니라서 따라가지 않는다
+        assertArrayEquals(intArrayOf(20, 40, 20, 18), borders(px))
+    }
+
+    @Test
     fun `좌우는 칸 밖으로 나온 그림이 있으면 그만큼 덜 자른다`() {
         val px = IntArray(w * h) { white }
         px.panel(20, 180, 30, 270)
