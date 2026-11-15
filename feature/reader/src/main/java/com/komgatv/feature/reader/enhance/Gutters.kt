@@ -137,7 +137,10 @@ private fun collapsePage(pixels: IntArray, width: Int, height: Int, overlapPerce
                 n++
             }
         }
-        val pad = (0xFF shl 24) or ((r / n).toInt() shl 16) or ((g / n).toInt() shl 8) or (b / n).toInt()
+        val pad = if (n == 0L) {
+            val bg = page.paper
+            (0xFF shl 24) or (bg shl 16) or (bg shl 8) or bg
+        } else (0xFF shl 24) or ((r / n).toInt() shl 16) or ((g / n).toInt() shl 8) or (b / n).toInt()
         for (x in x0 until x1) {
             var out = top
             var k = 0
@@ -168,7 +171,14 @@ private fun collapsePage(pixels: IntArray, width: Int, height: Int, overlapPerce
             // 떼어 낸 테두리 끝자락 줄만큼 건너 테두리를 찾는다
             val above = (gap.first - 1 downTo 0).takeWhile { tail[it] }.count()
             val below = (gap.last + 1 until height).takeWhile { tail[it] }.count()
-            !page.cleanGap(gap, edgeX, width - edgeX, above, below)
+            val borderAbove = (gap.first - 1 downTo (gap.first - 4 - above).coerceAtLeast(0)).any { page.borderRow(it, edgeX, width - edgeX) }
+            val borderBelow = (gap.last + 1..(gap.last + 4 + below).coerceAtMost(height - 1)).any { page.borderRow(it, edgeX, width - edgeX) }
+            val clean = page.cleanGap(gap, edgeX, width - edgeX, above, below)
+            if (borderAbove && borderBelow) {
+                !clean
+            } else {
+                !clean || gap.any { !page.flatGutter(it, edgeX, width - edgeX) && (page.hasSignificantInk(it, edgeX, width - edgeX) || !page.isPaperRow(it, edgeX, width - edgeX)) }
+            }
         },
     )
     if (bands.isEmpty()) return null
@@ -222,7 +232,7 @@ private fun collapsePage(pixels: IntArray, width: Int, height: Int, overlapPerce
                 isContent = { i -> inked(i) && !page.flatGutter(band.first + i, x0, x1) },
                 flatOnly = { i -> inked(i) },
             )
-            if (parts.isEmpty()) continue
+            if (parts.size <= 1) continue
             // 칸은 어느 정도 높다 — 아주 얇은 조각(테두리 없는 그림 속 하늘의 점들)이 있으면 칸 묶음이 아니다
             if (parts.any { it.last - it.first + 1 < height * MIN_STACK_PART_RATIO }) continue
             val rows = parts.flatMap { it.toList() }
@@ -325,6 +335,7 @@ private fun layerOrder(count: Int): List<Int> {
 /** 쪽을 보는 표들 — 잉크(바탕과 다른 곳), 세로·가로로 길게 이어진 잉크, 살짝 흐리게 한 밝기 */
 private class PageMaps(pixels: IntArray, private val width: Int, private val height: Int) {
     private val bg: Int
+    private val colPaper: IntArray?
     private val ink: BooleanArray
     private val tall: BooleanArray
     /** 세로로 긴 잉크가 아닌 잉크 중 위나 아래도 잉크인 곳 — 글자 획·그림. 망점 하나하나는 빠진다 */
@@ -335,6 +346,10 @@ private class PageMaps(pixels: IntArray, private val width: Int, private val hei
     private val blurV: IntArray
     private val lum: IntArray
 
+    private val edgeX = (width * EDGE_RATIO).roundToInt()
+    private val firstBorder: Int
+    private val lastBorder: Int
+
     init {
         lum = IntArray(pixels.size) { i ->
             val c = pixels[i]
@@ -342,15 +357,16 @@ private class PageMaps(pixels: IntArray, private val width: Int, private val hei
         }
         bg = backgroundLuminance(lum)
         // 밝은 종이 쪽은 열마다 그 열의 종이색보다 어두운 곳이 잉크 — 가운데 접힌 곳 그림자는 잉크가 아니다
-        val paper = if (bg >= MIN_COLUMN_PAPER_BG) columnPaper(lum, width, height, bg) else null
+        colPaper = if (bg >= MIN_COLUMN_PAPER_BG) columnPaper(lum, width, height, bg) else null
         ink = BooleanArray(pixels.size) { i ->
-            if (paper != null) lum[i] < paper[i % width] - INK_DIFF else abs(lum[i] - bg) > INK_DIFF
+            if (colPaper != null) lum[i] < colPaper[i % width] - INK_DIFF else abs(lum[i] - bg) > INK_DIFF
         }
-        val edgeX = (width * EDGE_RATIO).roundToInt()
         val minRunV = (height * LONG_INK_RATIO).roundToInt().coerceAtLeast(8)
         val minRunH = (width * LONG_INK_RATIO).roundToInt().coerceAtLeast(8)
         tall = longRuns(ink, width, height, vertical = true, minRun = minRunV, edge = edgeX, maxEdgeRun = (height * SCAN_EDGE_RUN_RATIO).roundToInt())
         wide = longRuns(ink, width, height, vertical = false, minRun = minRunH)
+        firstBorder = (0 until height).indexOfFirst { borderRow(it, edgeX, width - edgeX) }
+        lastBorder = (0 until height).indexOfLast { borderRow(it, edgeX, width - edgeX) }
         val loose = BooleanArray(pixels.size) { ink[it] && !tall[it] }
         stroke = BooleanArray(pixels.size) { i ->
             loose[i] && ((i >= width && loose[i - width]) || (i + width < loose.size && loose[i + width]))
@@ -358,6 +374,9 @@ private class PageMaps(pixels: IntArray, private val width: Int, private val hei
         blurH = boxBlur(lum, width, height, BLUR_RADIUS, horizontal = true)
         blurV = boxBlur(lum, width, height, BLUR_RADIUS, horizontal = false)
     }
+
+    /** 칸 테두리 바깥(첫 테두리 위 또는 끝 테두리 아래)에 있는 줄 — 제목 줄, 글 문단, 오픈 컷 */
+    fun outsideBorders(y: Int): Boolean = firstBorder < 0 || y < firstBorder || y > lastBorder
 
     /**
      * 세로로 긴 잉크가 지나가면 칸. 다만 그것이 좁은 곳([OVERLAY_SPAN_RATIO] 미만)에만 있고
@@ -381,10 +400,29 @@ private class PageMaps(pixels: IntArray, private val width: Int, private val hei
     }
 
     /** 칸 테두리 같은 가로선이 줄의 [BORDER_ROW_RATIO] 이상을 지나간다 */
-    private fun borderRow(y: Int, x0: Int, x1: Int): Boolean {
+    fun borderRow(y: Int, x0: Int, x1: Int): Boolean {
         var n = 0
         for (x in x0 until x1) if (wide[y * width + x]) n++
         return n >= (x1 - x0) * BORDER_ROW_RATIO
+    }
+
+    /** 화 제목, 글 문단, 테두리 없는 오픈 컷처럼 가로 폭이 [OVERLAY_SPAN_RATIO] 이상을 차지하는 독립적인 글·그림 줄 */
+    fun broadInk(y: Int, x0: Int, x1: Int): Boolean {
+        val base = y * width
+        var first = -1
+        var last = -1
+        var inkCount = 0
+        for (x in x0 until x1) {
+            if (ink[base + x]) {
+                if (first < 0) first = x
+                last = x
+                inkCount++
+            }
+        }
+        if (first < 0) return false
+        val span = last - first + 1
+        val w = x1 - x0
+        return span >= w * OVERLAY_SPAN_RATIO && inkCount >= (w * 0.02f).roundToInt().coerceAtLeast(4)
     }
 
     /** 그림 획이 줄의 [STROKE_ROW_RATIO] 이상을 지나간다 — 테두리 없는 그림 */
@@ -395,10 +433,34 @@ private class PageMaps(pixels: IntArray, private val width: Int, private val hei
         return n >= (x1 - x0) * STROKE_ROW_RATIO
     }
 
-    /** 쪽 전체 띠를 나눌 때의 잉크 줄 — 세로로 긴 잉크가 지나가거나, 칸 테두리 같은 가로선(또는 검은 바탕 쪽의 그림 획)이 길게 지나간다 */
+    /** 쪽 번호나 짧은 역자 주보다 큰 잉크 덩어리 — 글 줄, 제목, 테두리 없는 그림 */
+    fun hasSignificantInk(y: Int, x0: Int, x1: Int): Boolean {
+        val base = y * width
+        var minX = -1
+        var maxX = -1
+        var strokeCount = 0
+        var inkCount = 0
+        for (x in x0 until x1) {
+            if (ink[base + x]) {
+                if (minX < 0) minX = x
+                maxX = x
+                inkCount++
+                if (stroke[base + x]) strokeCount++
+            }
+        }
+        if (minX < 0) return false
+        val span = maxX - minX + 1
+        val w = x1 - x0
+        val wideSpan = span >= w * SIGNIFICANT_SPAN_RATIO && (strokeCount >= 3 || inkCount >= (w * 0.015f).roundToInt().coerceAtLeast(3))
+        val denseStroke = strokeCount >= (w * SIGNIFICANT_STROKE_RATIO).roundToInt().coerceAtLeast(4)
+        return wideSpan || denseStroke
+    }
+
+    /** 쪽 전체 띠를 나눌 때의 잉크 줄 — 세로로 긴 잉크가 지나가거나, 칸 테두리 같은 가로선, 또는 글 줄·제목·테두리 없는 그림 */
     fun bandInk(y: Int, edgeX: Int): Boolean {
-        return inkContent(y, 0, width) || borderRow(y, edgeX, width - edgeX) ||
-            (bg < MIN_COLUMN_PAPER_BG && strokeRow(y, edgeX, width - edgeX))
+        if (inkContent(y, 0, width) || borderRow(y, edgeX, width - edgeX)) return true
+        if (bg < MIN_COLUMN_PAPER_BG && strokeRow(y, edgeX, width - edgeX)) return true
+        return outsideBorders(y) && broadInk(y, edgeX, width - edgeX)
     }
 
     fun inkAt(i: Int): Boolean = ink[i]
@@ -492,6 +554,19 @@ private class PageMaps(pixels: IntArray, private val width: Int, private val hei
     /** 바탕과 다른 한 가지 색으로 고른 줄 — 검은 틈·망점 틈. 바탕색으로 고른 줄(액자 선만 지나가는 흰 줄)은 아니다 */
     fun flatGutter(y: Int, x0: Int, x1: Int): Boolean =
         flat(y, x0, x1) && abs(median(x1 - x0) { blurH[y * width + x0 + it] } - bg) > FLAT_DIFF
+
+    /** 줄이 진짜 빈 흰 종이(또는 검은 바탕)인지 — 옅은 회색 톤이나 그림 텍스처가 깔려 있으면 빈 줄이 아니다 */
+    fun isPaperRow(y: Int, x0: Int, x1: Int): Boolean {
+        var nonWhite = 0
+        val base = y * width
+        val p = colPaper
+        if (p != null) {
+            for (x in x0 until x1) if (p[x] - lum[base + x] > PAPER_ROW_DIFF) nonWhite++
+        } else {
+            for (x in x0 until x1) if (abs(lum[base + x] - bg) > PAPER_ROW_DIFF) nonWhite++
+        }
+        return nonWhite <= (x1 - x0) * PAPER_ROW_MAX_NONWHITE
+    }
 
     /** 여백 후보가 정말 비었는지 — 빈 줄(고른 색 줄 포함)이 [CLEAN_GAP_RATIO] 이상이고 획이 평균 [GAP_STROKE_RATIO] 이하 */
     fun cleanGap(rows: IntRange, x0: Int, x1: Int, slackAbove: Int = 0, slackBelow: Int = slackAbove): Boolean {
@@ -1038,7 +1113,10 @@ private fun packCells(
         bl += c and 0xFF
         m++
     }
-    val pad = if (m == 0L) -1 else (0xFF shl 24) or ((r / m).toInt() shl 16) or ((g / m).toInt() shl 8) or (bl / m).toInt()
+    val pad = if (m == 0L) {
+        val bg = page.paper
+        (0xFF shl 24) or (bg shl 16) or (bg shl 8) or bg
+    } else (0xFF shl 24) or ((r / m).toInt() shl 16) or ((g / m).toInt() shl 8) or (bl / m).toInt()
     // 옮길 칸은 열마다 칸의 첫 칸부터 끝 칸까지 통째로 (칸 안의 말풍선 속·글자 둘레 옅은 칸까지) — 다른 칸 것은 빼고.
     // 지운 뒤 새 자리에 그린다
     val moving = IntArray(n) { -1 }
@@ -1210,6 +1288,8 @@ private fun findRibbons(
                         m += dir
                         continue
                     }
+                    val runsInCol = runs[m]
+                    if (runsInCol.isEmpty()) return false
                     // 뺄 줄의 위아래 끝 1줄(테두리 가장자리의 옅은 칸)은 보지 않는다
                     fun range(at: Int) = page.rowRange(x, at + 1, at + rows - 1)
                     // 빼고 난 두 열이 자리가 달라 어긋나는 줄에서 밝기가 비슷해야 한다
@@ -1217,9 +1297,11 @@ private fun findRibbons(
                     fun seamless(at: Int) = (minOf(prev, at) until maxOf(prev, at)).all { y ->
                         abs(out(x, at, y) - out(x - dir, prev, y)) <= RIBBON_FLAT_DIFF
                     }
-                    // 가까운 자리부터
+                    // 가까운 자리부터 — 그 열의 빈 구간 안에서만 뺀다 (세로로 긴 칸 안은 절대 빼지 않는다)
                     val best = (0..RIBBON_STEP).flatMap { d -> if (d == 0) listOf(prev) else listOf(prev - d, prev + d) }
-                        .firstOrNull { it >= y0 && it + rows <= y1 && range(it) <= RIBBON_FLAT_DIFF && seamless(it) } ?: return false
+                        .firstOrNull { it >= y0 && it + rows <= y1 && range(it) <= RIBBON_FLAT_DIFF && seamless(it) &&
+                            runsInCol.any { r -> it >= r.first && it + rows <= r.last + 1 }
+                        } ?: return false
                     lo[m] = best
                     m += dir
                 }
@@ -1286,6 +1368,11 @@ private const val OVERLAY_STROKE_SHARE = 0.9
 /** 글 상자 안 줄에 이만큼까지의 짧은 잉크는 잡티로 본다 */
 private const val OVERLAY_NOISE = 2
 
+/** 쪽 번호·짧은 역자 주를 넘는 잉크 가로 폭 비율 (쪽 너비의 8%) */
+private const val SIGNIFICANT_SPAN_RATIO = 0.08f
+/** 쪽 번호·짧은 역자 주를 넘는 줄 내 획 비율 (4%) */
+private const val SIGNIFICANT_STROKE_RATIO = 0.04f
+
 /** 고른 색 줄을 볼 때 흐리게 하는 반경 (5칸) — 망점이 고른 회색이 된다 */
 private const val BLUR_RADIUS = 2
 
@@ -1308,6 +1395,12 @@ private const val STROKE_ROW_RATIO = 0.1f
 
 /** 여백 후보의 줄 중 이만큼은 빈 줄이어야 여백 — 글 쪽·한 장 그림은 빈 줄이 드물다 */
 private const val CLEAN_GAP_RATIO = 0.6f
+
+/** 빈 종이 줄에서 종이 색보다 이만큼 어두우면 그림 톤·텍스처 */
+private const val PAPER_ROW_DIFF = 18
+
+/** 빈 종이 줄에서 그림 톤 픽셀이 이 비율 이하이어야 진짜 빈 줄 */
+private const val PAPER_ROW_MAX_NONWHITE = 0.08f
 
 /** 획이 이 비율 이하인 줄은 빈 줄 (잡티·망점 틈) */
 private const val CLEAN_ROW_RATIO = 0.01f
@@ -1432,7 +1525,7 @@ private const val MIN_SAVED_RATIO = 0.005f
 
 /** 페이지 리더(Coil)용 — 작품 보기 설정 "칸 간격 없애기" */
 internal class GutterTransformation(private val overlapPercent: Int = 0) : Transformation() {
-    override val cacheKey: String = "gutters-21" + if (overlapPercent > 0) "-o$overlapPercent" else ""
+    override val cacheKey: String = "gutters-23" + if (overlapPercent > 0) "-o$overlapPercent" else ""
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width

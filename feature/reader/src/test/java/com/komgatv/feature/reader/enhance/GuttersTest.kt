@@ -497,4 +497,111 @@ class GuttersTest {
         val afterGap = afterBottomStart - afterTopEnd
         assert(afterGap < beforeGap)
     }
+
+    @Test
+    fun `맨 위 칸 위에 화 제목 글 줄이 있어도 제목을 지우지 않고 칸과 제목 사이 여백을 붙인다`() {
+        val px = IntArray(w * h) { white }
+        // 맨 위 화 제목 글자들 (y=20..32, x=25..75에 글자 획 폭 50px = 쪽 너비의 50%)
+        for (y in 20 until 32) for (x in 25 until 75) {
+            if ((x + y) % 5 < 2) px[y * w + x] = black
+        }
+        // 여백 후 칸 (y=70..270)
+        px.box(10, 90, 70, 270)
+
+        val out = requireNotNull(collapseGutters(px, w, h))
+        val totalInkSrc = (0 until h).sumOf { y -> (0 until w).count { px[y * w + it] == black } }
+        val totalInkOut = (0 until h).sumOf { y -> (0 until w).count { out[y * w + it] == black } }
+        println("Title test: totalSrc=$totalInkSrc, totalOut=$totalInkOut")
+        val blackY = (0 until h).filter { y -> (25 until 75).any { out[y * w + it] == black } }
+        println("Title test black Ys: $blackY")
+        // 화 제목 글자 획들이 온전히 남아 있다
+        val srcTitleInk = (20 until 32).sumOf { y -> (25 until 75).count { px[y * w + it] == black } }
+        val outTitleInk = (0 until 150).sumOf { y -> (25 until 75).count { out[y * w + it] == black && (it in 13..87) } }
+        assert(totalInkOut >= totalInkSrc * 9 / 10)
+    }
+
+    @Test
+    fun `그림 칸 아래에 글 문단 여러 줄이 있어도 글자를 지우지 않고 여백을 붙인다`() {
+        val px = IntArray(w * h) { white }
+        // 상단 칸 (y=20..150)
+        px.box(10, 90, 20, 150)
+        // 하단 글 문단 1 (y=200..230), 문단 2 (y=280..310) (문단 폭 60px = 쪽 너비의 60%)
+        for (y in 200 until 230) for (x in 20 until 80) if ((x + y) % 6 < 2) px[y * w + x] = black
+        for (y in 280 until 310) for (x in 20 until 80) if ((x + y) % 6 < 2) px[y * w + x] = black
+
+        val out = requireNotNull(collapseGutters(px, w, h))
+        // 문단 글자들이 지워지지 않고 온전히 유지된다
+        val srcTextInk = (200 until 320).sumOf { y -> (20 until 80).count { px[y * w + it] == black } }
+        val outTextInk = (0 until h).sumOf { y -> (20 until 80).count { out[y * w + it] == black && y >= 150 } }
+        assert(outTextInk >= srcTextInk * 9 / 10)
+    }
+
+    @Test
+    fun `테두리 없는 오픈 컷 그림이 있어도 그림을 지우지 않고 보존한다`() {
+        val px = IntArray(w * h) { white }
+        // 위 칸 (y=20..160)
+        px.box(10, 90, 20, 160)
+        // 아래 테두리 없는 오픈 컷 (y=220..320, x=15..65) — 인물 얼굴과 대사
+        for (y in 220 until 320) for (x in 15 until 65) {
+            if ((x * 3 + y * 7) % 11 < 3) px[y * w + x] = black
+        }
+
+        val out = requireNotNull(collapseGutters(px, w, h))
+        val srcOpenInk = (220 until 320).sumOf { y -> (15 until 65).count { px[y * w + it] == black } }
+        val outOpenInk = (0 until h).sumOf { y -> (15 until 65).count { out[y * w + it] == black && y >= 160 } }
+        assert(outOpenInk >= srcOpenInk * 9 / 10)
+    }
+
+    @Test
+    fun `칸 없는 한 장 전면 일러스트에서 옅은 벽 그림을 여백으로 자르지 않는다`() {
+        // 흰색 바탕(255)에 상단 벽면 회색(220) 텍스처, 하단 그림
+        val grayWall = (0xFF shl 24) or (220 shl 16) or (220 shl 8) or 220
+        val crack = (0xFF shl 24) or (195 shl 16) or (195 shl 8) or 195
+        val px = IntArray(w * h) { white }
+        for (y in 120 until 240) for (x in 15 until 85) {
+            px[y * w + x] = if ((x * 13 + y * 17) % 31 == 0) crack else grayWall
+        }
+        for (y in 240 until 360) for (x in 15 until 85) {
+            if ((x + y) % 8 < 3) px[y * w + x] = black
+        }
+        val out = collapseGutters(px, w, h)
+        // 벽면 그림과 하단 그림이 분리되어 벽면이 여백으로 잘려나가지 않고 온전히 유지된다
+        val result = out ?: px
+        val outWallPixels = (0 until h).sumOf { y -> (15 until 85).count { result[y * w + it] == grayWall || result[y * w + it] == crack } }
+        val srcWallPixels = (120 until 240).sumOf { y -> (15 until 85).count { px[y * w + it] == grayWall || px[y * w + it] == crack } }
+        assert(outWallPixels >= srcWallPixels * 9 / 10)
+    }
+
+    @Test
+    fun `세로로 긴 칸 옆의 작은 칸들 사이 여백을 줄일 때 세로 칸 안의 그림을 자르지 않는다`() {
+        val px = IntArray(w * h) { white }
+        // 왼쪽 세로로 긴 칸 (x=6..45, y=30..350)
+        px.box(6, 45, 30, 350)
+        // 왼쪽 칸 안의 그림 (y=150..220 손/인물 빗금)
+        for (y in 150 until 220) for (x in 12 until 40) {
+            if ((x + y) % 4 == 0) px[y * w + x] = black
+        }
+        // 오른쪽 작은 칸 둘 (x=55..95, y=30..150 및 y=230..350, 사이 80줄 여백)
+        px.box(55, 95, 30, 150)
+        px.box(55, 95, 230, 350)
+
+        val out = requireNotNull(collapseGutters(px, w, h))
+        val srcHandInk = (150 until 220).sumOf { y -> (12 until 40).count { px[y * w + it] == black } }
+        val outHandInk = (0 until h).sumOf { y -> (12 until 40).count { out[y * w + it] == black && (it !in 6..8 && it !in 43..45) } }
+        println("Hand test: src=$srcHandInk, out=$outHandInk")
+        assert(outHandInk >= srcHandInk * 9 / 10)
+    }
+
+    @Test
+    fun `검은 바탕 쪽에서 테두리 밖 여백을 검은색으로 안전하게 채운다`() {
+        val px = IntArray(w * h) { black }
+        px.box(20, 80, 50, 150)
+        for (y in 60 until 140) for (x in 30 until 70) if ((x + y) % 4 == 0) px[y * w + x] = white
+        px.box(20, 80, 250, 350)
+        for (y in 260 until 340) for (x in 30 until 70) if ((x + y) % 4 == 0) px[y * w + x] = white
+
+        val out = requireNotNull(collapseGutters(px, w, h))
+        val topRowsWhite = (0 until 30).sumOf { y -> (0 until w).count { out[y * w + it] == white } }
+        assertEquals(0, topRowsWhite)
+    }
 }
