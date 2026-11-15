@@ -99,8 +99,16 @@ private fun collapsePage(pixels: IntArray, width: Int, height: Int, overlapPerce
     val minFlatGap = (height * MIN_FLAT_GAP_RATIO).roundToInt().coerceAtLeast(3)
     val maxFlatGap = (height * MAX_FLAT_GAP_RATIO).roundToInt()
 
-    /** 띠([band]) 쪽 가운데 쪽으로 붙일 때 내용의 첫 줄 — 위쪽 띠는 아래로, 아래쪽 띠는 위로, 가운데에 걸치면 가운데 */
+    // 쪽 전체 띠들 — 아래에서 나눈 뒤 채운다
+    var bandList = emptyList<IntRange>()
+
+    /**
+     * 띠([band]) 안 내용을 붙일 때 첫 줄 — 이웃 띠 쪽으로 붙여 띠 사이 이음매에 빈 곳이 다시 생기지 않게 한다:
+     * 첫 띠는 아래로, 끝 띠는 위로. 띠가 하나거나 가운데 띠면 쪽 가운데 쪽으로 (가운데에 걸치면 가운데)
+     */
     fun towardCentre(band: IntRange, removed: Int): Int = when {
+        bandList.size > 1 && band == bandList.first() -> removed
+        bandList.size > 1 && band == bandList.last() -> 0
         band.last < height / 2 -> removed
         band.first > height / 2 -> 0
         else -> removed / 2
@@ -164,6 +172,14 @@ private fun collapsePage(pixels: IntArray, width: Int, height: Int, overlapPerce
         },
     )
     if (bands.isEmpty()) return null
+    bandList = bands
+
+    /** 칸마다 밀 때([packCells]) 위로 밀지 — 이웃 띠 쪽으로 ([towardCentre]와 같은 기준), 아니면 띠 가운데가 쪽 아래 절반이면 위로 */
+    fun towardUp(band: IntRange): Boolean = when {
+        bands.size > 1 && band == bands.first() -> false
+        bands.size > 1 && band == bands.last() -> true
+        else -> band.first + band.last >= height
+    }
     var columnsMoved = false
     val blocks = bands.map { band ->
         val bandH = band.last - band.first + 1
@@ -187,7 +203,7 @@ private fun collapsePage(pixels: IntArray, width: Int, height: Int, overlapPerce
         if (columns.size == 1) {
             if (collapseRibbons(block, band, columns[0].first, columns[0].last + 1)) {
                 columnsMoved = true
-            } else if (packCells(pixels, block, page, band, width, height, up = band.first + band.last >= height)) {
+            } else if (packCells(pixels, block, page, band, width, height, up = towardUp(band))) {
                 columnsMoved = true
             }
             return@map block
@@ -371,9 +387,18 @@ private class PageMaps(pixels: IntArray, private val width: Int, private val hei
         return n >= (x1 - x0) * BORDER_ROW_RATIO
     }
 
-    /** 쪽 전체 띠를 나눌 때의 잉크 줄 — 세로로 긴 잉크가 지나가거나, 칸 테두리 같은 가로선이 길게 지나간다 (기울어진 스캔의 테두리 끝자락) */
+    /** 그림 획이 줄의 [STROKE_ROW_RATIO] 이상을 지나간다 — 테두리 없는 그림 */
+    private fun strokeRow(y: Int, x0: Int, x1: Int): Boolean {
+        var n = 0
+        val base = y * width
+        for (x in x0 until x1) if (stroke[base + x]) n++
+        return n >= (x1 - x0) * STROKE_ROW_RATIO
+    }
+
+    /** 쪽 전체 띠를 나눌 때의 잉크 줄 — 세로로 긴 잉크가 지나가거나, 칸 테두리 같은 가로선(또는 검은 바탕 쪽의 그림 획)이 길게 지나간다 */
     fun bandInk(y: Int, edgeX: Int): Boolean {
-        return inkContent(y, 0, width) || borderRow(y, edgeX, width - edgeX)
+        return inkContent(y, 0, width) || borderRow(y, edgeX, width - edgeX) ||
+            (bg < MIN_COLUMN_PAPER_BG && strokeRow(y, edgeX, width - edgeX))
     }
 
     fun inkAt(i: Int): Boolean = ink[i]
@@ -1271,13 +1296,15 @@ private const val FLAT_DIFF = 30
 private const val FLAT_OUTLIER_RATIO = 0.03f
 
 /** 고른 색 빈 곳이 쪽 높이의 이만큼보다 얇으면 틈이 아니라 칸 테두리 */
-private const val MIN_FLAT_GAP_RATIO = 0.008f
+private const val MIN_FLAT_GAP_RATIO = 0.003f
 
 /** 고른 색 빈 곳이 쪽 높이의 이만큼보다 길면 틈이 아니라 그림 속 고른 곳 */
 private const val MAX_FLAT_GAP_RATIO = 0.06f
 
 /** 가로로 긴 잉크가 줄의 이만큼을 덮으면 칸 테두리가 지나가는 줄 */
 private const val BORDER_ROW_RATIO = 0.1f
+/** 그림 획이 줄의 이만큼을 덮으면 칸 내용이 지나가는 줄 */
+private const val STROKE_ROW_RATIO = 0.1f
 
 /** 여백 후보의 줄 중 이만큼은 빈 줄이어야 여백 — 글 쪽·한 장 그림은 빈 줄이 드물다 */
 private const val CLEAN_GAP_RATIO = 0.6f
@@ -1289,7 +1316,7 @@ private const val CLEAN_ROW_RATIO = 0.01f
 private const val GAP_STROKE_RATIO = 0.1f
 
 /** 칸 묶음 안에서 여백으로 볼 가장 짧은 빈 곳 — 그림 속 흰 줄은 이보다 짧다 */
-private const val MIN_STACK_GAP_RATIO = 0.006f
+private const val MIN_STACK_GAP_RATIO = 0.003f
 
 /** 띠 높이의 이만큼 넘게 잉크인 열은 칸 세로 테두리 */
 private const val BORDER_COLUMN_INK = 0.9f
@@ -1405,7 +1432,7 @@ private const val MIN_SAVED_RATIO = 0.005f
 
 /** 페이지 리더(Coil)용 — 작품 보기 설정 "칸 간격 없애기" */
 internal class GutterTransformation(private val overlapPercent: Int = 0) : Transformation() {
-    override val cacheKey: String = "gutters-19" + if (overlapPercent > 0) "-o$overlapPercent" else ""
+    override val cacheKey: String = "gutters-21" + if (overlapPercent > 0) "-o$overlapPercent" else ""
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width
