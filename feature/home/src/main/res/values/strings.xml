@@ -8,7 +8,6 @@
     <string name="home_book_completed">Finished</string>
     <string name="home_server_settings">Server settings</string>
     <string name="home_search">Search</string>
-    <string name="home_on_deck">On deck</string>
     <string name="home_latest_books">Recently added books</string>
     <string name="home_new_series">Recently added series</string>
     <string name="home_updated_series">Recently updated series</string>
@@ -22,7 +21,7 @@
     <string name="library_action_done_scan">Scan requested — the server works on it now</string>
     <string name="library_action_done_trash">Trash emptied</string>
     <string name="library_action_failed">Could not do that (admin only, or server error)</string>
-    <string name="reading_action_hint">Clears the reading progress on the server (on every device) and hides this series from Continue reading and On deck. It comes back when you read it again.</string>
+    <string name="reading_action_hint">Clears the reading progress on the server (on every device) and hides this series from Continue reading. It comes back when you read it again.</string>
     <string name="reading_action_question">Remove this series from Continue reading?</string>
     <string name="reading_action_keep">Keep</string>
     <string name="reading_action_remove">Remove</string>

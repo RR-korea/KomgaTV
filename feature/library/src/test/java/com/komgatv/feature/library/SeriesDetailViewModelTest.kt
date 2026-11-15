@@ -293,8 +293,6 @@ class SeriesDetailViewModelTest {
         override suspend fun updateReadProgress(bookId: String, page: Int, completed: Boolean) {
         }
 
-        override suspend fun getBooksOnDeck(size: Int): List<Book> = emptyList()
-
         override suspend fun getLatestBooks(size: Int): List<Book> = emptyList()
 
         override fun searchBooks(query: String, page: Int, size: Int): Flow<BookPageResult> = throw NotImplementedError()

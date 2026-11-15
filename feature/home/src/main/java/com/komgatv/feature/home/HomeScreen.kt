@@ -170,7 +170,7 @@ private class HomeRow<T>(
 /**
  * 홈 화면 콘텐츠 (표준 LazyColumn + focusRestorer로 포커스 복원 지원)
  *
- * 줄 순서는 Komelia 홈과 같다: 읽는 중, 다음 권, 최근 추가된 책, 최근 추가된 시리즈, 최근 업데이트된 시리즈, 라이브러리.
+ * 줄 순서는 Komelia 홈과 같다: 읽는 중, 최근 추가된 책, 최근 추가된 시리즈, 최근 업데이트된 시리즈, 라이브러리.
  * 빈 줄은 그리지 않는다.
  */
 @Composable
@@ -186,9 +186,9 @@ private fun HomeContent(
     onLibraryMenu: (Library) -> Unit,
     onReadingMenu: (Book) -> Unit,
 ) {
-    // 새로고침하면 읽는 중·다음 권 순서가 바뀌므로 내용이 바뀔 때도 연 항목으로 포커스를 다시 준다.
+    // 새로고침하면 읽는 중 순서가 바뀌므로 내용이 바뀔 때도 연 항목으로 포커스를 다시 준다.
     // 처음이거나 그 항목이 없어졌으면 첫 줄.
-    EntryFocusEffect(entryFocus, state.continueReading, state.onDeck, state.libraries)
+    EntryFocusEffect(entryFocus, state.continueReading, state.libraries)
 
     @Composable
     fun bookCard(
@@ -236,9 +236,6 @@ private fun HomeContent(
         HomeRow("continue", R.string.home_continue_reading, state.continueReading, { it.id }) { book, m ->
             // 길게 누르면 "읽는 중에서 빼기"
             bookCard("continue", book, m, showProgress = true, onLongClick = { onReadingMenu(book) })
-        },
-        HomeRow("ondeck", R.string.home_on_deck, state.onDeck, { it.id }) { book, m ->
-            bookCard("ondeck", book, m, showProgress = false, onLongClick = { onReadingMenu(book) })
         },
         HomeRow("latest", R.string.home_latest_books, state.latestBooks, { it.id }) { book, m ->
             bookCard("latest", book, m, showProgress = false)

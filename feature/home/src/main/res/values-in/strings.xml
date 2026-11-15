@@ -8,7 +8,6 @@
     <string name="home_book_completed">Selesai</string>
     <string name="home_server_settings">Pengaturan server</string>
     <string name="home_search">Cari</string>
-    <string name="home_on_deck">Baca berikutnya</string>
     <string name="home_latest_books">Buku yang baru ditambahkan</string>
     <string name="home_new_series">Seri yang baru ditambahkan</string>
     <string name="home_updated_series">Seri yang baru diperbarui</string>
@@ -21,7 +20,7 @@
     <string name="library_action_done_scan">Pemindaian diminta — server sedang memprosesnya</string>
     <string name="library_action_done_trash">Sampah dikosongkan</string>
     <string name="library_action_failed">Tidak dapat dilakukan (khusus admin, atau kesalahan server)</string>
-    <string name="reading_action_hint">Menghapus progres membaca di server (di semua perangkat) dan menyembunyikan seri ini dari “Lanjutkan membaca” dan “Baca berikutnya”. Seri akan muncul lagi saat Anda membacanya kembali.</string>
+    <string name="reading_action_hint">Menghapus progres membaca di server (di semua perangkat) dan menyembunyikan seri ini dari “Lanjutkan membaca”. Seri akan muncul lagi saat Anda membacanya kembali.</string>
     <string name="reading_action_question">Hapus seri ini dari “Lanjutkan membaca”?</string>
     <string name="reading_action_keep">Biarkan</string>
     <string name="reading_action_remove">Hapus</string>
