@@ -34,8 +34,11 @@
     <string name="view_zoom">Zoom</string>
     <string name="view_remove_gutters">Remove panel gaps (experimental)</string>
     <string name="view_panel_overlap">Overlap panel rows (experimental)</string>
+    <string name="view_crop_borders">Crop borders</string>
+    <string name="view_crop_top_bottom">Top &amp; bottom</string>
+    <string name="view_crop_left_right">Left &amp; right</string>
+    <string name="view_crop_all">All sides</string>
     <string name="view_move_balloons">Move balloons too (experimental)</string>
-    <string name="view_colorize">Auto colorize (experimental)</string>
     <string name="view_transition">Page transition</string>
     <string name="view_transition_off">Off</string>
     <string name="view_transition_slide">Slide</string>

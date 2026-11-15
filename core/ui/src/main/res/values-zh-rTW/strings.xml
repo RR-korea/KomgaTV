@@ -34,8 +34,11 @@
     <string name="view_zoom">縮放</string>
     <string name="view_remove_gutters">去除分格間距（實驗性）</string>
     <string name="view_panel_overlap">分格列重疊（實驗性）</string>
+    <string name="view_crop_borders">裁切邊框</string>
+    <string name="view_crop_top_bottom">上下</string>
+    <string name="view_crop_left_right">左右</string>
+    <string name="view_crop_all">上下左右</string>
     <string name="view_move_balloons">連對話框一起移動（實驗性）</string>
-    <string name="view_colorize">自動上色（實驗性）</string>
     <string name="view_transition">翻頁效果</string>
     <string name="view_transition_off">關閉</string>
     <string name="view_transition_slide">滑動</string>

@@ -34,8 +34,11 @@
     <string name="view_zoom">Zoom</string>
     <string name="view_remove_gutters">Remover espaço entre quadros (experimental)</string>
     <string name="view_panel_overlap">Sobrepor fileiras de quadros (experimental)</string>
+    <string name="view_crop_borders">Cortar bordas</string>
+    <string name="view_crop_top_bottom">Cima e baixo</string>
+    <string name="view_crop_left_right">Esquerda e direita</string>
+    <string name="view_crop_all">Todos os lados</string>
     <string name="view_move_balloons">Mover também os balões (experimental)</string>
-    <string name="view_colorize">Colorir automaticamente (experimental)</string>
     <string name="view_transition">Transição de página</string>
     <string name="view_transition_off">Desativada</string>
     <string name="view_transition_slide">Deslizar</string>

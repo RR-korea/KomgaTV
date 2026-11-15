@@ -13,6 +13,7 @@ import com.komgatv.core.model.BookPage
 import com.komgatv.core.model.LoadError
 import com.komgatv.core.model.MediaProfile
 import com.komgatv.core.model.displayName
+import com.komgatv.core.model.CropBorders
 import com.komgatv.core.model.ImageEnhancement
 import com.komgatv.core.model.PageLayout
 import com.komgatv.core.model.PageTransition
@@ -101,10 +102,10 @@ sealed interface ReaderUiState {
         val removeGutters: Boolean = false,
         /** 확대해서 잘리는 쪽 끝 말풍선을 말풍선째 옮기기 */
         val moveBalloons: Boolean = false,
-        /** 흑백 쪽 자동 채색 */
-        val colorize: Boolean = false,
         /** 칸 줄(단) 겹치기 % (0이면 안 함) */
         val panelOverlapPercent: Int = 0,
+        /** 쪽 둘레 빈 테두리 잘라내기 */
+        val cropBorders: CropBorders = CropBorders.OFF,
         /** 페이지 넘김 화면 전환 효과 */
         val pageTransition: PageTransition = PageTransition.SLIDE,
         /**
@@ -141,8 +142,8 @@ sealed interface ReaderUiState {
                 zoomPanPercent = zoomPanPercent,
                 removeGutters = removeGutters,
                 moveBalloons = moveBalloons,
-                colorize = colorize,
                 panelOverlapPercent = panelOverlapPercent,
+                cropBorders = cropBorders,
                 pageTransition = pageTransition,
             )
     }
@@ -249,8 +250,8 @@ class ReaderViewModel @Inject constructor(
     private var currentZoomPanPercent: Int = 0
     private var currentRemoveGutters: Boolean = false
     private var currentMoveBalloons: Boolean = false
-    private var currentColorize: Boolean = false
     private var currentPanelOverlapPercent: Int = 0
+    private var currentCropBorders: CropBorders = CropBorders.OFF
     private var currentPageTransition: PageTransition = PageTransition.SLIDE
     private var pageStep = 0
     private var currentSeriesId: String = ""
@@ -822,8 +823,8 @@ class ReaderViewModel @Inject constructor(
         if (new.zoomPanPercent != currentZoomPanPercent) setZoomPanPercent(new.zoomPanPercent)
         if (new.removeGutters != currentRemoveGutters) setRemoveGutters(new.removeGutters)
         if (new.moveBalloons != currentMoveBalloons) setMoveBalloons(new.moveBalloons)
-        if (new.colorize != currentColorize) setColorize(new.colorize)
         if (new.panelOverlapPercent != currentPanelOverlapPercent) setPanelOverlapPercent(new.panelOverlapPercent)
+        if (new.cropBorders != currentCropBorders) setCropBorders(new.cropBorders)
         if (new.pageTransition != currentPageTransition) setPageTransition(new.pageTransition)
     }
 
@@ -870,19 +871,19 @@ class ReaderViewModel @Inject constructor(
         saveSeriesSettings()
     }
 
-    /** 흑백 쪽 자동 채색 — 이 작품에 저장 */
-    fun setColorize(enabled: Boolean) {
-        if (currentColorize == enabled) return
-        currentColorize = enabled
-        updateReadingState()
-        saveSeriesSettings()
-    }
-
     /** 칸 줄(단) 겹치기 % — 이 작품에 저장 */
     fun setPanelOverlapPercent(percent: Int) {
         val clamped = percent.coerceIn(0, ReaderSettings.MAX_PANEL_OVERLAP_PERCENT)
         if (currentPanelOverlapPercent == clamped) return
         currentPanelOverlapPercent = clamped
+        updateReadingState()
+        saveSeriesSettings()
+    }
+
+    /** 쪽 둘레 빈 테두리 잘라내기 — 이 작품에 저장 */
+    fun setCropBorders(mode: CropBorders) {
+        if (currentCropBorders == mode) return
+        currentCropBorders = mode
         updateReadingState()
         saveSeriesSettings()
     }
@@ -949,8 +950,8 @@ class ReaderViewModel @Inject constructor(
         currentZoomPanPercent = settings.zoomPanPercent
         currentRemoveGutters = settings.removeGutters
         currentMoveBalloons = settings.moveBalloons
-        currentColorize = settings.colorize
         currentPanelOverlapPercent = settings.panelOverlapPercent
+        currentCropBorders = settings.cropBorders
         currentPageTransition = settings.pageTransition
     }
 
@@ -968,8 +969,8 @@ class ReaderViewModel @Inject constructor(
         zoomPanPercent = currentZoomPanPercent,
         removeGutters = currentRemoveGutters,
         moveBalloons = currentMoveBalloons,
-        colorize = currentColorize,
         panelOverlapPercent = currentPanelOverlapPercent,
+        cropBorders = currentCropBorders,
         pageTransition = currentPageTransition,
     )
 
@@ -1220,8 +1221,8 @@ class ReaderViewModel @Inject constructor(
             zoomPanPercent = currentZoomPanPercent,
             removeGutters = currentRemoveGutters,
             moveBalloons = currentMoveBalloons,
-            colorize = currentColorize,
             panelOverlapPercent = currentPanelOverlapPercent,
+            cropBorders = currentCropBorders,
             pageTransition = currentPageTransition,
             pageStep = pageStep,
             seriesCustomized = seriesCustomized,

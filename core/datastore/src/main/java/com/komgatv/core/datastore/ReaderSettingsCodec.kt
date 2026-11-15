@@ -1,5 +1,6 @@
 package com.komgatv.core.datastore
 
+import com.komgatv.core.model.CropBorders
 import com.komgatv.core.model.ImageEnhancement
 import com.komgatv.core.model.PageLayout
 import com.komgatv.core.model.PageTransition
@@ -27,8 +28,8 @@ internal object ReaderSettingsCodec {
         "zoomPanPercent" to s.zoomPanPercent.toString(),
         "removeGutters" to s.removeGutters.toString(),
         "moveBalloons" to s.moveBalloons.toString(),
-        "colorize" to s.colorize.toString(),
         "panelOverlap" to s.panelOverlapPercent.toString(),
+        "cropBorders" to s.cropBorders.name,
         "pageTransition" to s.pageTransition.name,
     ).joinToString(";") { (k, v) -> "$k=$v" }
 
@@ -58,9 +59,9 @@ internal object ReaderSettingsCodec {
                 ?.coerceIn(ReaderSettings.MIN_ZOOM_PAN_PERCENT, ReaderSettings.MAX_ZOOM_PAN_PERCENT) ?: d.zoomPanPercent,
             removeGutters = map["removeGutters"]?.toBooleanStrictOrNull() ?: d.removeGutters,
             moveBalloons = map["moveBalloons"]?.toBooleanStrictOrNull() ?: d.moveBalloons,
-            colorize = map["colorize"]?.toBooleanStrictOrNull() ?: d.colorize,
             panelOverlapPercent = map["panelOverlap"]?.toIntOrNull()
                 ?.coerceIn(0, ReaderSettings.MAX_PANEL_OVERLAP_PERCENT) ?: d.panelOverlapPercent,
+            cropBorders = enumOrNull<CropBorders>(map["cropBorders"]) ?: d.cropBorders,
         )
     }
 

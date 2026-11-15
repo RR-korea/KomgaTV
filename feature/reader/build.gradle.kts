@@ -12,7 +12,6 @@ dependencies {
     implementation(project(":core:datastore"))
     implementation(libs.androidx.activity.compose)
     implementation(libs.coil.compose)
-    implementation(libs.onnxruntime.android)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
