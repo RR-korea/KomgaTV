@@ -8,7 +8,6 @@
     <string name="home_book_completed">Прочитано</string>
     <string name="home_server_settings">Настройки сервера</string>
     <string name="home_search">Поиск</string>
-    <string name="home_on_deck">Следующие тома</string>
     <string name="home_latest_books">Недавно добавленные книги</string>
     <string name="home_new_series">Недавно добавленные серии</string>
     <string name="home_updated_series">Недавно обновлённые серии</string>
@@ -24,7 +23,7 @@
     <string name="library_action_done_scan">Сканирование запрошено — сервер уже работает</string>
     <string name="library_action_done_trash">Корзина очищена</string>
     <string name="library_action_failed">Не удалось (только для админа или ошибка сервера)</string>
-    <string name="reading_action_hint">Сбрасывает прогресс чтения на сервере (на всех устройствах) и убирает эту серию из «Продолжить чтение» и «Следующие тома». Она вернётся, когда вы снова начнёте её читать.</string>
+    <string name="reading_action_hint">Сбрасывает прогресс чтения на сервере (на всех устройствах) и убирает эту серию из «Продолжить чтение». Она вернётся, когда вы снова начнёте её читать.</string>
     <string name="reading_action_question">Убрать эту серию из «Продолжить чтение»?</string>
     <string name="reading_action_keep">Оставить</string>
     <string name="reading_action_remove">Убрать</string>

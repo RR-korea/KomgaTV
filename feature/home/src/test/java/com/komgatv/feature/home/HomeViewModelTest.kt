@@ -85,12 +85,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `다음 권과 최근 추가된 시리즈 줄을 함께 읽는다`() = runTest {
-        val book = Book(
-            id = "next-1", seriesId = "s1", seriesTitle = "원피스", name = "원피스 2권", number = 2,
-            pageCount = 100, metadata = BookMetadata("원피스 2권", "", "2"), readProgress = null,
-        )
-        fakeBookRepository.onDeckToReturn = listOf(book)
+    fun `최근 추가된 시리즈 줄을 읽는다`() = runTest {
         fakeSeriesRepository.newSeriesToReturn = listOf(
             Series("s9", "lib", "새 시리즈", 3, 0, 0, SeriesMetadata("새 시리즈", "", "ONGOING", "", emptyList(), null)),
         )
@@ -99,31 +94,28 @@ class HomeViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.uiState.value as HomeUiState.Success
-        assertEquals(listOf("next-1"), state.onDeck.map { it.id })
         assertEquals(listOf("s9"), state.newSeries.map { it.id })
     }
 
     @Test
     fun `선택 줄이 실패해도 홈은 열리고 그 줄만 비어 있다`() = runTest {
-        fakeBookRepository.failOnDeck = true
+        fakeBookRepository.failLatestBooks = true
 
         val viewModel = createViewModel()
         advanceUntilIdle()
 
         val state = viewModel.uiState.value as HomeUiState.Success
-        assertTrue(state.onDeck.isEmpty())
+        assertTrue(state.latestBooks.isEmpty())
     }
 
     @Test
-    fun `읽는 중에서 빼면 서버 진행을 지우고 그 시리즈가 두 줄에서 빠지며, 다시 읽으면 돌아온다`() = runTest {
+    fun `읽는 중에서 빼면 서버 진행을 지우고 그 시리즈가 빠지며, 다시 읽으면 돌아온다`() = runTest {
         val reading = Book(
             id = "k9", seriesId = "kingdom", seriesTitle = "킹덤", name = "킹덤 09권", number = 9,
             pageCount = 210, metadata = BookMetadata("킹덤 09권", "", "9"),
             readProgress = ReadProgress(page = 57, completed = false, readDateMillis = 1_000L),
         )
-        val next = reading.copy(id = "k10", name = "킹덤 10권", readProgress = null)
         fakeBookRepository.inProgressBooksToReturn = listOf(reading)
-        fakeBookRepository.onDeckToReturn = listOf(next)
         val viewModel = createViewModel()
         advanceUntilIdle()
 
@@ -131,8 +123,7 @@ class HomeViewModelTest {
         advanceUntilIdle()
         var state = viewModel.uiState.value as HomeUiState.Success
         assertTrue(state.continueReading.isEmpty())
-        assertTrue(state.onDeck.isEmpty())
-        // 읽던 책은 서버 진행도 지운다, 다음 권은 지울 진행이 없다
+        // 읽던 책은 서버 진행도 지운다
         assertEquals(listOf("k9"), fakeBookRepository.unread)
         assertTrue(homePreferences.hidden.value.containsKey("kingdom"))
 
@@ -145,7 +136,6 @@ class HomeViewModelTest {
         advanceUntilIdle()
         state = viewModel.uiState.value as HomeUiState.Success
         assertEquals(listOf("k9"), state.continueReading.map { it.id })
-        assertEquals(listOf("k10"), state.onDeck.map { it.id })
         assertTrue(homePreferences.hidden.value.isEmpty())
     }
 
@@ -294,15 +284,12 @@ class HomeViewModelTest {
         override suspend fun updateReadProgress(bookId: String, page: Int, completed: Boolean) {
         }
 
-        var onDeckToReturn = listOf<Book>()
-        var failOnDeck = false
+        var failLatestBooks = false
 
-        override suspend fun getBooksOnDeck(size: Int): List<Book> {
-            if (failOnDeck) throw RuntimeException("on deck 실패")
-            return onDeckToReturn
+        override suspend fun getLatestBooks(size: Int): List<Book> {
+            if (failLatestBooks) throw RuntimeException("최근 추가된 책 실패")
+            return emptyList()
         }
-
-        override suspend fun getLatestBooks(size: Int): List<Book> = emptyList()
 
         override fun searchBooks(query: String, page: Int, size: Int): Flow<BookPageResult> = throw NotImplementedError()
 

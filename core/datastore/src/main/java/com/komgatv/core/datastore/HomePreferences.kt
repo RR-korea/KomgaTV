@@ -19,7 +19,7 @@ private val Context.homeDataStore: DataStore<Preferences> by preferencesDataStor
 /**
  * 홈 화면 — "읽는 중"에서 뺀 시리즈.
  *
- * 서버의 읽기 진행은 그대로 두고 이 TV의 홈에서만 숨긴다 ("다음 권"에도 그 시리즈를 보이지 않는다).
+ * 서버의 읽기 진행은 그대로 두고 이 TV의 홈에서만 숨긴다.
  * 그 시리즈를 뺀 뒤에 다시 읽으면 홈이 다시 보이게 하고 기록을 지운다.
  */
 interface HomePreferences {

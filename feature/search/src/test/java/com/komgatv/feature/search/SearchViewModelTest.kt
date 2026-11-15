@@ -176,7 +176,6 @@ class SearchViewModelTest {
         override suspend fun getBookById(bookId: String): Book = throw NotImplementedError()
         override suspend fun getBookPages(bookId: String): List<BookPage> = throw NotImplementedError()
         override suspend fun updateReadProgress(bookId: String, page: Int, completed: Boolean) = Unit
-        override suspend fun getBooksOnDeck(size: Int): List<Book> = emptyList()
         override suspend fun getLatestBooks(size: Int): List<Book> = emptyList()
 
         override suspend fun getEpubManifest(bookId: String): EpubManifest = throw NotImplementedError()
