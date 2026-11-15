@@ -99,8 +99,16 @@ private fun collapsePage(pixels: IntArray, width: Int, height: Int, overlapPerce
     val minFlatGap = (height * MIN_FLAT_GAP_RATIO).roundToInt().coerceAtLeast(3)
     val maxFlatGap = (height * MAX_FLAT_GAP_RATIO).roundToInt()
 
-    /** 띠([band]) 쪽 가운데 쪽으로 붙일 때 내용의 첫 줄 — 위쪽 띠는 아래로, 아래쪽 띠는 위로, 가운데에 걸치면 가운데 */
+    // 쪽 전체 띠들 — 아래에서 나눈 뒤 채운다
+    var bandList = emptyList<IntRange>()
+
+    /**
+     * 띠([band]) 안 내용을 붙일 때 첫 줄 — 이웃 띠 쪽으로 붙여 띠 사이 이음매에 빈 곳이 다시 생기지 않게 한다:
+     * 첫 띠는 아래로, 끝 띠는 위로. 띠가 하나거나 가운데 띠면 쪽 가운데 쪽으로 (가운데에 걸치면 가운데)
+     */
     fun towardCentre(band: IntRange, removed: Int): Int = when {
+        bandList.size > 1 && band == bandList.first() -> removed
+        bandList.size > 1 && band == bandList.last() -> 0
         band.last < height / 2 -> removed
         band.first > height / 2 -> 0
         else -> removed / 2
@@ -157,13 +165,21 @@ private fun collapsePage(pixels: IntArray, width: Int, height: Int, overlapPerce
         isContent = { y -> (page.bandInk(y, edgeX) && !page.flatGutter(y, edgeX, width - edgeX)) || tail[y] },
         flatOnly = { y -> page.bandInk(y, edgeX) || tail[y] },
         keepGap = { gap ->
-            // 떼어 낸 테두리 끝자락 줄만큼 건너 테두리를 찾는다 (최소 STRAY_SLACK 여유)
-            val above = maxOf(STRAY_SLACK, (gap.first - 1 downTo 0).takeWhile { tail[it] }.count())
-            val below = maxOf(STRAY_SLACK, (gap.last + 1 until height).takeWhile { tail[it] }.count())
+            // 떼어 낸 테두리 끝자락 줄만큼 건너 테두리를 찾는다
+            val above = (gap.first - 1 downTo 0).takeWhile { tail[it] }.count()
+            val below = (gap.last + 1 until height).takeWhile { tail[it] }.count()
             !page.cleanGap(gap, edgeX, width - edgeX, above, below)
         },
     )
     if (bands.isEmpty()) return null
+    bandList = bands
+
+    /** 칸마다 밀 때([packCells]) 위로 밀지 — 이웃 띠 쪽으로 ([towardCentre]와 같은 기준), 아니면 띠 가운데가 쪽 아래 절반이면 위로 */
+    fun towardUp(band: IntRange): Boolean = when {
+        bands.size > 1 && band == bands.first() -> false
+        bands.size > 1 && band == bands.last() -> true
+        else -> band.first + band.last >= height
+    }
     var columnsMoved = false
     val blocks = bands.map { band ->
         val bandH = band.last - band.first + 1
@@ -187,7 +203,7 @@ private fun collapsePage(pixels: IntArray, width: Int, height: Int, overlapPerce
         if (columns.size == 1) {
             if (collapseRibbons(block, band, columns[0].first, columns[0].last + 1)) {
                 columnsMoved = true
-            } else if (packCells(pixels, block, page, band, width, height, up = band.first + band.last >= height)) {
+            } else if (packCells(pixels, block, page, band, width, height, up = towardUp(band))) {
                 columnsMoved = true
             }
             return@map block
@@ -358,13 +374,10 @@ private class PageMaps(pixels: IntArray, private val width: Int, private val hei
             }
         }
         if (first < 0) return false
-        val span = last - first + 1
-        if (span >= (x1 - x0) * OVERLAY_SPAN_RATIO) return true
-        // 좁은 구간(말풍선) 밖에 잉크가 거의 없으면 여백에 걸친 말풍선 — 칸 내용이 아니다
-        var outsideLoose = 0
-        for (x in x0 until first) if (ink[base + x]) outsideLoose++
-        for (x in last + 1 until x1) if (ink[base + x]) outsideLoose++
-        return outsideLoose > OVERLAY_NOISE
+        if (last - first + 1 >= (x1 - x0) * OVERLAY_SPAN_RATIO) return true
+        var loose = 0
+        for (x in first..last) if (ink[base + x] && !tall[base + x]) loose++
+        return loose > OVERLAY_NOISE
     }
 
     /** 칸 테두리 같은 가로선이 줄의 [BORDER_ROW_RATIO] 이상을 지나간다 */
@@ -1346,7 +1359,7 @@ private const val CELL_FRAME_WIDTH_RATIO = 0.3f
 private const val MIN_STACK_PART_RATIO = 0.02f
 
 /** 칸 묶음 사이 세로 여백은 잉크가 이 비율 이하 */
-private const val MAX_COLUMN_GAP_INK = 0.20f
+private const val MAX_COLUMN_GAP_INK = 0.05f
 
 /** 칸 묶음은 쪽 너비의 이만큼은 돼야 한다 */
 private const val MIN_STACK_WIDTH_RATIO = 0.1f
@@ -1419,7 +1432,7 @@ private const val MIN_SAVED_RATIO = 0.005f
 
 /** 페이지 리더(Coil)용 — 작품 보기 설정 "칸 간격 없애기" */
 internal class GutterTransformation(private val overlapPercent: Int = 0) : Transformation() {
-    override val cacheKey: String = "gutters-20" + if (overlapPercent > 0) "-o$overlapPercent" else ""
+    override val cacheKey: String = "gutters-21" + if (overlapPercent > 0) "-o$overlapPercent" else ""
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width

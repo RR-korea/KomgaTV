@@ -87,6 +87,35 @@ class GuttersTest {
     }
 
     @Test
+    fun `끝 띠의 칸 묶음은 위 띠 쪽으로 붙인다 - 빼낸 띠 사이 여백이 다시 생기지 않는다`() {
+        val px = IntArray(w * h) { white }
+        // 1단: 넓은 칸. 2단: 왼쪽 긴 칸(쪽 바닥 70줄 위에서 끝남) + 오른쪽 작은 칸 둘(아래 칸은 쪽 바닥까지) — 킹덤 34권 176쪽
+        px.box(6, 94, 20, 100)
+        px.box(6, 50, 130, 330)
+        px.box(55, 94, 130, 220)
+        px.box(55, 94, 250, 400)
+
+        val out = requireNotNull(collapseGutters(px, w, h))
+
+        // 1단 아래 테두리와 2단 칸들의 위 테두리 사이에 흰 줄이 없다 (맞닿은 테두리는 한 줄로 겹친다)
+        fun runs(x: Int): List<IntRange> {
+            val rows = (0 until h).filter { out[it * w + x] == black }
+            val result = mutableListOf<IntRange>()
+            var start = rows.first()
+            for (i in 1 until rows.size) if (rows[i] != rows[i - 1] + 1) {
+                result += start..rows[i - 1]
+                start = rows[i]
+            }
+            result += start..rows.last()
+            return result
+        }
+        // 왼쪽 긴 칸 열: 1단 위 테두리, 1단 아래+긴 칸 위 테두리, 긴 칸 아래 테두리
+        assertEquals(3, runs(20).size)
+        // 오른쪽 열: 1단 아래 테두리와 작은 칸 위 테두리도 붙는다
+        assertEquals(runs(20)[1].first, runs(70)[1].first)
+    }
+
+    @Test
     fun `칸 묶음 사이 여백의 쪽 번호는 여백과 함께 지운다`() {
         val px = IntArray(w * h) { white }
         // 오른쪽 세로로 긴 칸, 왼쪽에 작은 칸 둘 (사이 40줄) — 그 사이 여백 왼쪽에 쪽 번호 ("10", 획 높이 10줄)
