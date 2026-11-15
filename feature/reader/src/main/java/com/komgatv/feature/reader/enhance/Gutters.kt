@@ -287,10 +287,6 @@ private fun collapsePage(pixels: IntArray, width: Int, height: Int, overlapPerce
     if (!columnsMoved && !layered && removed.size < height * MIN_SAVED_RATIO) return null
     // 위아래 빈 곳은 쪽 위·아래 절반의 원래 여백 중 가장 고른 줄의 대표 색 (위는 검정 틈, 아래는 흰 종이인 쪽도 있다)
     fun padColor(rows: List<Int>): Int {
-        if (page.paper < MIN_COLUMN_PAPER_BG) {
-            val bg = page.paper
-            return (0xFF shl 24) or (bg shl 16) or (bg shl 8) or bg
-        }
         val sample = rows.ifEmpty { removed }
         return page.typicalColor(pixels, if (sample.isEmpty()) 0 else page.evenest(sample, 0, width), 0, width)
     }
@@ -1529,7 +1525,7 @@ private const val MIN_SAVED_RATIO = 0.005f
 
 /** 페이지 리더(Coil)용 — 작품 보기 설정 "칸 간격 없애기" */
 internal class GutterTransformation(private val overlapPercent: Int = 0) : Transformation() {
-    override val cacheKey: String = "gutters-22" + if (overlapPercent > 0) "-o$overlapPercent" else ""
+    override val cacheKey: String = "gutters-23" + if (overlapPercent > 0) "-o$overlapPercent" else ""
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width
