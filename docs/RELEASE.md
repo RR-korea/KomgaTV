@@ -15,6 +15,7 @@
 ## 개인정보처리방침
 - URL: https://rr-korea.github.io/KomgaTV/privacy/ (한·영, GitHub Pages — `.github/workflows/pages.yml`이 `docs/privacy`가 바뀔 때만 올림, `docs/privacy/index.html`)
 - Play Console → 앱 콘텐츠 → 개인정보처리방침에 이 주소를 넣는다. 앱이 다루는 데이터가 바뀌면 이 페이지도 고친다.
+- **GitHub Actions 꺼 둠 (2026-11-17, 사용자 "github actions 에서 돌아가는게 없게 정리해줘")** — 저장소 설정에서 Actions 를 껐다. 지금 올라가 있는 페이지는 그대로 보이지만, `docs/privacy` 를 고쳐도 자동으로 다시 올라가지 않는다. 고칠 때는 저장소 Settings → Actions 를 잠깐 켜거나 사용자에게 먼저 묻는다.
 
 ## 서명 (업로드 키)
 - 키 파일: `D:\Keys\komgatv-upload.jks` (별칭 `upload`, 2026-11-02 생성). 저장소 밖에 두고 백업한다 — 잃어버리면 Play Console에서 업로드 키 재설정을 요청해야 한다.

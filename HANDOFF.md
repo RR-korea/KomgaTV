@@ -17,6 +17,7 @@
 | 에뮬레이터 | adb 는 늘 `-s emulator-5556` (다른 프로젝트가 5554를 쓴다). 다른 세션이 에뮬레이터를 쓰고 있으면(다른 앱이 앞에 있으면) 조작하지 않는다. 다른 세션의 프로세스를 끄지 않는다. |
 | 스토어 그림 | 사용자의 개인 책으로 스토어 스크린샷을 만들지 않는다 (데모 서버로). |
 | 작업 흐름 | 기능 브랜치 → `main` 에 `--no-ff` 병합 → push. 빌드마다 `app/build.gradle.kts` 위 `appVersionCode`(+1)·`appVersionName`(1.0.x) 올리고, 빌드 뒤 `app\build\outputs\apk\debug` 를 탐색기로 연다. |
+| GitHub Actions | 2026-11-17 사용자 "github actions 에서 돌아가는게 없게 정리해줘" — RR-korea 의 워크플로가 있는 저장소 6개(Autopilot, KomgaTV, kimchicraft, KimchiTower, XboxKit, iso2god-rs-GUI) 모두 설정에서 Actions 를 껐다. 다시 켜지 않는다 (개인정보처리방침 페이지 갱신이 필요하면 사용자에게 먼저 묻는다 — `docs/RELEASE.md`). |
 | 잡일 | 할 수 있는 잡일(조사·대량 확인·단순 수정)은 안티그래비티(agy)에게 맡기고, 리드(Claude)는 지시·검토·병합을 한다. agy 결과는 반드시 직접 확인한다 — 숫자 판정을 믿지 말고 그림을 본다. |
 
 ---
