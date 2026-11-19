@@ -63,6 +63,44 @@ class CropBordersTest {
     }
 
     @Test
+    fun `칸 밖 아래 여백의 쪽 번호와 넓은 광고 글은 여백으로 보고 칸 테두리 선에서 자른다`() {
+        val px = IntArray(w * h) { white }
+        px.panel(10, 190, 20, 130)
+        px.panel(10, 100, 140, 275)
+        px.panel(110, 190, 140, 275)
+        // 아래 여백: 왼쪽 작은 글, 쪽 번호, 쪽 너비 절반을 넘는 광고 글 (킹덤 권 중간 쪽처럼)
+        px.art(12, 40, 281, 292)
+        for (y in 280 until 287) for (x in 44 until 52) px[y * w + x] = black
+        px.art(60, 170, 279, 297)
+
+        // 위는 칸 테두리 20, 아래는 칸 테두리 선(274)에서 — 쪽 번호와 광고는 함께 잘린다
+        assertArrayEquals(intArrayOf(20, 25, 10, 10), borders(px))
+    }
+
+    @Test
+    fun `칸 밖 위 여백의 제목 글도 칸 테두리 선에서 함께 자른다`() {
+        val px = IntArray(w * h) { white }
+        px.panel(10, 190, 40, 290)
+        // 위 여백에 쪽 너비 60%의 머리글
+        px.art(30, 150, 10, 30)
+
+        assertArrayEquals(intArrayOf(40, 10, 10, 10), borders(px))
+    }
+
+    @Test
+    fun `쪽 끝까지 그린 맨 아래 칸의 하얀 칸 안은 여백이 아니다 - 그 칸의 위 테두리에서 자르지 않는다`() {
+        val px = IntArray(w * h) { white }
+        px.panel(10, 190, 20, 200)
+        // 맨 아래 칸: 위·옆 테두리만 있고 쪽 아래 끝까지 열렸다. 안은 거의 하얗고 얼굴 하나 (킹덤 1권 185쪽처럼)
+        for (x in 10 until 190) for (y in 210 until 212) px[y * w + x] = black
+        for (y in 210 until h) for (x in 10 until 12) px[y * w + x] = black
+        for (y in 210 until h) for (x in 188 until 190) px[y * w + x] = black
+        px.art(70, 130, 240, h)
+
+        assertArrayEquals(intArrayOf(20, 0, 10, 10), borders(px))
+    }
+
+    @Test
     fun `위아래에 칸 테두리 선이 없으면(열린 칸, 칸 밖 글) 모든 열이 여백인 곳까지만 자른다`() {
         val px = IntArray(w * h) { white }
         // 테두리 없이 위아래로 열린 칸 — 가는 세로 획(머리카락·빗줄기)만 y=20..259, 가로로 긴 선은 없다 (나루토 1권 58쪽)
@@ -159,6 +197,16 @@ class CropBordersTest {
     }
 
     @Test
+    fun `좌우 여백의 세로 광고 글은 여백으로 보고 칸 테두리 선에서 자른다`() {
+        val px = IntArray(w * h) { white }
+        px.panel(30, 180, 20, 280)
+        // 왼쪽 여백에 쪽 높이 거의 전부를 따라 내려가는 세로 광고 글 (킹덤 권 끝 쪽처럼) — 글자 사이 틈 몇 줄만 테두리까지 빈다
+        for (c in 0 until 13) px.art(8, 24, 24 + c * 20, 42 + c * 20)
+
+        assertArrayEquals(intArrayOf(20, 20, 30, 20), borders(px))
+    }
+
+    @Test
     fun `좌우 변에서 1줄짜리 고립된 먼지 점은 봐주고 테두리까지 잰다`() {
         val px = IntArray(w * h) { white }
         px.panel(20, 180, 30, 270)
@@ -172,8 +220,8 @@ class CropBordersTest {
     fun `좌우 변에서 1열짜리 가는 펜선이 안쪽으로 이어져 있으면 먼지로 오인하지 않고 보존한다`() {
         val px = IntArray(w * h) { white }
         px.panel(20, 180, 30, 270)
-        // 오른쪽 여백(x=180..199)으로 튀어나온 1열짜리 가는 머리카락 펜선 (x=185에서 y=100..105까지 6픽셀 연속)
-        for (y in 100..105) px[y * w + 185] = black
+        // 칸 테두리에서 오른쪽 여백(x=180..199)으로 튀어나온 가는 머리카락 펜선 (x=180..185, 2줄) — 칸에 이어졌으니 칸 밖 글이 아니다
+        for (y in 100..101) for (x in 180..185) px[y * w + x] = black
 
         // x=185의 머리카락 펜선을 지우지 않고 15에서 안전하게 멈춘다
         assertArrayEquals(intArrayOf(30, 30, 20, 14), borders(px))
