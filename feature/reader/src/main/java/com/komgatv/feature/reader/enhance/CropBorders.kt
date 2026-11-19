@@ -159,6 +159,21 @@ internal fun findBorders(pixels: IntArray, width: Int, height: Int, topBottom: B
 internal fun matchCrop(own: FloatArray, partner: FloatArray?): FloatArray =
     FloatArray(4) { maxOf(own[it], partner?.get(it) ?: 0f) }
 
+/**
+ * 같은 펼침의 다른 쪽에게 알려 줄 테두리 비율 [위, 아래, 바깥, 안쪽] ([findBorders]의 [borders]에서).
+ * 한 변이라도 재는 끝([MAX_CROP_RATIO])까지 비었으면 테두리가 아니라 빈 쪽(제목·로고만 있는 쪽, 장 표지)이라 아무것도 맞추게 하지 않는다 —
+ * 그 빈 곳에 맞추면 다른 쪽 그림이 잘린다. 다른 쪽에 맞춰 자르는 것은 [MAX_MATCH_RATIO]까지만.
+ */
+internal fun spreadShare(borders: IntArray, width: Int, height: Int, left: Boolean): FloatArray {
+    val maxY = (height * MAX_CROP_RATIO).toInt()
+    val maxX = (width * MAX_CROP_RATIO).toInt()
+    if (borders[0] >= maxY || borders[1] >= maxY || borders[2] >= maxX || borders[3] >= maxX) return FloatArray(4)
+    val outer = if (left) borders[2] else borders[3]
+    val inner = if (left) borders[3] else borders[2]
+    return floatArrayOf(borders[0] / height.toFloat(), borders[1] / height.toFloat(), outer / width.toFloat(), inner / width.toFloat())
+        .map { it.coerceAtMost(MAX_MATCH_RATIO) }.toFloatArray()
+}
+
 private fun luminanceOf(c: Int) = (((c shr 16) and 0xFF) * 299 + ((c shr 8) and 0xFF) * 587 + (c and 0xFF) * 114) / 1000
 
 /** 펼침의 쪽마다 잰 테두리 비율 — 같은 펼침의 다른 쪽이 읽어 맞춘다 (쪽 주소|설정 → [위, 아래, 바깥, 안쪽]) */
@@ -197,6 +212,9 @@ private const val THIN_EDGE_RATIO = 0.01f
 /** 한 변에서 쪽의 이만큼까지만 뺀다 */
 private const val MAX_CROP_RATIO = 0.2f
 
+/** 두 쪽 보기에서 다른 쪽 테두리에 맞춰 한 변을 더 자르는 것은 쪽의 이만큼까지만 */
+private const val MAX_MATCH_RATIO = 0.12f
+
 /** 한 변의 테두리가 쪽의 이만큼보다 얇으면 테두리가 아니다 */
 private const val MIN_BORDER_RATIO = 0.01f
 
@@ -224,7 +242,7 @@ internal class CropBorderTransformation(
     private val left: Boolean,
     private val variant: String,
 ) : Transformation() {
-    override val cacheKey: String = "crop-borders-4-$mode" + if (partner != null) "-${partner.hashCode()}-${if (left) "L" else "R"}" else ""
+    override val cacheKey: String = "crop-borders-5-$mode" + if (partner != null) "-${partner.hashCode()}-${if (left) "L" else "R"}" else ""
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width
@@ -239,7 +257,7 @@ internal class CropBorderTransformation(
         val inner = if (left) borders[3] else borders[2]
         val own = floatArrayOf(borders[0] / h.toFloat(), borders[1] / h.toFloat(), outer / w.toFloat(), inner / w.toFloat())
         if (spreadBorders.size > MAX_REMEMBERED) spreadBorders.clear()
-        spreadBorders["$self|$mode|$variant"] = own
+        spreadBorders["$self|$mode|$variant"] = spreadShare(borders, w, h, left)
         val other = partner?.let { awaitBorders("$it|$mode|$variant") }
         val crop = matchCrop(own, other)
         val top = (crop[0] * h).toInt()
