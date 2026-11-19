@@ -36,16 +36,26 @@ import kotlinx.coroutines.sync.withLock
 internal fun collapseGutters(pixels: IntArray, width: Int, height: Int): IntArray? {
     if (width < 8 || height < 32) return null
     val spine = spreadSpine(pixels, width, height) ?: return collapsePage(pixels, width, height)
-    var out: IntArray? = null
-    for ((x0, x1) in listOf(0 to spine, spine to width)) {
-        val w = x1 - x0
-        val half = IntArray(w * height)
-        for (y in 0 until height) System.arraycopy(pixels, y * width + x0, half, y * w, w)
-        val done = collapsePage(half, w, height) ?: continue
-        val dst = out ?: pixels.copyOf().also { out = it }
-        for (y in 0 until height) System.arraycopy(done, y * w, dst, y * width + x0, w)
+    val w0 = spine
+    val w1 = width - spine
+    val half0 = IntArray(w0 * height)
+    val half1 = IntArray(w1 * height)
+    for (y in 0 until height) {
+        System.arraycopy(pixels, y * width, half0, y * w0, w0)
+        System.arraycopy(pixels, y * width + spine, half1, y * w1, w1)
     }
-    return out
+    val done0 = collapsePage(half0, w0, height)
+    val done1 = collapsePage(half1, w1, height)
+    // 원칙: 덜 줄어드는 것은 참을 수 있지만, 그림·글자가 잘리거나 칸이 망가지는 것은 절대 안 된다.
+    // 좌우 펼침면에서 한쪽만 줄어들면 양쪽 칸 높이가 심각하게 어긋나므로 둘 다 줄어들 때만 합친다.
+    if (done0 == null || done1 == null) return null
+
+    val dst = pixels.copyOf()
+    for (y in 0 until height) {
+        System.arraycopy(done0, y * w0, dst, y * width, w0)
+        System.arraycopy(done1, y * w1, dst, y * width + spine, w1)
+    }
+    return dst
 }
 
 /**
@@ -496,9 +506,16 @@ private class PageMaps(pixels: IntArray, private val width: Int, private val hei
     /** 줄에서 가운데 밝기(중앙값)와 [FLAT_DIFF] 넘게 다른 칸 수 — 적을수록 고른 줄 */
     fun outliers(y: Int, x0: Int, x1: Int): Int = outliers(x1 - x0) { blurH[y * width + x0 + it] }
 
-    /** 가장 고른 줄 — 똑같이 고르면 바탕색에 가까운 줄 (스캔 끝의 회색 줄보다 종이) */
-    fun evenest(rows: List<Int>, x0: Int, x1: Int): Int =
-        rows.minWith(compareBy({ outliers(it, x0, x1) }, { abs(median(x1 - x0) { i -> blurH[it * width + x0 + i] } - bg) }))
+    /** 가장 고른 줄 — 바탕색과 너무 다른 줄(스캔 끝 흰색/검은 테두리)은 피하고 종이색에 가까운 가장 고른 줄 */
+    fun evenest(rows: List<Int>, x0: Int, x1: Int): Int {
+        val compatible = rows.filter { y ->
+            val m = median(x1 - x0) { i -> blurH[y * width + x0 + i] }
+            if (bg < 80) m < 140 else if (bg > 180) m > 100 else true
+        }.ifEmpty { rows }
+        return compatible.minWith(compareBy({ outliers(it, x0, x1) }, { abs(median(x1 - x0) { i -> blurH[it * width + x0 + i] } - bg) }))
+    }
+
+    fun paperColor(): Int = (0xFF shl 24) or (bg shl 16) or (bg shl 8) or bg
 
     /** 줄의 대표 색 — 흐리게 본 밝기가 가운데 값 가까운 칸들의 평균 색 (망점이면 그 회색, 색 틈이면 그 색) */
     fun typicalColor(pixels: IntArray, y: Int, x0: Int, x1: Int): Int {
@@ -1497,7 +1514,7 @@ private const val MIN_SAVED_RATIO = 0.005f
 
 /** 페이지 리더(Coil)용 — 작품 보기 설정 "칸 간격 없애기" */
 internal class GutterTransformation : Transformation() {
-    override val cacheKey: String = "gutters-23"
+    override val cacheKey: String = "gutters-24"
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width

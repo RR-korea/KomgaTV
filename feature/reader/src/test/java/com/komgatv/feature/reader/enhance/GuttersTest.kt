@@ -575,4 +575,44 @@ class GuttersTest {
         val topRowsWhite = (0 until 30).sumOf { y -> (0 until w).count { out[y * w + it] == white } }
         assertEquals(0, topRowsWhite)
     }
+
+    @Test
+    fun `검은 바탕 쪽에 스캔 가장자리 흰 줄이 섞여 있어도 위아래 여백을 검은색으로 채운다`() {
+        val px = IntArray(w * h) { black }
+        // 맨 위 20줄에 스캔 여백 흰 줄이 섞여 있음
+        for (y in 0 until 20) for (x in 0 until w) px[y * w + x] = white
+        px.box(20, 80, 50, 150)
+        for (y in 60 until 140) for (x in 30 until 70) if ((x + y) % 4 == 0) px[y * w + x] = white
+        px.box(20, 80, 250, 350)
+        for (y in 260 until 340) for (x in 30 until 70) if ((x + y) % 4 == 0) px[y * w + x] = white
+
+        val out = requireNotNull(collapseGutters(px, w, h))
+        // 위쪽 비는 곳(0..40)이 흰색으로 채워지면 안 되고 검은색이어야 한다
+        val topWhite = (0 until 30).sumOf { y -> (0 until w).count { out[y * w + it] == white } }
+        assertEquals(0, topWhite)
+    }
+
+    @Test
+    fun `좌우 펼침면에서 한쪽만 줄어들어 양쪽 칸의 높이가 어긋나는 경우 펼침면을 건드리지 않는다`() {
+        val spreadW = 200
+        val spreadH = 100
+        val px = IntArray(spreadW * spreadH) { white }
+        // 왼쪽 반쪽(0..99): 칸 2개 (여백 20줄) -> 줄어듦
+        for (y in 10 until 40) for (x in 10 until 90) {
+            val edge = y < 12 || y >= 38 || x < 12 || x >= 88
+            if (edge) px[y * spreadW + x] = black
+        }
+        for (y in 60 until 90) for (x in 10 until 90) {
+            val edge = y < 62 || y >= 88 || x < 12 || x >= 88
+            if (edge) px[y * spreadW + x] = black
+        }
+        // 오른쪽 반쪽(100..199): 위부터 아래까지 꽉 찬 한 장 그림 (테두리/여백 없음) -> 줄어들지 않음
+        for (y in 0 until spreadH) for (x in 100 until spreadW) {
+            if ((x + y) % 3 == 0) px[y * spreadW + x] = black
+        }
+
+        // 한쪽만 줄어들면 좌우 정렬이 망가지므로 null을 반환해야 함
+        val out = collapseGutters(px, spreadW, spreadH)
+        assertNull(out)
+    }
 }
