@@ -27,8 +27,6 @@ internal object ReaderSettingsCodec {
         "brightnessPercent" to s.brightnessPercent.toString(),
         "zoomPanPercent" to s.zoomPanPercent.toString(),
         "removeGutters" to s.removeGutters.toString(),
-        "moveBalloons" to s.moveBalloons.toString(),
-        "panelOverlap" to s.panelOverlapPercent.toString(),
         "cropBorders" to s.cropBorders.name,
         "pageTransition" to s.pageTransition.name,
     ).joinToString(";") { (k, v) -> "$k=$v" }
@@ -58,9 +56,6 @@ internal object ReaderSettingsCodec {
             zoomPanPercent = map["zoomPanPercent"]?.toIntOrNull()
                 ?.coerceIn(ReaderSettings.MIN_ZOOM_PAN_PERCENT, ReaderSettings.MAX_ZOOM_PAN_PERCENT) ?: d.zoomPanPercent,
             removeGutters = map["removeGutters"]?.toBooleanStrictOrNull() ?: d.removeGutters,
-            moveBalloons = map["moveBalloons"]?.toBooleanStrictOrNull() ?: d.moveBalloons,
-            panelOverlapPercent = map["panelOverlap"]?.toIntOrNull()
-                ?.coerceIn(0, ReaderSettings.MAX_PANEL_OVERLAP_PERCENT) ?: d.panelOverlapPercent,
             cropBorders = enumOrNull<CropBorders>(map["cropBorders"]) ?: d.cropBorders,
         )
     }

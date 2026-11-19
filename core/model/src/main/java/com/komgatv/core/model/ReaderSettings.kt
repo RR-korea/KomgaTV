@@ -143,16 +143,6 @@ data class ReaderSettings(
     val zoomPanPercent: Int = 0,
     /** 칸 사이 위아래 여백을 없애고 칸들을 쪽 가운데로 모은다 (작품별, 페이지 넘김) */
     val removeGutters: Boolean = false,
-    /**
-     * 확대해서 쪽 끝에서 잘리는 대사를 옮길 때, 쪽 끝에 걸려 잘린 말풍선은 말풍선째 옮긴다 (작품별, 페이지 넘김).
-     * 꺼져 있어도 확대하면 말풍선 안에서 대사는 옮긴다.
-     */
-    val moveBalloons: Boolean = false,
-    /**
-     * 칸 겹치기 % (작품별, 페이지 넘김, 0~[MAX_PANEL_OVERLAP_PERCENT]) — 칸 줄(단)끼리 쪽 높이의 이만큼 포개고
-     * 가운데 줄을 위에 그린다. 칸 사이 여백도 함께 없앤다. 0이면 안 함.
-     */
-    val panelOverlapPercent: Int = 0,
     /** 쪽 둘레의 빈 테두리(흰·검은 스캔 여백)를 잘라내 쪽을 화면에 더 크게 (작품별, 페이지 넘김) */
     val cropBorders: CropBorders = CropBorders.OFF,
     /** 페이지 넘김 화면 전환 효과 */
@@ -170,6 +160,5 @@ data class ReaderSettings(
         const val ZOOM_PAN_STEP = 25
         const val MAX_BRIGHTNESS_PERCENT = 150
         const val BRIGHTNESS_STEP = 5
-        const val MAX_PANEL_OVERLAP_PERCENT = 10
     }
 }
