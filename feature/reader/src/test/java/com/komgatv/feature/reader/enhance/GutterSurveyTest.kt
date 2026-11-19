@@ -133,7 +133,7 @@ class GutterSurveyTest {
         val (beforeColRatio, beforeMedLen) = measureBorderGutters(srcLum, bg, w, h)
 
         val t0 = System.nanoTime()
-        val outPixels = collapseGutters(srcPixels, w, h, overlapPercent = 0)
+        val outPixels = collapseGutters(srcPixels, w, h)
         val elapsedMs = (System.nanoTime() - t0) / 1_000_000.0
 
         val afterPixels = outPixels ?: srcPixels

@@ -36,7 +36,7 @@ class BalloonsTest {
         px.ellipse(200, 45, 80, 40)
         px.text(170, 230, 20)
 
-        val out = requireNotNull(pullBalloonText(px, w, h, topCut = 40, bottomCut = 40, moveBalloons = false))
+        val out = requireNotNull(pullBalloonText(px, w, h, topCut = 40, bottomCut = 40))
 
         // 위로 40줄이 잘린다 — 대사(20~29줄)를 말풍선 아래쪽 끝까지 (테두리에서 2줄 띄워 69~78줄로)
         assertEquals((69..78).toList(), (12 until 80).filter { out[it * w + 170] == black })
@@ -54,7 +54,7 @@ class BalloonsTest {
         px.text(170, 230, 47)
         px.text(170, 230, 72)
 
-        val out = requireNotNull(pullBalloonText(px, w, h, topCut = 40, bottomCut = 40, moveBalloons = false))
+        val out = requireNotNull(pullBalloonText(px, w, h, topCut = 40, bottomCut = 40))
 
         // 말풍선 테두리(위 15~17줄, 아래 102~105줄 언저리)는 빼고 본다
         val rows = (20 until 100).filter { y -> (170 until 230).any { out[y * w + it] == black } }
@@ -72,21 +72,15 @@ class BalloonsTest {
     }
 
     @Test
-    fun `쪽 끝에 걸린 말풍선은 옵션을 켜면 말풍선째 밀어 대사가 잘리지 않게 한다`() {
+    fun `쪽 끝에 걸린 말풍선의 넓은 대사는 말풍선 안에서 옮길 수 있는 만큼만 옮긴다`() {
         val px = IntArray(w * h) { white }
         // 쪽 위 끝에 걸려 잘린 말풍선 (아래 절반 타원) — 대사가 넓어 말풍선 안에서는 다 못 옮긴다
         px.ellipse(200, 0, 80, 70)
         px.text(140, 260, 5)
 
-        val inside = requireNotNull(pullBalloonText(px, w, h, topCut = 40, bottomCut = 40, moveBalloons = false))
+        val inside = requireNotNull(pullBalloonText(px, w, h, topCut = 40, bottomCut = 40))
         val insideTop = (0 until 120).first { inside[it * w + 140] == black }
         assertTrue("말풍선 안에서는 조금만: $insideTop", insideTop in 6 until 40)
-
-        val pushed = requireNotNull(pullBalloonText(px, w, h, topCut = 40, bottomCut = 40, moveBalloons = true))
-        val pushedTop = (0 until 120).first { pushed[it * w + 140] == black }
-        assertTrue("말풍선째 밀면 잘리는 선 아래로: $pushedTop", pushedTop >= 40)
-        // 말풍선 아래 끝도 함께 내려온다
-        assertTrue(pushed[(70 + 40) * w + 200] == black || pushed[(71 + 40) * w + 200] == black)
     }
 
     @Test
@@ -98,7 +92,7 @@ class BalloonsTest {
         }
         px.text(170, 230, 20)
 
-        val out = requireNotNull(pullBalloonText(px, w, h, topCut = 40, bottomCut = 40, moveBalloons = true))
+        val out = requireNotNull(pullBalloonText(px, w, h, topCut = 40, bottomCut = 40))
 
         // 대사(20~29줄)는 잘리는 선 + 여백(6줄) 아래로, 칸 테두리는 그대로
         assertEquals((46..55).toList(), (12 until 120).filter { out[it * w + 170] == black })
@@ -106,7 +100,7 @@ class BalloonsTest {
     }
 
     @Test
-    fun `칸 안의 꽉 찬 해설 상자는 옵션을 켜면 상자째 올린다`() {
+    fun `칸 안의 꽉 찬 해설 상자는 상자 안에서 줄 사이를 좁혀 아랫줄을 올린다`() {
         val px = IntArray(w * h) { white }
         // 쪽 아래까지 이어진 칸, 그 안 아래쪽의 해설 상자 (140~259, 530~589) — 글 두 줄로 꽉 찼다
         for (y in 300 until 600) for (x in 20 until 380) {
@@ -118,21 +112,10 @@ class BalloonsTest {
         px.text(152, 250, 540)
         px.text(152, 250, 566)
 
-        // 끄면 상자 안에서 줄 사이를 좁혀 아랫줄을 올린다 — 윗줄은 상자 위 테두리에 막혀 조금만
-        val inside = requireNotNull(pullBalloonText(px, w, h, topCut = 40, bottomCut = 40, moveBalloons = false))
+        // 윗줄은 상자 위 테두리에 막혀 조금만
+        val inside = requireNotNull(pullBalloonText(px, w, h, topCut = 40, bottomCut = 40))
         val insideRows = (533 until 588).filter { inside[it * w + 152] == black }
         assertTrue("$insideRows", insideRows.first() >= 534 && insideRows.last() < 575)
-
-        val out = requireNotNull(pullBalloonText(px, w, h, topCut = 40, bottomCut = 40, moveBalloons = true))
-        // 상자째 22줄 올라 아랫줄 글(566~575줄)이 보이는 곳(560줄 위) 안으로 — 위 테두리, 윗줄 글, 아래 테두리도 함께.
-        // 쪽 끝 쪽에서 끌려온 것은 잘리는 곳(560줄부터) 안에만 있다
-        assertEquals(
-            listOf(300, 301, 508, 509) + (518..527) + (544..553),
-            (300 until 560).filter { out[it * w + 152] == black },
-        )
-        // 상자 밖 칸 테두리는 그대로
-        assertEquals(black, out[598 * w + 50])
-        assertEquals(white, out[540 * w + 50])
     }
 
     @Test
@@ -140,10 +123,10 @@ class BalloonsTest {
         val px = IntArray(w * h) { white }
         px.ellipse(200, 300, 80, 40)
         px.text(170, 230, 295)
-        assertNull(pullBalloonText(px, w, h, topCut = 40, bottomCut = 40, moveBalloons = true))
+        assertNull(pullBalloonText(px, w, h, topCut = 40, bottomCut = 40))
 
         val dark = IntArray(w * h) { black }
-        assertNull(pullBalloonText(dark, w, h, topCut = 40, bottomCut = 40, moveBalloons = true))
+        assertNull(pullBalloonText(dark, w, h, topCut = 40, bottomCut = 40))
     }
 
     @Test

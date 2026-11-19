@@ -100,10 +100,6 @@ sealed interface ReaderUiState {
         val zoomPanPercent: Int = 0,
         /** 칸 사이 위아래 여백 없애기 */
         val removeGutters: Boolean = false,
-        /** 확대해서 잘리는 쪽 끝 말풍선을 말풍선째 옮기기 */
-        val moveBalloons: Boolean = false,
-        /** 칸 줄(단) 겹치기 % (0이면 안 함) */
-        val panelOverlapPercent: Int = 0,
         /** 쪽 둘레 빈 테두리 잘라내기 */
         val cropBorders: CropBorders = CropBorders.OFF,
         /** 페이지 넘김 화면 전환 효과 */
@@ -141,8 +137,6 @@ sealed interface ReaderUiState {
                 brightnessPercent = brightnessPercent,
                 zoomPanPercent = zoomPanPercent,
                 removeGutters = removeGutters,
-                moveBalloons = moveBalloons,
-                panelOverlapPercent = panelOverlapPercent,
                 cropBorders = cropBorders,
                 pageTransition = pageTransition,
             )
@@ -249,8 +243,6 @@ class ReaderViewModel @Inject constructor(
     private var currentBrightnessPercent: Int = 100
     private var currentZoomPanPercent: Int = 0
     private var currentRemoveGutters: Boolean = false
-    private var currentMoveBalloons: Boolean = false
-    private var currentPanelOverlapPercent: Int = 0
     private var currentCropBorders: CropBorders = CropBorders.OFF
     private var currentPageTransition: PageTransition = PageTransition.SLIDE
     private var pageStep = 0
@@ -822,8 +814,6 @@ class ReaderViewModel @Inject constructor(
         if (new.brightnessPercent != currentBrightnessPercent) setBrightnessPercent(new.brightnessPercent)
         if (new.zoomPanPercent != currentZoomPanPercent) setZoomPanPercent(new.zoomPanPercent)
         if (new.removeGutters != currentRemoveGutters) setRemoveGutters(new.removeGutters)
-        if (new.moveBalloons != currentMoveBalloons) setMoveBalloons(new.moveBalloons)
-        if (new.panelOverlapPercent != currentPanelOverlapPercent) setPanelOverlapPercent(new.panelOverlapPercent)
         if (new.cropBorders != currentCropBorders) setCropBorders(new.cropBorders)
         if (new.pageTransition != currentPageTransition) setPageTransition(new.pageTransition)
     }
@@ -871,27 +861,10 @@ class ReaderViewModel @Inject constructor(
         saveSeriesSettings()
     }
 
-    /** 칸 줄(단) 겹치기 % — 이 작품에 저장 */
-    fun setPanelOverlapPercent(percent: Int) {
-        val clamped = percent.coerceIn(0, ReaderSettings.MAX_PANEL_OVERLAP_PERCENT)
-        if (currentPanelOverlapPercent == clamped) return
-        currentPanelOverlapPercent = clamped
-        updateReadingState()
-        saveSeriesSettings()
-    }
-
     /** 쪽 둘레 빈 테두리 잘라내기 — 이 작품에 저장 */
     fun setCropBorders(mode: CropBorders) {
         if (currentCropBorders == mode) return
         currentCropBorders = mode
-        updateReadingState()
-        saveSeriesSettings()
-    }
-
-    /** 확대해서 잘리는 쪽 끝 말풍선을 말풍선째 옮기기 — 이 작품에 저장 */
-    fun setMoveBalloons(enabled: Boolean) {
-        if (currentMoveBalloons == enabled) return
-        currentMoveBalloons = enabled
         updateReadingState()
         saveSeriesSettings()
     }
@@ -949,8 +922,6 @@ class ReaderViewModel @Inject constructor(
         currentBrightnessPercent = settings.brightnessPercent
         currentZoomPanPercent = settings.zoomPanPercent
         currentRemoveGutters = settings.removeGutters
-        currentMoveBalloons = settings.moveBalloons
-        currentPanelOverlapPercent = settings.panelOverlapPercent
         currentCropBorders = settings.cropBorders
         currentPageTransition = settings.pageTransition
     }
@@ -968,8 +939,6 @@ class ReaderViewModel @Inject constructor(
         brightnessPercent = currentBrightnessPercent,
         zoomPanPercent = currentZoomPanPercent,
         removeGutters = currentRemoveGutters,
-        moveBalloons = currentMoveBalloons,
-        panelOverlapPercent = currentPanelOverlapPercent,
         cropBorders = currentCropBorders,
         pageTransition = currentPageTransition,
     )
@@ -1220,8 +1189,6 @@ class ReaderViewModel @Inject constructor(
             brightnessPercent = currentBrightnessPercent,
             zoomPanPercent = currentZoomPanPercent,
             removeGutters = currentRemoveGutters,
-            moveBalloons = currentMoveBalloons,
-            panelOverlapPercent = currentPanelOverlapPercent,
             cropBorders = currentCropBorders,
             pageTransition = currentPageTransition,
             pageStep = pageStep,
