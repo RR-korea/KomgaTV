@@ -259,10 +259,10 @@ private fun ReaderContent(
     val contentScale = remember(state.scaleType) { contentScaleFor(state.scaleType) }
 
     // 확대(줌인): 크기 맞춤 결과를 펼침째(두 쪽이면 두 쪽 함께, 가운데 기준) 키운다.
-    // 화면 고정 모드에서는 ▲▼로 위아래를 본다 (넘치는 높이의 1/8씩). 옮겨 둔 자리는 작품에 저장돼 쪽을 넘겨도 그대로.
+    // 화면 고정 모드에서는 ▲▼로 위아래를 본다 (넘치는 높이의 1/16씩). 옮겨 둔 자리는 작품에 저장돼 쪽을 넘겨도 그대로.
     val zoom = state.zoomPercent / 100f
     val panOffset by animateFloatAsState(
-        targetValue = -state.zoomPanPercent / 100f * (zoom - 1f) * screenHeightPx / 2f,
+        targetValue = -state.zoomPanPermille / 1000f * (zoom - 1f) * screenHeightPx / 2f,
         label = "zoom-pan",
     )
 
@@ -302,7 +302,7 @@ private fun ReaderContent(
                             scrollState.animateScrollTo((scrollState.value - screenHeightPx / 2).coerceAtLeast(0))
                         }
                     } else if (!scrollable && zoom > 1f) {
-                        viewModel.setZoomPanPercent(state.zoomPanPercent - ReaderSettings.ZOOM_PAN_STEP)
+                        viewModel.setZoomPanPermille(state.zoomPanPermille - ReaderSettings.ZOOM_PAN_STEP)
                     }
                     Key.DirectionDown -> if (state.showOverlay) {
                         viewModel.jumpPages(-10)
@@ -320,7 +320,7 @@ private fun ReaderContent(
                             )
                         }
                     } else if (!scrollable && zoom > 1f) {
-                        viewModel.setZoomPanPercent(state.zoomPanPercent + ReaderSettings.ZOOM_PAN_STEP)
+                        viewModel.setZoomPanPermille(state.zoomPanPermille + ReaderSettings.ZOOM_PAN_STEP)
                     }
                     else -> return@onPreviewKeyEvent false
                 }

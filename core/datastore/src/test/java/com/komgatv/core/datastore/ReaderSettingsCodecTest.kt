@@ -27,7 +27,7 @@ class ReaderSettingsCodecTest {
             zoomPercent = 117,
             contrastPercent = 125,
             brightnessPercent = 85,
-            zoomPanPercent = -50,
+            zoomPanPermille = -375,
             removeGutters = true,
             cropBorders = CropBorders.ALL,
             pageTransition = PageTransition.FADE,
@@ -40,6 +40,12 @@ class ReaderSettingsCodecTest {
         assertEquals(150, ReaderSettingsCodec.decode("zoomPercent=999")!!.zoomPercent)
         assertEquals(100, ReaderSettingsCodec.decode("zoomPercent=20")!!.zoomPercent)
         assertEquals(100, ReaderSettingsCodec.decode("pageLayout=DOUBLE_PAGES")!!.zoomPercent)
+    }
+
+    @Test
+    fun `예전에 % 로 저장한 확대 위치는 ‰ 로 읽는다`() {
+        assertEquals(-500, ReaderSettingsCodec.decode("zoomPanPercent=-50")!!.zoomPanPermille)
+        assertEquals(1000, ReaderSettingsCodec.decode("zoomPanPercent=100")!!.zoomPanPermille)
     }
 
     @Test

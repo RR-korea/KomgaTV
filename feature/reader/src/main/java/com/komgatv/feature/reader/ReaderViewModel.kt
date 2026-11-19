@@ -96,8 +96,8 @@ sealed interface ReaderUiState {
         val contrastPercent: Int = 100,
         /** 밝기 % (100 = 그대로) */
         val brightnessPercent: Int = 100,
-        /** 확대했을 때 위아래로 옮겨 둔 자리 % (0 = 가운데) */
-        val zoomPanPercent: Int = 0,
+        /** 확대했을 때 위아래로 옮겨 둔 자리 ‰ (0 = 가운데) */
+        val zoomPanPermille: Int = 0,
         /** 칸 사이 위아래 여백 없애기 */
         val removeGutters: Boolean = false,
         /** 쪽 둘레 빈 테두리 잘라내기 */
@@ -135,7 +135,7 @@ sealed interface ReaderUiState {
                 zoomPercent = zoomPercent,
                 contrastPercent = contrastPercent,
                 brightnessPercent = brightnessPercent,
-                zoomPanPercent = zoomPanPercent,
+                zoomPanPermille = zoomPanPermille,
                 removeGutters = removeGutters,
                 cropBorders = cropBorders,
                 pageTransition = pageTransition,
@@ -241,7 +241,7 @@ class ReaderViewModel @Inject constructor(
     private var currentZoomPercent: Int = ReaderSettings.MIN_ZOOM_PERCENT
     private var currentContrastPercent: Int = 100
     private var currentBrightnessPercent: Int = 100
-    private var currentZoomPanPercent: Int = 0
+    private var currentZoomPanPermille: Int = 0
     private var currentRemoveGutters: Boolean = false
     private var currentCropBorders: CropBorders = CropBorders.OFF
     private var currentPageTransition: PageTransition = PageTransition.SLIDE
@@ -812,7 +812,7 @@ class ReaderViewModel @Inject constructor(
         if (new.zoomPercent != currentZoomPercent) setZoomPercent(new.zoomPercent)
         if (new.contrastPercent != currentContrastPercent) setContrastPercent(new.contrastPercent)
         if (new.brightnessPercent != currentBrightnessPercent) setBrightnessPercent(new.brightnessPercent)
-        if (new.zoomPanPercent != currentZoomPanPercent) setZoomPanPercent(new.zoomPanPercent)
+        if (new.zoomPanPermille != currentZoomPanPermille) setZoomPanPermille(new.zoomPanPermille)
         if (new.removeGutters != currentRemoveGutters) setRemoveGutters(new.removeGutters)
         if (new.cropBorders != currentCropBorders) setCropBorders(new.cropBorders)
         if (new.pageTransition != currentPageTransition) setPageTransition(new.pageTransition)
@@ -845,10 +845,10 @@ class ReaderViewModel @Inject constructor(
     }
 
     /** 확대했을 때 위아래 자리 변경 (▲▼) — 이 작품에 저장, 쪽을 넘겨도 유지 */
-    fun setZoomPanPercent(percent: Int) {
-        val clamped = percent.coerceIn(ReaderSettings.MIN_ZOOM_PAN_PERCENT, ReaderSettings.MAX_ZOOM_PAN_PERCENT)
-        if (currentZoomPanPercent == clamped) return
-        currentZoomPanPercent = clamped
+    fun setZoomPanPermille(permille: Int) {
+        val clamped = permille.coerceIn(ReaderSettings.MIN_ZOOM_PAN_PERMILLE, ReaderSettings.MAX_ZOOM_PAN_PERMILLE)
+        if (currentZoomPanPermille == clamped) return
+        currentZoomPanPermille = clamped
         updateReadingState()
         saveSeriesSettings()
     }
@@ -920,7 +920,7 @@ class ReaderViewModel @Inject constructor(
         currentZoomPercent = settings.zoomPercent
         currentContrastPercent = settings.contrastPercent
         currentBrightnessPercent = settings.brightnessPercent
-        currentZoomPanPercent = settings.zoomPanPercent
+        currentZoomPanPermille = settings.zoomPanPermille
         currentRemoveGutters = settings.removeGutters
         currentCropBorders = settings.cropBorders
         currentPageTransition = settings.pageTransition
@@ -937,7 +937,7 @@ class ReaderViewModel @Inject constructor(
         zoomPercent = currentZoomPercent,
         contrastPercent = currentContrastPercent,
         brightnessPercent = currentBrightnessPercent,
-        zoomPanPercent = currentZoomPanPercent,
+        zoomPanPermille = currentZoomPanPermille,
         removeGutters = currentRemoveGutters,
         cropBorders = currentCropBorders,
         pageTransition = currentPageTransition,
@@ -1187,7 +1187,7 @@ class ReaderViewModel @Inject constructor(
             zoomPercent = currentZoomPercent,
             contrastPercent = currentContrastPercent,
             brightnessPercent = currentBrightnessPercent,
-            zoomPanPercent = currentZoomPanPercent,
+            zoomPanPermille = currentZoomPanPermille,
             removeGutters = currentRemoveGutters,
             cropBorders = currentCropBorders,
             pageTransition = currentPageTransition,
