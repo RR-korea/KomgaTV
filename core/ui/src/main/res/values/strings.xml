@@ -33,7 +33,7 @@
     <string name="view_off">Off</string>
     <string name="view_zoom">Zoom</string>
     <string name="view_remove_gutters">Remove panel gaps (experimental)</string>
-    <string name="view_crop_borders">Crop borders</string>
+    <string name="view_crop_borders">Crop margins</string>
     <string name="view_crop_top_bottom">Top &amp; bottom</string>
     <string name="view_crop_left_right">Left &amp; right</string>
     <string name="view_crop_all">All sides</string>

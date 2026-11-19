@@ -33,7 +33,7 @@
     <string name="view_off">Tắt</string>
     <string name="view_zoom">Thu phóng</string>
     <string name="view_remove_gutters">Bỏ khoảng cách khung (thử nghiệm)</string>
-    <string name="view_crop_borders">Cắt viền</string>
+    <string name="view_crop_borders">Cắt lề</string>
     <string name="view_crop_top_bottom">Trên &amp; dưới</string>
     <string name="view_crop_left_right">Trái &amp; phải</string>
     <string name="view_crop_all">Mọi phía</string>

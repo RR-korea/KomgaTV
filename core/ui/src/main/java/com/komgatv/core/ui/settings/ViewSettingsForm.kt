@@ -64,7 +64,7 @@ fun ViewSettingsForm(
     onLayoutOffsetChange: (Boolean) -> Unit = {},
     showZoom: Boolean = false,
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(3.dp)) {
         OptionRow(
             title = stringResource(R.string.view_reader_type),
             options = listOf(
@@ -277,7 +277,7 @@ private fun SettingRow(
                     else -> false
                 }
             }
-            .padding(horizontal = 14.dp, vertical = 2.dp),
+            .padding(horizontal = 14.dp, vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {

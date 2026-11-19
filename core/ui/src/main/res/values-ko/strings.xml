@@ -33,7 +33,7 @@
     <string name="view_off">꺼짐</string>
     <string name="view_zoom">확대</string>
     <string name="view_remove_gutters">칸 간격 없애기 (실험적)</string>
-    <string name="view_crop_borders">테두리 잘라내기</string>
+    <string name="view_crop_borders">여백 잘라내기</string>
     <string name="view_crop_top_bottom">상하</string>
     <string name="view_crop_left_right">좌우</string>
     <string name="view_crop_all">상하좌우</string>

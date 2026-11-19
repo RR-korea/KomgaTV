@@ -33,7 +33,7 @@
     <string name="view_off">Disattivo</string>
     <string name="view_zoom">Zoom</string>
     <string name="view_remove_gutters">Rimuovi spazi vignette (sperimentale)</string>
-    <string name="view_crop_borders">Ritaglia i bordi</string>
+    <string name="view_crop_borders">Ritaglia i margini</string>
     <string name="view_crop_top_bottom">Sopra e sotto</string>
     <string name="view_crop_left_right">Sinistra e destra</string>
     <string name="view_crop_all">Tutti i lati</string>
