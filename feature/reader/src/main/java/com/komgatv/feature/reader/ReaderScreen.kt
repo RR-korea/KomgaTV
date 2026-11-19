@@ -84,7 +84,6 @@ import com.komgatv.core.model.ScaleType
 import com.komgatv.core.ui.components.ProgressBar
 import com.komgatv.core.ui.components.loadErrorText
 import com.komgatv.feature.reader.continuous.ContinuousPages
-import com.komgatv.feature.reader.enhance.BalloonTextTransformation
 import com.komgatv.feature.reader.enhance.CropBorderTransformation
 import com.komgatv.feature.reader.enhance.GutterTransformation
 import com.komgatv.feature.reader.enhance.ImageEnhancer
@@ -215,11 +214,11 @@ private fun ReaderContent(
     val preloads = remember { mutableMapOf<String, Disposable>() }
     LaunchedEffect(
         state.preloadSpreads, state.spreadPageUrls, state.scaleType, state.imageEnhancement, state.removeGutters,
-        state.cropBorders, state.zoomPercent, screenWidthPx, screenHeightPx,
+        state.cropBorders, screenWidthPx, screenHeightPx,
     ) {
         val imageLoader = SingletonImageLoader.get(context)
         val variant = "${state.scaleType}|${state.imageEnhancement}|${state.removeGutters}|${state.cropBorders}|" +
-            "${state.zoomPercent}|${screenWidthPx}x$screenHeightPx"
+            "${screenWidthPx}x$screenHeightPx"
         val wanted = state.preloadSpreads.flatMap { urls -> urls.map { url -> "$url|${urls.size}|$variant" to (url to urls) } }
             .toMap()
         // 지금 보이는 쪽은 화면이 같은 주소를 받는 중일 수 있어 끊지 않는다 (같은 요청은 한 번만 받는다)
@@ -235,7 +234,7 @@ private fun ReaderContent(
             preloads[key] = imageLoader.enqueue(
                 pageRequest(
                     context, url, state.scaleType, slotWidth(screenWidthPx, spread.size), screenHeightPx,
-                    state.imageEnhancement, state.removeGutters, state.cropBorders, state.zoomPercent,
+                    state.imageEnhancement, state.removeGutters, state.cropBorders,
                     spreadPartner(spread, url, state.readingDirection),
                 )
             )
@@ -527,11 +526,11 @@ private fun SpreadPages(
             val pageUrl = if (useRendered) url.removeSuffix("/raw") else url
             val request = remember(
                 pageUrl, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement, state.removeGutters,
-                state.cropBorders, state.zoomPercent,
+                state.cropBorders,
             ) {
                 pageRequest(
                     context, pageUrl, state.scaleType, slotWidthPx, screenHeightPx,
-                    state.imageEnhancement, state.removeGutters, state.cropBorders, state.zoomPercent,
+                    state.imageEnhancement, state.removeGutters, state.cropBorders,
                     spreadPartner(state.spreadPageUrls, url, state.readingDirection),
                 )
             }
@@ -663,7 +662,6 @@ private fun pageRequest(
     enhancement: ImageEnhancement,
     removeGutters: Boolean,
     cropBorders: CropBorders,
-    zoomPercent: Int,
     partner: SpreadPartner,
 ): ImageRequest {
     val size = when (scaleType) {
@@ -680,8 +678,7 @@ private fun pageRequest(
         .crossfade(false)
         .transformations(
             listOfNotNull(
-                // 칸 사이 여백을 먼저 줄이고(쪽 크기는 그대로), 확대로 잘릴 쪽 끝 대사를 옮기고,
-                // 화면 크기로 Lanczos 리샘플링한 뒤 선명하게
+                // 칸 사이 여백을 먼저 줄이고(쪽 크기는 그대로), 화면 크기로 Lanczos 리샘플링한 뒤 선명하게
                 if (removeGutters) GutterTransformation() else null,
                 // 테두리는 여백을 붙인 뒤 자른다 — 붙이고 남은 위아래 빈 곳도 함께 빠진다
                 if (cropBorders != CropBorders.OFF) {
@@ -689,12 +686,6 @@ private fun pageRequest(
                         cropBorders, partner.self, partner.other, partner.left,
                         variant = "$removeGutters|$scaleType|${slotWidthPx}x$screenHeightPx",
                     )
-                } else {
-                    null
-                },
-                // 확대는 화면 고정(맞춤·높이 맞춤)에서만 위아래가 잘린다
-                if (zoomPercent > ReaderSettings.MIN_ZOOM_PERCENT && (scaleType == ScaleType.SCREEN || scaleType == ScaleType.FIT_HEIGHT)) {
-                    BalloonTextTransformation(zoomPercent, slotWidthPx, screenHeightPx, fitHeight = scaleType == ScaleType.FIT_HEIGHT)
                 } else {
                     null
                 },

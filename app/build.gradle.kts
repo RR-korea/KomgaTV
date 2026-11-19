@@ -7,8 +7,8 @@ plugins {
 }
 
 // 버전 — APK 파일 이름에도 들어간다 (KomgaTV-v0.2.9-b11-debug.apk)
-val appVersionCode = 51
-val appVersionName = "1.0.36"
+val appVersionCode = 52
+val appVersionName = "1.0.37"
 
 base {
     archivesName = "TVReaderForKomga-v$appVersionName-b$appVersionCode"
