@@ -137,10 +137,10 @@ data class ReaderSettings(
     /** 밝기 % (작품별, [MIN_BRIGHTNESS_PERCENT]~[MAX_BRIGHTNESS_PERCENT], 5% 단위, 100 = 그대로) — 어두운 스캔본을 밝게, 밤에는 어둡게 */
     val brightnessPercent: Int = 100,
     /**
-     * 확대했을 때 위아래로 옮겨 둔 자리 % (작품별, [MIN_ZOOM_PAN_PERCENT]~[MAX_ZOOM_PAN_PERCENT], [ZOOM_PAN_STEP] 단위).
-     * 0 = 가운데, -100 = 맨 위, 100 = 맨 아래. 쪽을 넘겨도 그 자리를 유지한다.
+     * 확대했을 때 위아래로 옮겨 둔 자리 ‰ (작품별, [MIN_ZOOM_PAN_PERMILLE]~[MAX_ZOOM_PAN_PERMILLE], [ZOOM_PAN_STEP] 단위).
+     * 0 = 가운데, -1000 = 맨 위, 1000 = 맨 아래. 쪽을 넘겨도 그 자리를 유지한다.
      */
-    val zoomPanPercent: Int = 0,
+    val zoomPanPermille: Int = 0,
     /** 칸 사이 위아래 여백을 없애고 칸들을 쪽 가운데로 모은다 (작품별, 페이지 넘김) */
     val removeGutters: Boolean = false,
     /** 쪽 둘레의 빈 테두리(흰·검은 스캔 여백)를 잘라내 쪽을 화면에 더 크게 (작품별, 페이지 넘김) */
@@ -155,9 +155,9 @@ data class ReaderSettings(
         const val MAX_CONTRAST_PERCENT = 190
         const val CONTRAST_STEP = 5
         const val MIN_BRIGHTNESS_PERCENT = 10
-        const val MIN_ZOOM_PAN_PERCENT = -100
-        const val MAX_ZOOM_PAN_PERCENT = 100
-        const val ZOOM_PAN_STEP = 25
+        const val MIN_ZOOM_PAN_PERMILLE = -1000
+        const val MAX_ZOOM_PAN_PERMILLE = 1000
+        const val ZOOM_PAN_STEP = 125
         const val MAX_BRIGHTNESS_PERCENT = 150
         const val BRIGHTNESS_STEP = 5
     }

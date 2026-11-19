@@ -974,23 +974,23 @@ class ReaderViewModelTest {
         readerPreferences.series.value = mapOf("s1" to ReaderSettings(zoomPercent = 110))
         openBook()
         advanceUntilIdle()
-        assertEquals(0, reading.zoomPanPercent)
+        assertEquals(0, reading.zoomPanPermille)
 
-        viewModel.setZoomPanPercent(reading.zoomPanPercent + ReaderSettings.ZOOM_PAN_STEP)
-        viewModel.setZoomPanPercent(reading.zoomPanPercent + ReaderSettings.ZOOM_PAN_STEP)
+        viewModel.setZoomPanPermille(reading.zoomPanPermille + ReaderSettings.ZOOM_PAN_STEP)
+        viewModel.setZoomPanPermille(reading.zoomPanPermille + ReaderSettings.ZOOM_PAN_STEP)
         advanceUntilIdle()
-        assertEquals(50, reading.zoomPanPercent)
-        assertEquals(50, readerPreferences.series.value["s1"]!!.zoomPanPercent)
-        assertEquals(0, readerPreferences.readerSettings.first().zoomPanPercent)
+        assertEquals(250, reading.zoomPanPermille)
+        assertEquals(250, readerPreferences.series.value["s1"]!!.zoomPanPermille)
+        assertEquals(0, readerPreferences.readerSettings.first().zoomPanPermille)
 
         viewModel.onDpadRight()
         advanceUntilIdle()
-        assertEquals(50, reading.zoomPanPercent)
+        assertEquals(250, reading.zoomPanPermille)
 
-        viewModel.setZoomPanPercent(1000)
-        assertEquals(100, reading.zoomPanPercent)
-        viewModel.setZoomPanPercent(-1000)
-        assertEquals(-100, reading.zoomPanPercent)
+        viewModel.setZoomPanPermille(5000)
+        assertEquals(1000, reading.zoomPanPermille)
+        viewModel.setZoomPanPermille(-5000)
+        assertEquals(-1000, reading.zoomPanPermille)
     }
 
     @Test
