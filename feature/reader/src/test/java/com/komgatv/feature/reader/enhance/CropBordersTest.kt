@@ -147,6 +147,32 @@ class CropBordersTest {
     }
 
     @Test
+    fun `두 쪽 보기 - 로고만 있는 빈 쪽은 다른 쪽을 자르게 하지 않는다`() {
+        // 가운데보다 조금 오른쪽에 로고만 있는 쪽 (킹덤 권 첫머리 쪽처럼) — 위·아래·바깥은 재는 끝까지 비었다
+        val px = IntArray(w * h) { white }
+        px.art(110, 170, 130, 170)
+        val logo = requireNotNull(borders(px))
+
+        assertArrayEquals(floatArrayOf(0f, 0f, 0f, 0f), spreadShare(logo, w, h, left = true), 0f)
+        // 옆의 칸 테두리 쪽은 제 테두리만큼만 잘린다
+        val own = floatArrayOf(0.02f, 0.03f, 0.01f, 0.01f)
+        assertArrayEquals(own, matchCrop(own, spreadShare(logo, w, h, left = true)), 0f)
+    }
+
+    @Test
+    fun `두 쪽 보기 - 테두리 쪽은 다른 쪽에 바깥·안쪽을 맞춰 알려 주되 한 변 12퍼센트까지만`() {
+        val px = IntArray(w * h) { white }
+        px.panel(20, 180, 30, 270)
+        // 왼쪽 쪽: 바깥 = 왼쪽 20, 안쪽 = 오른쪽 20
+        assertArrayEquals(floatArrayOf(0.1f, 0.1f, 0.1f, 0.1f), spreadShare(borders(px)!!, w, h, left = true), 1e-6f)
+
+        val wide = IntArray(w * h) { white }
+        wide.panel(10, 190, 50, 260)
+        // 위 50줄(17%)은 12%까지만, 아래 40줄(13%)도 12%까지만
+        assertArrayEquals(floatArrayOf(0.12f, 0.12f, 0.05f, 0.05f), spreadShare(borders(wide)!!, w, h, left = false), 1e-6f)
+    }
+
+    @Test
     fun `검은 바탕에 스캔한 쪽의 외곽 줄에 센서 빛샘이나 노이즈가 있어도 검은 테두리를 잰다`() {
         val px = IntArray(w * h) { black }
         px.panel(15, 190, 25, 280, frame = white)
