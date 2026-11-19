@@ -33,7 +33,7 @@
     <string name="view_off">Kapalı</string>
     <string name="view_zoom">Yakınlaştırma</string>
     <string name="view_remove_gutters">Panel aralarını kaldır (deneysel)</string>
-    <string name="view_crop_borders">Kenarları kırp</string>
+    <string name="view_crop_borders">Kenar boşluklarını kırp</string>
     <string name="view_crop_top_bottom">Üst ve alt</string>
     <string name="view_crop_left_right">Sol ve sağ</string>
     <string name="view_crop_all">Tüm kenarlar</string>

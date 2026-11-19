@@ -4,8 +4,6 @@ import android.graphics.Bitmap
 import coil3.size.Size
 import coil3.transform.Transformation
 import com.komgatv.core.model.CropBorders
-import java.util.concurrent.ConcurrentHashMap
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.withLock
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -152,32 +150,7 @@ internal fun findBorders(pixels: IntArray, width: Int, height: Int, topBottom: B
     return intArrayOf(top, bottom, left, right)
 }
 
-/**
- * 자를 비율 [위, 아래, 바깥, 안쪽] — 바깥은 화면 가장자리 쪽 변, 안쪽은 펼침 가운데(다른 쪽에 닿는) 변.
- * 두 쪽 보기에서 다른 쪽([partner])의 테두리가 더 두꺼우면 그만큼 이 쪽도 잘라 두 쪽을 맞춘다 (바깥은 바깥끼리, 안쪽은 안쪽끼리).
- */
-internal fun matchCrop(own: FloatArray, partner: FloatArray?): FloatArray =
-    FloatArray(4) { maxOf(own[it], partner?.get(it) ?: 0f) }
-
-/**
- * 같은 펼침의 다른 쪽에게 알려 줄 테두리 비율 [위, 아래, 바깥, 안쪽] ([findBorders]의 [borders]에서).
- * 한 변이라도 재는 끝([MAX_CROP_RATIO])까지 비었으면 테두리가 아니라 빈 쪽(제목·로고만 있는 쪽, 장 표지)이라 아무것도 맞추게 하지 않는다 —
- * 그 빈 곳에 맞추면 다른 쪽 그림이 잘린다. 다른 쪽에 맞춰 자르는 것은 [MAX_MATCH_RATIO]까지만.
- */
-internal fun spreadShare(borders: IntArray, width: Int, height: Int, left: Boolean): FloatArray {
-    val maxY = (height * MAX_CROP_RATIO).toInt()
-    val maxX = (width * MAX_CROP_RATIO).toInt()
-    if (borders[0] >= maxY || borders[1] >= maxY || borders[2] >= maxX || borders[3] >= maxX) return FloatArray(4)
-    val outer = if (left) borders[2] else borders[3]
-    val inner = if (left) borders[3] else borders[2]
-    return floatArrayOf(borders[0] / height.toFloat(), borders[1] / height.toFloat(), outer / width.toFloat(), inner / width.toFloat())
-        .map { it.coerceAtMost(MAX_MATCH_RATIO) }.toFloatArray()
-}
-
 private fun luminanceOf(c: Int) = (((c shr 16) and 0xFF) * 299 + ((c shr 8) and 0xFF) * 587 + (c and 0xFF) * 114) / 1000
-
-/** 펼침의 쪽마다 잰 테두리 비율 — 같은 펼침의 다른 쪽이 읽어 맞춘다 (쪽 주소|설정 → [위, 아래, 바깥, 안쪽]) */
-private val spreadBorders = ConcurrentHashMap<String, FloatArray>()
 
 /** 이보다 작은 그림은 보지 않는다 */
 private const val MIN_SIDE = 16
@@ -212,70 +185,27 @@ private const val THIN_EDGE_RATIO = 0.01f
 /** 한 변에서 쪽의 이만큼까지만 뺀다 */
 private const val MAX_CROP_RATIO = 0.2f
 
-/** 두 쪽 보기에서 다른 쪽 테두리에 맞춰 한 변을 더 자르는 것은 쪽의 이만큼까지만 */
-private const val MAX_MATCH_RATIO = 0.12f
-
 /** 한 변의 테두리가 쪽의 이만큼보다 얇으면 테두리가 아니다 */
 private const val MIN_BORDER_RATIO = 0.01f
 
 /** 위아래·좌우 모두 이만큼도 안 빠지면 그대로 둔다 */
 private const val MIN_CROP_RATIO = 0.005f
 
-/** 같은 펼침의 다른 쪽이 테두리를 잴 때까지 기다리는 시간 — 두 쪽은 함께 받는다 */
-private const val PARTNER_WAIT_MS = 3000L
-private const val PARTNER_POLL_MS = 30L
-
-/** 기억해 둘 쪽 수 — 넘치면 비운다 */
-private const val MAX_REMEMBERED = 400
-
 /**
- * 페이지 리더(Coil)용 — 작품 보기 설정 "테두리 잘라내기". 그림 크기가 줄어든다 (화면 맞춤으로 그만큼 크게 보인다).
- *
- * @param self 이 쪽 주소, [partner] 같은 펼침에 함께 보이는 쪽 주소 (한 쪽이면 null)
- * @param left 이 쪽이 화면 왼쪽인지 (바깥 변 = 왼쪽)
- * @param variant 앞선 처리(칸 간격 등) 설정 — 같은 설정으로 잰 다른 쪽의 테두리만 맞춘다
+ * 페이지 리더(Coil)용 — 작품 보기 설정 "여백 잘라내기". 쪽마다 따로 자른다 (두 쪽 보기도 쪽마다 자른 뒤 가운데에 붙여 놓는다).
+ * 그림 크기가 줄어든다 (화면 맞춤으로 그만큼 크게 보인다).
  */
-internal class CropBorderTransformation(
-    private val mode: CropBorders,
-    private val self: String,
-    private val partner: String?,
-    private val left: Boolean,
-    private val variant: String,
-) : Transformation() {
-    override val cacheKey: String = "crop-borders-5-$mode" + if (partner != null) "-${partner.hashCode()}-${if (left) "L" else "R"}" else ""
+internal class CropBorderTransformation(private val mode: CropBorders) : Transformation() {
+    override val cacheKey: String = "crop-borders-6-$mode"
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width
         val h = input.height
-        val borders = pageWorkLock.withLock {
+        val b = pageWorkLock.withLock {
             val pixels = IntArray(w * h)
             input.getPixels(pixels, 0, w, 0, 0, w, h)
             findBorders(pixels, w, h, topBottom = mode != CropBorders.LEFT_RIGHT, leftRight = mode != CropBorders.TOP_BOTTOM)
-        } ?: IntArray(4)
-        // [위, 아래, 바깥, 안쪽] 비율
-        val outer = if (left) borders[2] else borders[3]
-        val inner = if (left) borders[3] else borders[2]
-        val own = floatArrayOf(borders[0] / h.toFloat(), borders[1] / h.toFloat(), outer / w.toFloat(), inner / w.toFloat())
-        if (spreadBorders.size > MAX_REMEMBERED) spreadBorders.clear()
-        spreadBorders["$self|$mode|$variant"] = spreadShare(borders, w, h, left)
-        val other = partner?.let { awaitBorders("$it|$mode|$variant") }
-        val crop = matchCrop(own, other)
-        val top = (crop[0] * h).toInt()
-        val bottom = (crop[1] * h).toInt()
-        val cutLeft = ((if (left) crop[2] else crop[3]) * w).toInt()
-        val cutRight = ((if (left) crop[3] else crop[2]) * w).toInt()
-        if (top + bottom == 0 && cutLeft + cutRight == 0) return input
-        return Bitmap.createBitmap(input, cutLeft, top, w - cutLeft - cutRight, h - top - bottom)
-    }
-
-    /** 같은 펼침의 다른 쪽이 잰 테두리 — 그 쪽 처리가 끝날 때까지 잠깐 기다린다. 끝내 없으면 null (이 쪽만 맞춘다) */
-    private suspend fun awaitBorders(key: String): FloatArray? {
-        var waited = 0L
-        while (waited < PARTNER_WAIT_MS) {
-            spreadBorders[key]?.let { return it }
-            delay(PARTNER_POLL_MS)
-            waited += PARTNER_POLL_MS
-        }
-        return spreadBorders[key]
+        } ?: return input
+        return Bitmap.createBitmap(input, b[2], b[0], w - b[2] - b[3], h - b[0] - b[1])
     }
 }

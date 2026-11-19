@@ -33,7 +33,7 @@
     <string name="view_off">Desativado</string>
     <string name="view_zoom">Zoom</string>
     <string name="view_remove_gutters">Remover espaço entre quadros (experimental)</string>
-    <string name="view_crop_borders">Cortar bordas</string>
+    <string name="view_crop_borders">Cortar margens</string>
     <string name="view_crop_top_bottom">Cima e baixo</string>
     <string name="view_crop_left_right">Esquerda e direita</string>
     <string name="view_crop_all">Todos os lados</string>

@@ -235,7 +235,6 @@ private fun ReaderContent(
                 pageRequest(
                     context, url, state.scaleType, slotWidth(screenWidthPx, spread.size), screenHeightPx,
                     state.imageEnhancement, state.removeGutters, state.cropBorders,
-                    spreadPartner(spread, url, state.readingDirection),
                 )
             )
         }
@@ -531,7 +530,6 @@ private fun SpreadPages(
                 pageRequest(
                     context, pageUrl, state.scaleType, slotWidthPx, screenHeightPx,
                     state.imageEnhancement, state.removeGutters, state.cropBorders,
-                    spreadPartner(state.spreadPageUrls, url, state.readingDirection),
                 )
             }
             // 받는 중이면 스피너, 실패하면 문구 — 빨리 넘길 때 검은 화면이 멈춘 것처럼 보이지 않게
@@ -635,17 +633,6 @@ private fun ReaderOverlay(state: ReaderUiState.Reading) {
     }
 }
 
-/** 펼침에서 [self] 쪽과 함께 보이는 쪽 ([other], 한 쪽이면 null), [self]가 화면 왼쪽인지 — 테두리 잘라내기를 두 쪽에 맞춘다 */
-private data class SpreadPartner(val self: String, val other: String?, val left: Boolean)
-
-/** [urls]는 읽는 차례 — 오른쪽에서 왼쪽으로 읽으면 첫 쪽이 화면 오른쪽 */
-private fun spreadPartner(urls: List<String>, self: String, direction: ReadingDirection): SpreadPartner {
-    if (urls.size < 2) return SpreadPartner(self, null, left = true)
-    val shown = if (direction == ReadingDirection.RIGHT_TO_LEFT) urls.reversed() else urls
-    val index = shown.indexOf(self)
-    return SpreadPartner(self, shown[1 - index.coerceIn(0, 1)], left = index == 0)
-}
-
 private fun slotWidth(screenWidthPx: Int, pagesInSpread: Int): Int =
     if (pagesInSpread >= 2) screenWidthPx / 2 else screenWidthPx
 
@@ -662,7 +649,6 @@ private fun pageRequest(
     enhancement: ImageEnhancement,
     removeGutters: Boolean,
     cropBorders: CropBorders,
-    partner: SpreadPartner,
 ): ImageRequest {
     val size = when (scaleType) {
         ScaleType.SCREEN -> CoilSize(slotWidthPx, screenHeightPx)
@@ -680,15 +666,8 @@ private fun pageRequest(
             listOfNotNull(
                 // 칸 사이 여백을 먼저 줄이고(쪽 크기는 그대로), 화면 크기로 Lanczos 리샘플링한 뒤 선명하게
                 if (removeGutters) GutterTransformation() else null,
-                // 테두리는 여백을 붙인 뒤 자른다 — 붙이고 남은 위아래 빈 곳도 함께 빠진다
-                if (cropBorders != CropBorders.OFF) {
-                    CropBorderTransformation(
-                        cropBorders, partner.self, partner.other, partner.left,
-                        variant = "$removeGutters|$scaleType|${slotWidthPx}x$screenHeightPx",
-                    )
-                } else {
-                    null
-                },
+                // 쪽 둘레 여백은 칸 간격을 붙인 뒤 쪽마다 따로 자른다 — 붙이고 남은 위아래 빈 곳도 함께 빠진다
+                if (cropBorders != CropBorders.OFF) CropBorderTransformation(cropBorders) else null,
                 ImageEnhancer.lanczos(enhancement)?.let { LanczosTransformation(scaleType, it) },
                 ImageEnhancer.sharpenAmount(enhancement)?.let { SharpenTransformation(it) },
             ),
