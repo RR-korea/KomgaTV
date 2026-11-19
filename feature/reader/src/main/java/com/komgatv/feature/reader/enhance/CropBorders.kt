@@ -49,20 +49,24 @@ internal fun findBorders(pixels: IntArray, width: Int, height: Int, topBottom: B
 
     fun isDark(level: Int) = level <= MAX_DARK_BORDER
 
-    /** 맨 바깥 줄과 그 안쪽 줄 중 더 어두운 레벨 (가장자리 빛샘·노이즈 방어) */
+    /** 맨 바깥 줄과 그 안쪽 줄들 중 더 어두운 레벨 (가장자리 빛샘·노이즈 방어) */
     fun edgeLevel(start: Int, step: Int, count: Int, inward: Int): Int {
         val l0 = commonLevel(start, step, count)
         val l1 = commonLevel(start + inward, step, count)
-        return if (isDark(l0) || isDark(l1)) minOf(l0, l1) else l0
+        val l2 = commonLevel(start + 2 * inward, step, count)
+        val minLevel = minOf(l0, l1, l2)
+        return if (isDark(minLevel)) minLevel else l0
     }
 
-    // 네 변 중 셋 이상의 바깥 레벨이 검으면 검은 바탕에 스캔한 쪽
-    val darkPage = listOf(
+    // 네 변 중 셋 이상의 바깥 레벨이 검거나, 둘 이상이 짙은 검은색이면서 흰 종이(MIN_LIGHT_BORDER 이상) 변이 없으면 검은 바탕 쪽
+    val edgeLevels = listOf(
         edgeLevel(0, 1, width, width),
         edgeLevel((height - 1) * width, 1, width, -width),
         edgeLevel(0, width, height, 1),
         edgeLevel(width - 1, width, height, -1),
-    ).count { isDark(it) } >= 3
+    )
+    val darkPage = edgeLevels.count { isDark(it) } >= 3 ||
+        (edgeLevels.count { it <= 50 } >= 2 && edgeLevels.all { it < MIN_LIGHT_BORDER } && edgeLevels.count { it <= 110 } >= 3)
 
     /**
      * 한 변의 테두리 두께. 변을 따라 [count]개 선(열 또는 줄)이 있고, k번째 선의 쪽 끝 픽셀은 [first] + k×[across],
@@ -74,11 +78,15 @@ internal fun findBorders(pixels: IntArray, width: Int, height: Int, topBottom: B
         // 흰 종이 쪽 끝의 얇은 검은 스캔 선 또는 검은 바탕 가장자리 빛샘 건넌다
         var skip = 0
         var level = commonLevel(first, across, count)
-        if (darkPage && !isDark(level)) {
-            val innerLevel = commonLevel(first + inward, across, count)
-            if (isDark(innerLevel)) {
+        if (darkPage) {
+            val l1 = commonLevel(first + inward, across, count)
+            val l2 = commonLevel(first + 2 * inward, across, count)
+            if (isDark(l1) && (!isDark(level) || l1 + BORDER_TOLERANCE < level)) {
                 skip = 1
-                level = innerLevel
+                level = l1
+            } else if (isDark(l2) && (!isDark(level) || l2 + BORDER_TOLERANCE < level)) {
+                skip = 2
+                level = l2
             }
         } else if (isDark(level) && !darkPage) {
             skip = ceil(length * THIN_EDGE_RATIO).toInt()
@@ -92,12 +100,27 @@ internal fun findBorders(pixels: IntArray, width: Int, height: Int, topBottom: B
             while (d < depthLimit && abs(lum[edge + d * inward] - level) <= BORDER_TOLERANCE) d++
             d
         }
-        /** 모든 선이 여백인 깊이 — 1줄짜리 고립된 먼지 스파이크는 이웃 선으로 완화한 뒤 그림이 시작되는 최소 깊이 */
+        /** 모든 선이 여백인 깊이 — 1줄짜리 고립된 먼지 점(안쪽 1~2px 가 다시 여백인 점)만 이웃 선으로 완화하고, 안쪽으로 이어지는 펜선(머리카락 끝·칼끝)은 보존 */
         fun strictDepth(): Int {
+            fun isDust(i: Int, d: Int): Boolean {
+                if (d + 2 >= depthLimit) return false
+                val edge = first + i * across
+                val step1 = abs(lum[edge + (d + 1) * inward] - level) > BORDER_TOLERANCE
+                val step2 = abs(lum[edge + (d + 2) * inward] - level) > BORDER_TOLERANCE
+                return if (step1) {
+                    !step2 && (d + 3 >= depthLimit || abs(lum[edge + (d + 3) * inward] - level) <= BORDER_TOLERANCE)
+                } else {
+                    !step2
+                }
+            }
             val smoothed = IntArray(count) { i ->
                 val prev = if (i > 0) depths[i - 1] else depths[i]
                 val next = if (i < count - 1) depths[i + 1] else depths[i]
-                if (depths[i] < prev && depths[i] < next) maxOf(depths[i], minOf(prev, next)) else depths[i]
+                if (depths[i] < prev && depths[i] < next && isDust(i, depths[i])) {
+                    maxOf(depths[i], minOf(prev, next))
+                } else {
+                    depths[i]
+                }
             }
             return smoothed.minOrNull() ?: 0
         }
@@ -174,7 +197,7 @@ private const val BORDER_TOLERANCE = 40
 private const val COVER_RATIO = 0.3f
 
 /** 위아래 변에서 칸 테두리 선으로 칠 가로 잉크의 길이 — 변 길이의 이만큼 (글자 획·머리카락은 짧다) */
-private const val BORDER_LINE_RATIO = 0.04f
+private const val BORDER_LINE_RATIO = 0.08f
 
 /** 고른 깊이에서 테두리 선에 닿은 열이 이만큼은 돼야 테두리에 맞춰 자른다 */
 private const val LINE_SUPPORT_RATIO = 0.2f
@@ -189,7 +212,7 @@ private const val STRICT_COVER_RATIO = 0.99f
 private const val MIN_LIGHT_BORDER = 180
 
 /** 이만큼 어두우면 검은 테두리 */
-private const val MAX_DARK_BORDER = 75
+private const val MAX_DARK_BORDER = 85
 
 /** 흰 종이 쪽에서도 쪽 끝에서 이만큼 안의 검은 줄은 스캔 선으로 보고 뺀다 */
 private const val THIN_EDGE_RATIO = 0.01f
@@ -224,7 +247,7 @@ internal class CropBorderTransformation(
     private val left: Boolean,
     private val variant: String,
 ) : Transformation() {
-    override val cacheKey: String = "crop-borders-4-$mode" + if (partner != null) "-${partner.hashCode()}-${if (left) "L" else "R"}" else ""
+    override val cacheKey: String = "crop-borders-5-$mode" + if (partner != null) "-${partner.hashCode()}-${if (left) "L" else "R"}" else ""
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width

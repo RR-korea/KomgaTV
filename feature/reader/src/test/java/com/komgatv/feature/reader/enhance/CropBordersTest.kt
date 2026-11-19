@@ -177,4 +177,40 @@ class CropBordersTest {
 
         assertArrayEquals(intArrayOf(30, 30, 20, 20), borders(px))
     }
+
+    @Test
+    fun `좌우 변에서 1열짜리 가는 펜선이 안쪽으로 이어져 있으면 먼지로 오인하지 않고 보존한다`() {
+        val px = IntArray(w * h) { white }
+        px.panel(20, 180, 30, 270)
+        // 오른쪽 여백(x=180..199)으로 튀어나온 1열짜리 가는 머리카락 펜선 (x=185에서 y=100..105까지 6픽셀 연속)
+        for (y in 100..105) px[y * w + 185] = black
+
+        // x=185의 머리카락 펜선을 지우지 않고 15에서 안전하게 멈춘다
+        assertArrayEquals(intArrayOf(30, 30, 20, 14), borders(px))
+    }
+
+    @Test
+    fun `칸 테두리 없는 열린 컷에서 짧은 가로 스피드선은 칸 테두리로 오인하지 않고 멈춘다`() {
+        val px = IntArray(w * h) { white }
+        px.panel(20, 180, 80, 270)
+        // 위쪽으로 열린 머리카락이 y=45까지 올라와 있고
+        for (x in 100..120) for (y in 45..50) px[y * w + x] = black
+        // 그 사이에 짧은 스피드선(너비의 5.5% = 11px)이 있다
+        for (x in 30..40) px[60 * w + x] = black // 11px 스피드선 (BORDER_LINE_RATIO 8% 미만)
+
+        // 패널 테두리 y=80이나 스피드선 y=60까지 자르지 않고 머리카락 시작 위치 45에서 안전하게 멈춘다
+        assertArrayEquals(intArrayOf(45, 30, 20, 20), borders(px))
+    }
+
+    @Test
+    fun `검은 바탕에 스캔한 쪽의 상단에 센서 조명 빛샘이 있어도 검은 테두리를 잰다`() {
+        val px = IntArray(w * h) { black }
+        px.panel(15, 190, 25, 280, frame = white)
+        // 상단 바깥 줄(y=0)에 스캐너 조명 빛샘 (밝기 82)
+        val bleed = 0xFF525252.toInt() // lum ~82 (<= MAX_DARK_BORDER 85)
+        for (x in 0 until w) px[x] = bleed
+
+        // 상단 빛샘을 인식하고 검은 테두리 25를 정상적으로 잰다
+        assertArrayEquals(intArrayOf(25, 20, 15, 10), borders(px))
+    }
 }
