@@ -20,7 +20,7 @@
 ## 서명 (업로드 키)
 - 키 파일: `D:\Keys\komgatv-upload.jks` (별칭 `upload`, 2026-11-02 생성). 저장소 밖에 두고 백업한다 — 잃어버리면 Play Console에서 업로드 키 재설정을 요청해야 한다.
 - 비밀번호는 어디에도 저장하지 않는다. `app/build.gradle.kts`는 환경 변수(`KOMGATV_UPLOAD_STORE_FILE`, `KOMGATV_UPLOAD_STORE_PASSWORD`, 선택 `KOMGATV_UPLOAD_KEY_ALIAS`/`KOMGATV_UPLOAD_KEY_PASSWORD`)가 있을 때만 release를 서명한다.
-- 출시용 AAB: `powershell -ExecutionPolicy Bypass -File toolsuild-release.ps1` → 비밀번호를 가려서 묻고 `dist\TVReaderForKomga-v<버전>-b<빌드>-release.aab`를 만든다.
+- 출시용 AAB: `powershell -ExecutionPolicy Bypass -File tools\build-release.ps1` → 비밀번호를 가려서 묻고 `dist\TVReaderForKomga-v<버전>-b<빌드>-release.aab`를 만든다.
 - Play 앱 서명(Play App Signing)을 켜 둔다 — 배포용 키는 Google이 보관하고, 이 키는 업로드용이다.
 
 ## 그 밖에
