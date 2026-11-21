@@ -15,6 +15,8 @@ class CropProbeTest {
         val list = System.getenv("CROP_LIST")
         val out = System.getenv("CROP_OUT")
         assumeTrue(list != null && out != null)
+        // CROP_BLANK_ONLY 가 있으면 칸 간격 없애기 뒤의 두 번째 자르기(모든 열이 빈 줄만)
+        val blankOnly = System.getenv("CROP_BLANK_ONLY") != null
         File(out!!).mkdirs()
         File(list!!).readLines().filter { it.isNotBlank() }.forEachIndexed { n, path ->
             val img = ImageIO.read(File(path)) ?: return@forEachIndexed
@@ -22,7 +24,7 @@ class CropProbeTest {
             val h = img.height
             val px = IntArray(w * h)
             img.getRGB(0, 0, w, h, px, 0, w)
-            val b = findBorders(px, w, h, topBottom = true, leftRight = true) ?: IntArray(4)
+            val b = findBorders(px, w, h, topBottom = true, leftRight = true, blankOnly = blankOnly) ?: IntArray(4)
             println("CROP $n ${b.joinToString(",")} $path")
             val scale = 900.0 / h
             val sw = (w * scale).toInt()
