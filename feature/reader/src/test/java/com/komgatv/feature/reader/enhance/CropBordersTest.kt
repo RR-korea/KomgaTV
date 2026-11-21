@@ -78,6 +78,18 @@ class CropBordersTest {
     }
 
     @Test
+    fun `빈 줄만 빼기 - 칸 간격 없애기가 남긴 빈 줄은 빼고 칸 밖으로 나온 말풍선은 남긴다`() {
+        val px = IntArray(w * h) { white }
+        px.panel(10, 190, 10, 250)
+        // 아래 칸 테두리 밖으로 나온 말풍선 (270줄까지), 그 아래 칸을 붙이고 남은 빈 줄
+        px.art(95, 110, 240, 270)
+
+        // 보통 자르기는 칸 테두리(249)에서 자르지만, 빈 줄만 빼면 말풍선 아래까지만
+        assertArrayEquals(intArrayOf(10, 50, 10, 10), borders(px))
+        assertArrayEquals(intArrayOf(10, 30, 10, 10), findBorders(px, w, h, topBottom = true, leftRight = true, blankOnly = true))
+    }
+
+    @Test
     fun `칸 밖 위 여백의 제목 글도 칸 테두리 선에서 함께 자른다`() {
         val px = IntArray(w * h) { white }
         px.panel(10, 190, 40, 290)

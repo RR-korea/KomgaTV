@@ -25,9 +25,17 @@ import kotlin.math.ceil
  *
  * @param topBottom 위아래를 볼지
  * @param leftRight 좌우를 볼지 (위아래도 보면 위아래 테두리를 뺀 줄 사이에서만)
+ * @param blankOnly 모든 줄(열)이 여백인 곳까지만 — 칸 테두리에 맞추지 않는다 (칸 간격 없애기가 남긴 빈 줄만 뺄 때)
  * @return 변마다 테두리 줄 수 [위, 아래, 왼쪽, 오른쪽], 모두 거의 없으면 null
  */
-internal fun findBorders(pixels: IntArray, width: Int, height: Int, topBottom: Boolean, leftRight: Boolean): IntArray? {
+internal fun findBorders(
+    pixels: IntArray,
+    width: Int,
+    height: Int,
+    topBottom: Boolean,
+    leftRight: Boolean,
+    blankOnly: Boolean = false,
+): IntArray? {
     if (width < MIN_SIDE || height < MIN_SIDE) return null
     val lum = IntArray(pixels.size) { luminanceOf(pixels[it]) }
     val hist = IntArray(256)
@@ -189,7 +197,9 @@ internal fun findBorders(pixels: IntArray, width: Int, height: Int, topBottom: B
             return -1
         }
 
-        val depth = if (!leftRight) {
+        val depth = if (blankOnly) {
+            strictDepth()
+        } else if (!leftRight) {
             // 위아래 변: 선 중 [COVER_RATIO]가 이만큼 이상 여백인 깊이 (칸 밖 머리·옷자락·쪽 번호 무시) —
             // 단 그 깊이에서 여러 열([LINE_SUPPORT_RATIO])이 함께 칸 테두리 선에 닿을 때만. 아니면 칸 밖 글·쪽 번호·광고 너머의 테두리 선,
             // 그것도 없으면(테두리 없이 열린 칸, 칸 밖 글 문단) 모든 열이 여백인 곳까지만
@@ -286,9 +296,12 @@ private const val MIN_CROP_RATIO = 0.005f
 /**
  * 페이지 리더(Coil)용 — 작품 보기 설정 "여백 잘라내기". 쪽마다 따로 자른다 (두 쪽 보기도 쪽마다 자른 뒤 가운데에 붙여 놓는다).
  * 그림 크기가 줄어든다 (화면 맞춤으로 그만큼 크게 보인다).
+ *
+ * 칸 간격 없애기와 함께 쓰면 먼저 자른다 — 칸을 붙이면 칸 밖 쪽 번호·광고가 칸 바로 밑으로 끌려와 칸 밖 글로 보이지 않는다.
+ * 붙이고 남은 위아래 빈 줄은 [blankOnly]로 한 번 더 뺀다 (모든 열이 빈 줄만 — 칸 밖으로 나온 말풍선은 그대로).
  */
-internal class CropBorderTransformation(private val mode: CropBorders) : Transformation() {
-    override val cacheKey: String = "crop-borders-8-$mode"
+internal class CropBorderTransformation(private val mode: CropBorders, private val blankOnly: Boolean = false) : Transformation() {
+    override val cacheKey: String = "crop-borders-9-$mode" + if (blankOnly) "-blank" else ""
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width
@@ -296,7 +309,7 @@ internal class CropBorderTransformation(private val mode: CropBorders) : Transfo
         val b = pageWorkLock.withLock {
             val pixels = IntArray(w * h)
             input.getPixels(pixels, 0, w, 0, 0, w, h)
-            findBorders(pixels, w, h, topBottom = mode != CropBorders.LEFT_RIGHT, leftRight = mode != CropBorders.TOP_BOTTOM)
+            findBorders(pixels, w, h, topBottom = mode != CropBorders.LEFT_RIGHT, leftRight = mode != CropBorders.TOP_BOTTOM, blankOnly = blankOnly)
         } ?: return input
         return Bitmap.createBitmap(input, b[2], b[0], w - b[2] - b[3], h - b[0] - b[1])
     }

@@ -672,10 +672,11 @@ private fun pageRequest(
         .crossfade(false)
         .transformations(
             listOfNotNull(
-                // 칸 사이 여백을 먼저 줄이고(쪽 크기는 그대로), 화면 크기로 Lanczos 리샘플링한 뒤 선명하게
-                if (removeGutters) GutterTransformation() else null,
-                // 쪽 둘레 여백은 칸 간격을 붙인 뒤 쪽마다 따로 자른다 — 붙이고 남은 위아래 빈 곳도 함께 빠진다
+                // 쪽 둘레 여백(칸 밖 쪽 번호·광고 포함)을 쪽마다 먼저 자르고, 칸 사이 여백을 줄인 뒤 남은 위아래 빈 줄만 한 번 더 뺀다.
+                // 그다음 화면 크기로 Lanczos 리샘플링하고 선명하게
                 if (cropBorders != CropBorders.OFF) CropBorderTransformation(cropBorders) else null,
+                if (removeGutters) GutterTransformation() else null,
+                if (removeGutters && cropBorders != CropBorders.OFF) CropBorderTransformation(cropBorders, blankOnly = true) else null,
                 ImageEnhancer.lanczos(enhancement)?.let { LanczosTransformation(scaleType, it) },
                 ImageEnhancer.sharpenAmount(enhancement)?.let { SharpenTransformation(it) },
             ),

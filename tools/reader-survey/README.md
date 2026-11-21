@@ -38,3 +38,4 @@ CROP_LIST='C:\...\crop_list.txt' CROP_OUT='D:\Project\KomgaTV-gutters-data\crop-
   탑 꼭대기·쪽 번호·옷자락은 함께 잘린다. 좌우는 칸 밖으로 나온 그림을 자르지 않는다.
 - 옛/새 비교: 같은 목록으로 옛 코드·새 코드의 `CROP` 줄을 파일로 남기고 `compare_crops.py` 로 비교한다 (쪽 크기의 0.5% 넘게 더/덜 자른 쪽 목록).
   더 자른 쪽은 전부, 덜 자른 쪽은 표본을 `CROP_OUT` 그림으로 눈으로 본다 (3차 조사: `D:\Project\KomgaTV-gutters-data\round3-crop\`).
+- `CROP_BLANK_ONLY=1` 을 주면 칸 간격 없애기 뒤의 두 번째 자르기(모든 열이 빈 줄만)를 잰다. 앱 순서는 여백 자르기 → 칸 간격 → 빈 줄 자르기 (1.0.45).
