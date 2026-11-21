@@ -33,4 +33,46 @@ class ReadingRowsTest {
         assertEquals(listOf("k9"), rows.continueReading.map { it.id })
         assertEquals(setOf("kingdom"), rows.reactivated)
     }
+
+    @Test
+    fun `한 권을 끝까지 읽은 시리즈는 다음 권으로 읽는 중에 남고 다 읽은 시각으로 줄을 선다`() {
+        val row = mergeReadingRow(
+            inProgress = listOf(book("b3", "bleach", readAt = 100)),
+            // 킹덤 74권을 방금(300) 다 읽었다, 73권은 그 전에
+            recentlyRead = listOf(book("k74", "kingdom", readAt = 300), book("k73", "kingdom", readAt = 50)),
+            onDeck = listOf(book("k75", "kingdom")),
+            size = 20,
+        )
+        assertEquals(listOf("k75", "b3"), row.map { it.id })
+    }
+
+    @Test
+    fun `읽던 책이 있는 시리즈는 다 읽은 권을 따로 넣지 않는다`() {
+        val row = mergeReadingRow(
+            inProgress = listOf(book("k76", "kingdom", readAt = 100)),
+            recentlyRead = listOf(book("k75", "kingdom", readAt = 90)),
+            onDeck = emptyList(),
+            size = 20,
+        )
+        assertEquals(listOf("k76"), row.map { it.id })
+    }
+
+    @Test
+    fun `나와 있는 데까지 다 읽은 시리즈는 마지막으로 읽은 책으로 남는다 - 새 권이 나오면 다음 권으로`() {
+        val row = mergeReadingRow(
+            inProgress = listOf(book("b3", "bleach", readAt = 100)),
+            recentlyRead = listOf(book("k884", "kingdom", readAt = 300), book("k883", "kingdom", readAt = 290)),
+            onDeck = emptyList(),
+            size = 20,
+        )
+        assertEquals(listOf("k884", "b3"), row.map { it.id })
+
+        val later = mergeReadingRow(
+            inProgress = emptyList(),
+            recentlyRead = listOf(book("k884", "kingdom", readAt = 300)),
+            onDeck = listOf(book("k885", "kingdom")),
+            size = 20,
+        )
+        assertEquals(listOf("k885"), later.map { it.id })
+    }
 }

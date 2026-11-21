@@ -36,7 +36,7 @@ sealed interface HomeUiState {
     /**
      * 데이터 로딩 성공 (Komelia 홈과 같은 줄)
      *
-     * @property continueReading 읽는 중인 책 (IN_PROGRESS, 최근 읽은 순)
+     * @property continueReading 읽는 중인 책 (IN_PROGRESS + 방금 다 읽은 시리즈의 다음 권, 최근 읽은 순)
      * @property latestBooks 최근 추가된 책
      * @property newSeries 최근 추가된 시리즈
      * @property updatedSeries 최근에 책이 더해진 시리즈
@@ -169,9 +169,15 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /** 읽는 중인 책 목록 로드 (IN_PROGRESS, 최근 읽은 순) */
-    private suspend fun loadContinueReading(): List<Book> {
-        return bookRepository.getBooksInProgress(page = 0, size = ROW_SIZE).first().books
+    /**
+     * 읽는 중인 책 목록 로드 (IN_PROGRESS + 한 권을 끝까지 읽은 시리즈의 다음 권, 최근 읽은 순).
+     * 끝까지 읽으면 그 책은 서버에서 "읽는 중"이 아니게 되므로 다음 권으로 줄에 남긴다 (사용자 11-21)
+     */
+    private suspend fun loadContinueReading(): List<Book> = coroutineScope {
+        val inProgress = async { bookRepository.getBooksInProgress(page = 0, size = ROW_SIZE).first().books }
+        val recentlyRead = async { bookRepository.getRecentlyReadBooks(size = ROW_SIZE) }
+        val onDeck = async { bookRepository.getBooksOnDeck(size = ROW_SIZE) }
+        mergeReadingRow(inProgress.await(), recentlyRead.await(), onDeck.await(), ROW_SIZE)
     }
 
     /** 읽기 진행이 바뀌면 달라지는 줄("읽는 중")만 다시 읽는다 (내용이 보일 때만) */
