@@ -246,14 +246,16 @@ private fun ReaderContent(
         }
     }
 
-    // Back은 키 이벤트로 오지 않는다 (targetSdk 36: 예측형 뒤로 가기). 시스템 뒤로 가기를 가로챈다.
-    BackHandler {
+    // 뒤로: 설정 패널 → 오버레이 → 리더 나가기 차례로 닫는다
+    val goBack = {
         when {
             state.showSettingsPanel -> viewModel.closeSettingsPanel()
             state.showOverlay -> viewModel.closeOverlay()
             else -> onNavigateBack()
         }
     }
+    // 예측형 뒤로 가기(Android 13+)에서는 Back이 키 이벤트로 오지 않고 여기로 온다
+    BackHandler { goBack() }
 
     val contentScale = remember(state.scaleType) { contentScaleFor(state.scaleType) }
 
@@ -272,6 +274,12 @@ private fun ReaderContent(
             .focusRequester(focusRequester)
             .focusable()
             .onPreviewKeyEvent { keyEvent ->
+                // 예측형 뒤로 가기가 없는 TV에서는 Back이 키 이벤트로 먼저 온다 — 그대로 두면 Compose가 포커스만 풀고
+                // 패널이 닫히지 않는다. 떼는 순간 닫고, 누름·뗌 모두 여기서 받는다
+                if (keyEvent.key == Key.Back) {
+                    if (keyEvent.type == KeyEventType.KeyUp) goBack()
+                    return@onPreviewKeyEvent true
+                }
                 if (keyEvent.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
 
                 // 설정 패널이 열려 있으면 키는 패널 항목이 처리

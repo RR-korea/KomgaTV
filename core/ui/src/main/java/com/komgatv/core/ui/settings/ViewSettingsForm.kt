@@ -281,10 +281,10 @@ private fun SettingRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        // 이름이 길면 말줄임 — 줄이 두 줄로 늘지 않게 (값은 다 보인다)
+        // 이름과 값은 같은 글자 크기 — 이름이 길면 말줄임, 줄이 두 줄로 늘지 않게 (값은 다 보인다)
         Text(
             text = title,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyLarge,
             color = Color.LightGray.copy(alpha = alpha),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
