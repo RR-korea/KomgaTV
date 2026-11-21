@@ -52,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -578,11 +579,9 @@ private fun SpreadPages(
 
 @Composable
 private fun ReaderOverlay(state: ReaderUiState.Reading) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.6f)),
-    ) {
+    // 화면은 어둡게 하지 않는다 — 흰 쪽 위에서도 글자가 보이게 글자에 검은 그림자만
+    val shadow = Shadow(color = Color.Black, blurRadius = 8f)
+    Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -591,7 +590,7 @@ private fun ReaderOverlay(state: ReaderUiState.Reading) {
         ) {
             Text(
                 text = state.bookTitle,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium.copy(shadow = shadow),
                 color = Color.White,
             )
 
@@ -608,13 +607,13 @@ private fun ReaderOverlay(state: ReaderUiState.Reading) {
                 }
                 Text(
                     text = stringResource(R.string.reader_page_range_format, pageNumbers, state.totalPages),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyMedium.copy(shadow = shadow),
                     color = Color.White,
                 )
                 val percent = state.shownPage * 100 / state.totalPages
                 Text(
                     text = stringResource(R.string.reader_page_percent_format, percent),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyMedium.copy(shadow = shadow),
                     color = Color.White,
                 )
             }
@@ -634,7 +633,7 @@ private fun ReaderOverlay(state: ReaderUiState.Reading) {
 
             Text(
                 text = stringResource(R.string.reader_overlay_hint),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodySmall.copy(shadow = shadow),
                 color = Color.White.copy(alpha = 0.7f),
             )
         }
