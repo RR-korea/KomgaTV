@@ -100,9 +100,10 @@ import { clampZoom, spreadPosition, zoomLayout } from '../src/reader/layout';
 
 describe('확대 (Android 작품별 확대)', () => {
   const two = layoutSpread([portrait, portrait], 'SCREEN', screen); // 1440×1080
-  it('100~120%, 1% 단위로 펼침째 키운다', () => {
+  it('100~150%, 1% 단위로 펼침째 키운다 (Android 1.0.21)', () => {
     expect(clampZoom(99)).toBe(100);
-    expect(clampZoom(121)).toBe(120);
+    expect(clampZoom(121)).toBe(121);
+    expect(clampZoom(151)).toBe(150);
     const zoomed = zoomLayout(two, 120);
     expect(zoomed.height).toBe(1296);
     expect(zoomed.width).toBe(1728);
@@ -112,8 +113,10 @@ describe('확대 (Android 작품별 확대)', () => {
   it('화면 맞춤: 가운데 기준, ▲▼로 넘친 위아래를 본다', () => {
     const zoomed = zoomLayout(two, 120); // 1728×1296
     expect(spreadPosition(two, zoomed, screen, 0, 0)).toEqual({ left: 96, top: -108 });
-    expect(spreadPosition(two, zoomed, screen, -2, 0).top).toBe(0); // 위 끝
-    expect(spreadPosition(two, zoomed, screen, 2, 0).top).toBe(-216); // 아래 끝
+    expect(spreadPosition(two, zoomed, screen, -1000, 0).top).toBe(0); // 위 끝
+    expect(spreadPosition(two, zoomed, screen, 1000, 0).top).toBe(-216); // 아래 끝
+    // ▲▼ 한 번 = 125‰ = 넘치는 높이(216)의 1/16 (Android 1.0.38)
+    expect(spreadPosition(two, zoomed, screen, 125, 0).top).toBe(-108 - 13.5);
   });
 
   it('너비 맞춤: 위쪽 기준, 키운 만큼 스크롤', () => {

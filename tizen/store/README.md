@@ -7,7 +7,7 @@ Samsung Seller Office(seller.samsungapps.com)에 앱을 등록할 때 쓰는 패
 | 항목 | 값 |
 |---|---|
 | 앱 이름 | TV Reader for Komga (모든 언어 같음) |
-| 버전 | `package.json` `version`·`build` = `static/config.xml` `version` (지금 1.0.6 / b21, Android와 같은 번호) |
+| 버전 | `package.json` `version`·`build` = `static/config.xml` `version` (지금 1.0.47 / b62, Android와 같은 번호) |
 | Tizen 앱 ID / 패키지 ID | `KomgaTVtz0.KomgaTV` / `KomgaTVtz0` — **스토어에 올린 뒤에는 바꾸지 않는다** (바꾸면 다른 앱이 된다) |
 | 최소 플랫폼 | Tizen 5.5 (2020년형 TV, Chromium 69) |
 | 파일 | `dist/TVReaderForKomga-v<버전>-b<빌드>.wgt` |

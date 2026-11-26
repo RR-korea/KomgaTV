@@ -76,6 +76,25 @@ export function buildSpreads(pages: PageInfo[], layout: PageLayout, offset = fal
   return spreads;
 }
 
+/** 숨긴 쪽을 뺀 쪽들 (Android 1.0.8 visiblePages) — 모두 숨겼으면 전부 */
+export function withoutHidden(pages: PageInfo[], hidden: number[]): PageInfo[] {
+  if (!hidden.length) return pages;
+  const shown = pages.filter((page) => hidden.indexOf(page.number) < 0);
+  return shown.length ? shown : pages;
+}
+
+/** 그 쪽(숨긴 쪽이면 다음 쪽)의 자리 — 끝을 넘으면 마지막 쪽, 없으면 0 */
+export function pageIndexAtOrAfter(pages: PageInfo[], pageNumber: number): number {
+  const index = pages.findIndex((page) => page.number >= pageNumber);
+  return index >= 0 ? index : Math.max(0, pages.length - 1);
+}
+
+/** 그 쪽이 든 펼침 (숨긴 쪽이면 다음 펼침, 끝을 넘으면 마지막 펼침, 없으면 0) — Android spreadIndexAtOrAfter */
+export function spreadIndexAtOrAfter(spreads: Spread[], pageNumber: number): number {
+  const index = spreads.findIndex((spread) => spread.some((page) => page.number >= pageNumber));
+  return index >= 0 ? index : Math.max(0, spreads.length - 1);
+}
+
 /** 쪽 번호가 들어 있는 펼침 인덱스 (없으면 0) */
 export function spreadIndexOf(spreads: Spread[], pageNumber: number): number {
   const index = spreads.findIndex((spread) => spreadContains(spread, pageNumber));

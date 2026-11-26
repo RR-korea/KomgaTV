@@ -19,6 +19,8 @@ export class ProgressSaver {
 
   /** 사용자가 쪽을 옮겼을 때 */
   schedule(page: number, completed: boolean): void {
+    // 같은 값을 다시 알리면 기다리던 저장을 미루지 않는다 (마지막 쪽 → 책 끝 화면: 둘 다 완독)
+    if (this.timer !== null && this.pending && this.pending.page === page && this.pending.completed === completed) return;
     this.pending = { page, completed };
     this.cancelTimer();
     this.timer = setTimeout(() => void this.flush(), this.delayMs);

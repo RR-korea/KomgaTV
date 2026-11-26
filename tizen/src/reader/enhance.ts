@@ -18,11 +18,17 @@ export function lanczosWindow(enhancement: ImageEnhancement): number | null {
 /**
  * 쪽 그림에 걸 CSS filter. 선명하게는 SVG 언샤프 필터(App.tsx), 대비는 contrast() —
  * 가운데 회색 기준 (v − 0.5) × c + 0.5 로 Android 색 행렬(t = 128 × (1 − c))과 같은 식, GPU가 한다.
+ * 밝기는 그 결과에 곱한다 (Android 1.0.9: gain = c × b, offset = 128 × (1 − c) × b) — contrast() 뒤의 brightness().
  */
-export function imageFilter(enhancement: ImageEnhancement, contrastPercent: number): string | undefined {
+export function imageFilter(
+  enhancement: ImageEnhancement,
+  contrastPercent: number,
+  brightnessPercent = 100,
+): string | undefined {
   const parts: string[] = [];
   if (enhancement === 'SHARPEN') parts.push('url(#ktv-sharpen)');
   if (enhancement === 'SHARPEN_STRONG') parts.push('url(#ktv-sharpen-strong)');
   if (contrastPercent !== 100) parts.push(`contrast(${contrastPercent / 100})`);
+  if (brightnessPercent !== 100) parts.push(`brightness(${brightnessPercent / 100})`);
   return parts.length ? parts.join(' ') : undefined;
 }

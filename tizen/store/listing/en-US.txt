@@ -17,7 +17,7 @@ WHY TV READER FOR KOMGA
 • Open source.
 
 HOME
-• Continue reading, On deck, recently added books and series, and recently updated series
+• Continue reading (a series you finished a book of stays there with its next book), recently added books and series, and recently updated series
 • Long-press a book to remove it from Continue reading
 
 COMICS AND MANGA
@@ -29,7 +29,10 @@ COMICS AND MANGA
 • Up/down to jump 10 pages, and a progress bar
 
 PER-SERIES VIEW SETTINGS
-• Every series keeps its own settings: direction, layout, scale, zoom (100–120%), contrast (50–150%)
+• Every series keeps its own settings: direction, layout, scale, zoom (100–150%), contrast and brightness
+• Crop margins: trims white or black page margins plus page numbers and ads outside the panels so the art fills more of the screen (top & bottom / left & right / all sides)
+• Remove panel gaps (experimental): closes the blank space between panel rows
+• Hide a page: skip ads or blank pages on this TV only (the files on your server are untouched)
 • Image enhancement for large TVs: Lanczos2/3/4 upscaling, smooth upscaling and sharpening
 
 BOOKS

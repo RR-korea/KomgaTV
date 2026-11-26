@@ -81,11 +81,11 @@ describe('대비·화질 개선 설정 (Android 1.0.1~1.0.2)', () => {
     expect(imageFilter('LANCZOS', 80)).toBe('contrast(0.8)');
   });
 
-  it('대비 저장 값: 50~150, 5% 단위, 기본 100', () => {
+  it('대비 저장 값: 50~190, 5% 단위, 기본 100 (Android 1.0.9부터 190%까지)', () => {
     expect(defaultReaderSettings.contrastPercent).toBe(100);
     expect(parseReaderSettings({ contrastPercent: 130 }).contrastPercent).toBe(130);
     expect(parseReaderSettings({ contrastPercent: 133 }).contrastPercent).toBe(135);
-    expect(parseReaderSettings({ contrastPercent: 300 }).contrastPercent).toBe(150);
+    expect(parseReaderSettings({ contrastPercent: 300 }).contrastPercent).toBe(190);
     expect(parseReaderSettings({ contrastPercent: 10 }).contrastPercent).toBe(50);
     expect(parseReaderSettings({ imageEnhancement: 'LANCZOS4' }).imageEnhancement).toBe('LANCZOS4');
   });

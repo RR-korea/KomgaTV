@@ -1,6 +1,9 @@
 // 리더 보기 설정. 이름·기본값은 Komelia ImageReaderSettings(Apache-2.0)와 같다 (Android T5·T6과 동일).
 import type { ReadingDirection } from '../api/types';
+import { CROP_BORDERS, type CropBorders } from '../image/pageWork';
 import { Store } from './store';
+
+export { CROP_BORDERS, type CropBorders };
 
 export type ReaderType = 'PAGED' | 'CONTINUOUS';
 export type PageLayout = 'SINGLE_PAGE' | 'DOUBLE_PAGES' | 'DOUBLE_PAGES_NO_COVER';
@@ -27,13 +30,24 @@ export interface ReaderSettings {
   epubTextZoom: number;
   imageEnhancement: ImageEnhancement;
   /**
-   * 페이지 넘김에서 크기 맞춤 결과를 더 확대하는 비율 % (100~120, 1% 단위, Android 0.2.8 — 120%면 충분하다는 사용자 의견).
+   * 페이지 넘김에서 크기 맞춤 결과를 더 확대하는 비율 % (100~150, 1% 단위, Android 1.0.21).
    * 스캔 여백을 잘라 크게 볼 때 — 작품별로만 바꾼다 (앱 기본값은 늘 100).
    */
   zoomPercent: number;
   pageTransition: PageTransition;
-  /** 대비 % (작품별, 50~150, 5% 단위, 100 = 그대로, Android 1.0.1) — 흐린 스캔본을 진하게 */
+  /** 대비 % (작품별, 50~190, 5% 단위, 100 = 그대로, Android 1.0.1) — 흐린 스캔본을 진하게 */
   contrastPercent: number;
+  /** 밝기 % (작품별, 10~150, 5% 단위, 100 = 그대로, Android 1.0.9) — 어두운 스캔본을 밝게, 밤에는 어둡게 */
+  brightnessPercent: number;
+  /**
+   * 확대했을 때 위아래로 옮겨 둔 자리 ‰ (작품별, −1000 맨 위 … 0 가운데 … 1000 맨 아래, 125 단위, Android 1.0.38).
+   * 쪽을 넘겨도 그 자리를 유지한다.
+   */
+  zoomPanPermille: number;
+  /** 칸 사이 위아래 여백을 없애고 칸들을 쪽 가운데로 모은다 (작품별, 페이지 넘김, Android 1.0.12 — 실험적) */
+  removeGutters: boolean;
+  /** 쪽 둘레의 빈 여백(흰·검은 스캔 여백, 칸 밖 쪽 번호·광고)을 잘라내 쪽을 화면에 더 크게 (작품별, 페이지 넘김, Android 1.0.33) */
+  cropBorders: CropBorders;
 }
 
 export const defaultReaderSettings: ReaderSettings = {
@@ -48,6 +62,10 @@ export const defaultReaderSettings: ReaderSettings = {
   zoomPercent: 100,
   pageTransition: 'SLIDE',
   contrastPercent: 100,
+  brightnessPercent: 100,
+  zoomPanPermille: 0,
+  removeGutters: false,
+  cropBorders: 'OFF',
 };
 
 export const READER_TYPES: ReaderType[] = ['PAGED', 'CONTINUOUS'];
@@ -56,11 +74,18 @@ export const SCALE_TYPES: ScaleType[] = ['SCREEN', 'FIT_WIDTH', 'FIT_HEIGHT', 'O
 export const DIRECTIONS: Direction[] = ['LEFT_TO_RIGHT', 'RIGHT_TO_LEFT'];
 export const ENHANCEMENTS: ImageEnhancement[] = ['OFF', 'SMOOTH', 'LANCZOS2', 'LANCZOS', 'LANCZOS4', 'SHARPEN', 'SHARPEN_STRONG'];
 export const MIN_CONTRAST_PERCENT = 50;
-export const MAX_CONTRAST_PERCENT = 150;
+export const MAX_CONTRAST_PERCENT = 190;
 export const CONTRAST_STEP = 5;
+export const MIN_BRIGHTNESS_PERCENT = 10;
+export const MAX_BRIGHTNESS_PERCENT = 150;
+export const BRIGHTNESS_STEP = 5;
+export const MIN_ZOOM_PAN_PERMILLE = -1000;
+export const MAX_ZOOM_PAN_PERMILLE = 1000;
+/** ▲▼ 한 번에 움직이는 양 — 넘치는 높이의 1/16 (Android 1.0.38) */
+export const ZOOM_PAN_STEP = 125;
 export const TRANSITIONS: PageTransition[] = ['OFF', 'SLIDE', 'FADE'];
 export const MIN_ZOOM_PERCENT = 100;
-export const MAX_ZOOM_PERCENT = 120;
+export const MAX_ZOOM_PERCENT = 150;
 /** 패널에서 고르는 값 (Android T6과 같음) */
 export const PADDING_STEPS = [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45];
 export const SPACING_STEPS = [0, 8, 16, 24, 32, 40, 48, 56, 64];
@@ -88,7 +113,7 @@ export function parseReaderSettings(raw: unknown): ReaderSettings {
         ? p.epubTextZoom
         : d.epubTextZoom,
     imageEnhancement: oneOf(ENHANCEMENTS, p.imageEnhancement, d.imageEnhancement),
-    // 범위 밖이면 끝값 (Android ReaderSettingsCodec과 같음 — 예전에 300%까지 저장된 값은 120%로)
+    // 범위 밖이면 끝값 (Android ReaderSettingsCodec과 같음 — 예전에 300%까지 저장된 값은 150%로)
     zoomPercent:
       typeof p.zoomPercent === 'number' && Number.isFinite(p.zoomPercent)
         ? Math.min(MAX_ZOOM_PERCENT, Math.max(MIN_ZOOM_PERCENT, Math.round(p.zoomPercent)))
@@ -102,6 +127,19 @@ export function parseReaderSettings(raw: unknown): ReaderSettings {
             Math.max(MIN_CONTRAST_PERCENT, Math.round(p.contrastPercent / CONTRAST_STEP) * CONTRAST_STEP),
           )
         : d.contrastPercent,
+    brightnessPercent:
+      typeof p.brightnessPercent === 'number' && Number.isFinite(p.brightnessPercent)
+        ? Math.min(
+            MAX_BRIGHTNESS_PERCENT,
+            Math.max(MIN_BRIGHTNESS_PERCENT, Math.round(p.brightnessPercent / BRIGHTNESS_STEP) * BRIGHTNESS_STEP),
+          )
+        : d.brightnessPercent,
+    zoomPanPermille:
+      typeof p.zoomPanPermille === 'number' && Number.isFinite(p.zoomPanPermille)
+        ? Math.min(MAX_ZOOM_PAN_PERMILLE, Math.max(MIN_ZOOM_PAN_PERMILLE, Math.round(p.zoomPanPermille)))
+        : d.zoomPanPermille,
+    removeGutters: typeof p.removeGutters === 'boolean' ? p.removeGutters : d.removeGutters,
+    cropBorders: oneOf(CROP_BORDERS, p.cropBorders, d.cropBorders),
   };
 }
 
@@ -156,13 +194,17 @@ export function withSeriesRules(defaults: ReaderSettings, seriesDirection: Readi
   const readerType = resolveReaderType(seriesDirection, defaults.readerType);
   const readingDirection =
     seriesDirection === 'LEFT_TO_RIGHT' || seriesDirection === 'RIGHT_TO_LEFT' ? seriesDirection : defaults.readingDirection;
-  // 확대·대비는 작품 설정에만 있다
+  // 확대·확대 자리·대비·밝기·여백 잘라내기·칸 간격 없애기는 작품 설정에만 있다
   return {
     ...defaults,
     readerType,
     readingDirection,
     zoomPercent: defaultReaderSettings.zoomPercent,
     contrastPercent: defaultReaderSettings.contrastPercent,
+    brightnessPercent: defaultReaderSettings.brightnessPercent,
+    zoomPanPermille: defaultReaderSettings.zoomPanPermille,
+    removeGutters: defaultReaderSettings.removeGutters,
+    cropBorders: defaultReaderSettings.cropBorders,
   };
 }
 
@@ -220,4 +262,52 @@ export function clearSeriesSettings(seriesId: string): void {
   const all = readAllSeries();
   delete all[seriesId];
   writeAllSeries(all);
+}
+
+// ---------- 숨긴 쪽 (Android 1.0.8) ----------
+// 광고·빈 쪽 등을 이 책에서 건너뛴다 — 이 기기에만 저장하고 서버 파일은 그대로. 쪽 번호는 원래 번호 그대로 쓴다.
+
+const HIDDEN_PAGES_KEY = 'komgatv.reader.hiddenPages';
+
+/** 저장된 문자열 → {책 ID: 숨긴 쪽 번호(오름차순)}. 깨진 값은 버린다 */
+export function parseHiddenPages(raw: string | null): Record<string, number[]> {
+  if (!raw) return {};
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    const result: Record<string, number[]> = {};
+    for (const [id, value] of Object.entries(parsed as Record<string, unknown>)) {
+      if (!Array.isArray(value)) continue;
+      const pages = value.filter((n): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 1);
+      const unique = pages.filter((n, i) => pages.indexOf(n) === i).sort((a, b) => a - b);
+      if (unique.length) result[id] = unique;
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
+
+function readAllHiddenPages(): Record<string, number[]> {
+  try {
+    return parseHiddenPages(localStorage.getItem(HIDDEN_PAGES_KEY));
+  } catch {
+    return {};
+  }
+}
+
+export function loadHiddenPages(bookId: string): number[] {
+  return readAllHiddenPages()[bookId] ?? [];
+}
+
+/** 숨긴 쪽을 저장한다. 비어 있으면 지운다 */
+export function saveHiddenPages(bookId: string, pages: number[]): void {
+  const all = readAllHiddenPages();
+  if (pages.length) all[bookId] = pages.slice().sort((a, b) => a - b);
+  else delete all[bookId];
+  try {
+    localStorage.setItem(HIDDEN_PAGES_KEY, JSON.stringify(all));
+  } catch {
+    // 저장소를 못 쓰면 이번 세션에서만
+  }
 }

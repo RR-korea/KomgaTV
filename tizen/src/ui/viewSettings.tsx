@@ -3,10 +3,14 @@
 import { fmt, t } from '../i18n';
 import { FOCUSABLE_CLASS } from '../platform/focus';
 import {
+  BRIGHTNESS_STEP,
   CONTRAST_STEP,
+  CROP_BORDERS,
   DIRECTIONS,
   ENHANCEMENTS,
+  MAX_BRIGHTNESS_PERCENT,
   MAX_CONTRAST_PERCENT,
+  MIN_BRIGHTNESS_PERCENT,
   MIN_CONTRAST_PERCENT,
   MAX_ZOOM_PERCENT,
   MIN_ZOOM_PERCENT,
@@ -21,6 +25,10 @@ import {
 
 const CONTRAST_STEPS: number[] = [];
 for (let percent = MIN_CONTRAST_PERCENT; percent <= MAX_CONTRAST_PERCENT; percent += CONTRAST_STEP) CONTRAST_STEPS.push(percent);
+const BRIGHTNESS_STEPS: number[] = [];
+for (let percent = MIN_BRIGHTNESS_PERCENT; percent <= MAX_BRIGHTNESS_PERCENT; percent += BRIGHTNESS_STEP) {
+  BRIGHTNESS_STEPS.push(percent);
+}
 const ZOOM_STEPS: number[] = [];
 for (let percent = MIN_ZOOM_PERCENT; percent <= MAX_ZOOM_PERCENT; percent++) ZOOM_STEPS.push(percent);
 
@@ -35,7 +43,10 @@ export type ViewKey =
   | 'opt-enhance'
   | 'opt-zoom'
   | 'opt-transition'
-  | 'opt-contrast';
+  | 'opt-contrast'
+  | 'opt-brightness'
+  | 'opt-crop'
+  | 'opt-gutters';
 
 export interface ViewOption {
   key: ViewKey;
@@ -158,11 +169,39 @@ export function viewOptions(
     enabled: true,
     clamp: true,
   };
+  // 밝기도 두 모드 모두, 작품 설정에서만 (Android 1.0.9)
+  const brightness: ViewOption = {
+    key: 'opt-brightness',
+    label: t.viewBrightness,
+    values: BRIGHTNESS_STEPS,
+    labels: BRIGHTNESS_STEPS.map((v) => fmt(t.viewPercent, v)),
+    value: s.brightnessPercent,
+    enabled: true,
+    clamp: true,
+  };
+  // 쪽 둘레의 흰·검은 빈 여백을 잘라내 쪽을 더 크게 — 위아래, 좌우, 네 변 (Android 1.0.33, 확대 바로 아래)
+  const crop: ViewOption = {
+    key: 'opt-crop',
+    label: t.viewCropBorders,
+    values: CROP_BORDERS,
+    labels: [t.off, t.viewCropTopBottom, t.viewCropLeftRight, t.viewCropAll],
+    value: s.cropBorders,
+    enabled: true,
+  };
+  // 칸 사이 위아래 여백을 없애 칸들을 쪽 가운데로 모은다 (Android 1.0.12, 실험적)
+  const gutters: ViewOption = {
+    key: 'opt-gutters',
+    label: t.viewRemoveGutters,
+    values: [false, true],
+    labels: onOff,
+    value: s.removeGutters,
+    enabled: true,
+  };
   switch (mode) {
     case 'reader-paged':
-      return [type, layout, offsetRow, direction, scale, transition, zoom, contrast, enhance];
+      return [type, layout, offsetRow, direction, scale, transition, zoom, crop, gutters, contrast, brightness, enhance];
     case 'reader-continuous':
-      return [type, padding, spacing, contrast, enhance];
+      return [type, padding, spacing, contrast, brightness, enhance];
     default:
       return [type, layout, direction, scale, transition, padding, spacing, enhance];
   }
@@ -185,6 +224,12 @@ export function applyViewOption(s: ReaderSettings, key: ViewKey, value: unknown)
       return { ...s, continuousPageSpacing: value as number };
     case 'opt-contrast':
       return { ...s, contrastPercent: value as number };
+    case 'opt-brightness':
+      return { ...s, brightnessPercent: value as number };
+    case 'opt-crop':
+      return { ...s, cropBorders: value as ReaderSettings['cropBorders'] };
+    case 'opt-gutters':
+      return { ...s, removeGutters: value as boolean };
     case 'opt-transition':
       return { ...s, pageTransition: value as ReaderSettings['pageTransition'] };
     case 'opt-enhance':

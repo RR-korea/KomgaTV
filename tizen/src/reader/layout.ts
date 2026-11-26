@@ -46,9 +46,7 @@ export function layoutSpread(sizes: Size[], scale: ScaleType, screen: Size): Spr
   return { pages, width: pages.reduce((sum, page) => sum + page.width, 0), height };
 }
 
-// ---------- 확대(줌인), Android 0.2.5 "작품별 확대" (0.2.8부터 100~120%) ----------
-/** 화면 고정 모드에서 ▲▼ 한 번에 움직이는 양 — 넘치는 높이의 절반을 이만큼 나눈다 */
-export const PAN_STEPS = 2;
+// ---------- 확대(줌인), Android 0.2.5 "작품별 확대" (1.0.21부터 100~150%) ----------
 
 export function clampZoom(percent: number): number {
   return Math.min(MAX_ZOOM_PERCENT, Math.max(MIN_ZOOM_PERCENT, Math.round(percent)));
@@ -64,7 +62,8 @@ export function zoomLayout(layout: SpreadLayout, zoomPercent: number): SpreadLay
 
 /**
  * 펼침의 화면 위치.
- * - 확대 전 펼침이 화면 높이 안이면(화면·높이 맞춤): 가운데 기준, ▲▼(panStep −2…2)로 넘친 위아래를 반씩 본다
+ * - 확대 전 펼침이 화면 높이 안이면(화면·높이 맞춤): 가운데 기준, ▲▼로 옮겨 둔 자리(panPermille −1000 맨 위 … 1000 맨 아래,
+ *   한 번에 125 = 넘치는 높이의 1/16, Android 1.0.38)만큼 위아래를 본다. 자리는 작품에 저장돼 쪽을 넘겨도 그대로
  * - 확대 전에도 넘치면(너비 맞춤·원본): 위쪽 기준, scrollY로 끝까지 스크롤
  * 좌우로 넘치는 부분은 가운데 기준으로 잘린다.
  */
@@ -72,13 +71,13 @@ export function spreadPosition(
   base: SpreadLayout,
   zoomed: SpreadLayout,
   screen: Size,
-  panStep: number,
+  panPermille: number,
   scrollY: number,
 ): { left: number; top: number } {
   const left = (screen.width - zoomed.width) / 2;
   if (base.height <= screen.height) {
     const overflow = Math.max(0, zoomed.height - screen.height);
-    const top = (screen.height - zoomed.height) / 2 + (-panStep / PAN_STEPS) * (overflow / 2);
+    const top = (screen.height - zoomed.height) / 2 + (-panPermille / 1000) * (overflow / 2);
     return { left, top };
   }
   return { left, top: -scrollY };

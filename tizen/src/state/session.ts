@@ -5,6 +5,7 @@ import { ConnectionError, HttpError } from '../api/errors';
 import type { KomgaUser } from '../api/types';
 import { ImagePaths, normalizeServerUrl } from '../api/url';
 import { clearLanczos } from '../image/lanczosPool';
+import { clearPageWork } from '../image/pageWorkPool';
 import { extractSingleJpeg } from '../pdf/pdfJpeg';
 import { ImageCache } from '../image/ImageCache';
 import { Store } from './store';
@@ -162,6 +163,7 @@ function setSession(client: KomgaClient, user: KomgaUser | null): Session {
   previous?.thumbnails.clear();
   previous?.pages.clear();
   clearLanczos();
+  clearPageWork();
   const next: Session = {
     client,
     user,

@@ -8,6 +8,8 @@
 // 책 처음(Android 이전 권으로 가기): 첫 펼침에서 뒤로 = 책 첫 화면(이전 권 ‹ 지금 권), 한 번 더 = 이전 권 마지막 쪽.
 //   처음 근처에서 이전 권을 찾고 마지막 두 쪽을 미리 받는다. 세로 스크롤은 1쪽 위 책 첫 카드, 맨 위에서 위 = 이전 권 끝.
 // PDF 책은 원본 쪽에서 JPEG를 꺼내 그린다(session.loadPage). 쪽이 0.25초 안에 안 뜨면 "불러오는 중…".
+// 작품별 (Android 1.0.7~1.0.47): 밝기, 확대 150%·▲▼로 옮긴 자리 기억, 여백 잘라내기·칸 간격 없애기(페이지 넘김 — 쪽마다 처리한
+//   그림을 그린다, image/pageWorkPool), 쪽 숨기기(이 책에서만, 이 기기에만).
 import type { ComponentChildren } from 'preact';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { bookDisplayTitle } from '../api/display';
@@ -34,7 +36,6 @@ import { type BoundaryLayout, boundaryLayout } from '../reader/boundary';
 import {
   FALLBACK_SIZE,
   layoutSpread,
-  PAN_STEPS,
   type Size,
   type SpreadLayout,
   spreadPosition,
@@ -42,18 +43,33 @@ import {
 } from '../reader/layout';
 import { chooseTransition, RAPID_FLIP_MS, slideFrom, transitionMs } from '../reader/transition';
 import { imageFilter, lanczosWindow } from '../reader/enhance';
-import { cachedLanczos, lanczosBitmap, lanczosKey } from '../image/lanczosPool';
+import { cachedLanczos, lanczosBitmap, lanczosKey, type LanczosSource } from '../image/lanczosPool';
+import { type PageWorkOptions, workBox } from '../image/pageWork';
+import { cachedPageWork, pageWork, pageWorkKey, type PageWorkResult } from '../image/pageWorkPool';
 import { ProgressSaver } from '../reader/progress';
-import { buildSpreads, highestPage, type PageInfo, spreadContains, spreadIndexOf } from '../reader/spreads';
+import {
+  buildSpreads,
+  highestPage,
+  type PageInfo,
+  pageIndexAtOrAfter,
+  spreadContains,
+  spreadIndexAtOrAfter,
+  withoutHidden,
+} from '../reader/spreads';
 import {
   clearSeriesSettings,
   effectiveSettings,
+  loadHiddenPages,
   loadSeriesSettings,
+  MAX_ZOOM_PAN_PERMILLE,
+  MIN_ZOOM_PAN_PERMILLE,
   type ReaderSettings,
   type ReaderType,
   readerPrefs,
+  saveHiddenPages,
   saveSeriesSettings,
   startPage,
+  ZOOM_PAN_STEP,
 } from '../state/readerPrefs';
 import { type LoadError, requireSession, session as sessionStore, toLoadError, trackWrite } from '../state/session';
 import { useStore } from '../state/store';
@@ -110,7 +126,7 @@ interface SpreadTransition {
 /**
  * Lanczos로 화면 크기에 맞춘 그림 (Android 1.0.1). 처리가 끝날 때까지는 null — 그동안은 보통 그림을 보인다.
  */
-function useLanczos(sourceKey: string, url: string | null, width: number, height: number, a: number | null) {
+function useLanczos(sourceKey: string, url: LanczosSource | null, width: number, height: number, a: number | null) {
   const w = Math.round(width);
   const h = Math.round(height);
   const key = a && url && w > 0 && h > 0 ? lanczosKey(sourceKey, w, h, a) : null;
@@ -134,7 +150,39 @@ function useLanczos(sourceKey: string, url: string | null, width: number, height
   return result && result.key === key ? result.bitmap : null;
 }
 
-function LanczosCanvas({ bitmap, filter }: { bitmap: ImageBitmap; filter?: string }) {
+/**
+ * 여백 잘라내기·칸 간격 없애기로 처리한 쪽 (Android 1.0.12~). 처리가 끝날 때까지 result 는 null — 그동안은 쪽을 그리지 않는다
+ * (자르기 전 쪽이 한 번 비치지 않게). 이미 처리해 둔 쪽은 첫 그리기부터 나온다 (화면 전환 효과). 못 하면 failed — 보통 그림으로.
+ */
+function usePageWork(sourceKey: string, url: string | null, options: PageWorkOptions | null) {
+  const key = options && url ? pageWorkKey(sourceKey, options) : null;
+  const [state, setState] = useState<{ key: string; result: PageWorkResult | null } | null>(null);
+  useEffect(() => {
+    if (!key || !url || !options) return undefined;
+    const hit = cachedPageWork(key);
+    if (hit) {
+      setState({ key, result: hit });
+      return undefined;
+    }
+    let alive = true;
+    pageWork(key, url, options, true).then(
+      (result) => alive && setState({ key, result }),
+      () => alive && setState({ key, result: null }),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [key]);
+  const known = state && state.key === key ? state : null;
+  const result = known ? known.result : key ? cachedPageWork(key) : null;
+  return { result, failed: !!known && !known.result };
+}
+
+/**
+ * ImageBitmap 을 1:1 캔버스에 그린다. overlay = 보통 그림 위에 겹치는 Lanczos 결과 (못 그리면 숨겨 아래 그림이 보이게),
+ * 아니면 쪽 그림 자체 (처리한 쪽).
+ */
+function LanczosCanvas({ bitmap, filter, overlay = true }: { bitmap: ImageBitmap; filter?: string; overlay?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [drawn, setDrawn] = useState(false);
   // 그리기 전에 화면에 나오지 않게 (빈 칸이 한 번 비치지 않게) 레이아웃 단계에서 그린다
@@ -152,7 +200,7 @@ function LanczosCanvas({ bitmap, filter }: { bitmap: ImageBitmap; filter?: strin
   return (
     <canvas
       ref={ref}
-      class={`reader-image reader-canvas${drawn ? '' : ' pending'}`}
+      class={overlay ? `reader-image reader-canvas${drawn ? '' : ' pending'}` : 'reader-image'}
       width={bitmap.width}
       height={bitmap.height}
       style={filter ? { filter } : undefined}
@@ -169,6 +217,8 @@ function ReaderPage({
   height,
   lanczos,
   filter,
+  work,
+  variant,
   onNaturalSize,
 }: {
   bookId: string;
@@ -180,14 +230,31 @@ function ReaderPage({
   height: number;
   /** Lanczos 창 크기, 아니면 null */
   lanczos: number | null;
-  /** 선명하게·대비 CSS filter */
+  /** 선명하게·대비·밝기 CSS filter */
   filter?: string;
-  onNaturalSize: (pageNumber: number, size: Size) => void;
+  /** 여백 잘라내기·칸 간격 없애기 설정 (페이지 넘김에서 켰을 때), 아니면 null */
+  work: PageWorkOptions | null;
+  /** 쪽 크기를 기록할 갈래 (처리 설정마다 그림 크기가 다르다) */
+  variant: string;
+  onNaturalSize: (variant: string, pageNumber: number, size: Size) => void;
 }) {
   const currentSession = useStore(sessionStore);
   const key = pageKey(bookId, page.number, pdf);
   const image = useCachedImage(currentSession?.pages, key);
-  const resampled = useLanczos(key, image.url, width, height, lanczos);
+  const worked = usePageWork(key, image.url, work);
+  /** 처리한 쪽을 그린다 (처리를 못 하면 보통 그림으로) */
+  const useWork = !!work && !worked.failed;
+  const processed = useWork ? worked.result : null;
+  const resampled = useLanczos(
+    useWork && work ? pageWorkKey(key, work) : key,
+    useWork ? (processed ? processed.bitmap : null) : image.url,
+    width,
+    height,
+    lanczos,
+  );
+  useEffect(() => {
+    if (processed) onNaturalSize(variant, page.number, { width: processed.width, height: processed.height });
+  }, [processed, variant]);
   // 0.25초 안에 안 뜨면 스피너 + "불러오는 중…"
   const [slow, setSlow] = useState(false);
   useEffect(() => {
@@ -198,7 +265,12 @@ function ReaderPage({
   return (
     // Preact 11은 숫자 스타일 값에 px를 붙이지 않는다 — 단위를 직접 쓴다
     <div class="reader-page" style={style}>
-      {image.url ? (
+      {useWork && processed ? (
+        <>
+          <LanczosCanvas bitmap={processed.bitmap} filter={filter} overlay={false} />
+          {resampled && <LanczosCanvas bitmap={resampled} filter={filter} />}
+        </>
+      ) : image.url && !useWork ? (
         <>
           <img
             class="reader-image"
@@ -207,7 +279,7 @@ function ReaderPage({
             style={filter ? { filter } : undefined}
             onLoad={(event) => {
               const img = event.currentTarget as HTMLImageElement;
-              onNaturalSize(page.number, { width: img.naturalWidth, height: img.naturalHeight });
+              onNaturalSize(variant, page.number, { width: img.naturalWidth, height: img.naturalHeight });
             }}
           />
           {resampled && <LanczosCanvas bitmap={resampled} filter={filter} />}
@@ -337,9 +409,10 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
   const [overlay, setOverlay] = useState(false);
   const [panel, setPanel] = useState(false);
   const [scrollY, setScrollY] = useState(0);
-  /** 확대한 화면·높이 맞춤에서 ▲▼로 본 위치 (−PAN_STEPS 위 끝 … +PAN_STEPS 아래 끝) */
-  const [panStep, setPanStep] = useState(0);
-  const [naturalSizes, setNaturalSizes] = useState<Record<number, Size>>({});
+  /** 그림을 불러와 알게 된 쪽 크기 — "처리 갈래#쪽 번호" (여백을 잘라내면 크기가 달라진다) */
+  const [naturalSizes, setNaturalSizes] = useState<Record<string, Size>>({});
+  /** 이 책에서 숨긴 쪽 번호 (이 기기에만 저장, Android 1.0.8) */
+  const [hidden, setHidden] = useState<number[]>([]);
   /** 페이지 넘김의 책 끝 화면 */
   const [atEnd, setAtEnd] = useState(false);
   const [nextBook, setNextBook] = useState<NextBook>(undefined);
@@ -360,6 +433,13 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
   const [transition, setTransition] = useState<SpreadTransition | null>(null);
   const exiting = useRef(false);
   const root = useRef<HTMLDivElement>(null);
+
+  const recordSize = (variant: string, number: number, size: Size) => {
+    const id = `${variant}#${number}`;
+    setNaturalSizes((previous) =>
+      previous[id]?.width === size.width && previous[id]?.height === size.height ? previous : { ...previous, [id]: size },
+    );
+  };
 
   /** 책을 읽는다. 다음 권으로 넘어갈 때는 지금 화면을 둔 채 바꾼다(로딩 화면 없이). */
   const load = (id: string, startAt: 'progress' | 'last' = 'progress') => {
@@ -383,12 +463,17 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
           return;
         }
         const progress = loaded.book.readProgress;
+        // 숨긴 쪽은 건너뛴다 — 쪽 번호는 원래 번호 그대로
+        const hiddenPages = loadHiddenPages(id);
+        const shown = withoutHidden(loaded.pages, hiddenPages);
+        const lastNumber = shown.length ? shown[shown.length - 1].number : 1;
         // 이전 권으로 넘어가면 그 책의 마지막 쪽에서
-        const first = startAt === 'last' ? Math.max(1, loaded.pages.length) : startPage(progress);
+        const first = startAt === 'last' ? lastNumber : Math.min(lastNumber, startPage(progress));
         openAtEnd.current = startAt === 'last';
+        setHidden(hiddenPages);
         setSeriesSettings(loadSeriesSettings(loaded.book.seriesId));
         setAnchorPage(first);
-        setAnchor({ index: Math.min(loaded.pages.length - 1, first - 1), offset: 0 });
+        setAnchor({ index: pageIndexAtOrAfter(shown, first), offset: 0 });
         saver.current = new ProgressSaver(
           (page, completed) => trackWrite(requireSession().client.markReadProgress(id, page, completed)),
           progress ? { page: progress.page, completed: progress.completed } : null,
@@ -408,17 +493,37 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
 
   const settings = effectiveSettings(defaults, seriesSettings, data?.seriesDirection ?? null);
   const readerType = settings.readerType;
+  const isContinuous = readerType === 'CONTINUOUS';
   const direction = settings.readingDirection;
-  const pages = data?.pages ?? [];
-  const totalPages = pages.length;
-  const sizeOf = (page: PageInfo): Size =>
-    naturalSizes[page.number] ?? (page.width && page.height ? { width: page.width, height: page.height } : FALLBACK_SIZE);
+  const allPages = data?.pages ?? [];
+  /** 보이는 쪽 (숨긴 쪽을 뺀 것) — 펼침·세로 스크롤은 이것으로 만든다 */
+  const pages = useMemo(() => withoutHidden(allPages, hidden), [data, hidden]);
+  /** 책의 쪽 수 (정보 표시·완독 저장 — 숨긴 쪽도 센다) */
+  const totalPages = allPages.length;
+  const pageCount = pages.length;
+  /** 보이는 마지막 쪽 번호 — 여기까지 보면 완독 (마지막 쪽을 숨겼으면 그 앞 쪽) */
+  const lastPageNumber = pageCount ? pages[pageCount - 1].number : 1;
+
+  /** 페이지 넘김에서 여백 잘라내기·칸 간격 없애기를 켰을 때의 처리 설정 (펼침의 쪽 수에 따라 처리 크기가 다르다) */
+  const workFor = (pagesInSpread: number): PageWorkOptions | null => {
+    if (isContinuous || (settings.cropBorders === 'OFF' && !settings.removeGutters)) return null;
+    const box = workBox(settings.scaleType, pagesInSpread, SCREEN);
+    return { crop: settings.cropBorders, removeGutters: settings.removeGutters, boxWidth: box.width, boxHeight: box.height };
+  };
+  const variantOf = (work: PageWorkOptions | null): string => (work ? pageWorkKey('', work) : '');
+  const sizeOf = (page: PageInfo, pagesInSpread = 1): Size =>
+    naturalSizes[`${variantOf(workFor(pagesInSpread))}#${page.number}`] ??
+    (page.width && page.height ? { width: page.width, height: page.height } : FALLBACK_SIZE);
 
   // ---------- 페이지 넘김 ----------
-  const spreads = useMemo(() => buildSpreads(pages, settings.pageLayout, offset), [data, settings.pageLayout, offset]);
-  const index = spreadIndexOf(spreads, anchorPage);
+  const spreads = useMemo(() => buildSpreads(pages, settings.pageLayout, offset), [pages, settings.pageLayout, offset]);
+  const index = spreadIndexAtOrAfter(spreads, anchorPage);
   const spread = spreads[index] ?? [];
-  const pagedLayout = layoutSpread(spread.map(sizeOf), settings.scaleType, SCREEN);
+  const pagedLayout = layoutSpread(
+    spread.map((page) => sizeOf(page, spread.length)),
+    settings.scaleType,
+    SCREEN,
+  );
   // 확대(Android 0.2.5): 크기 맞춤 결과를 펼침째 키운다
   const zoomedLayout = zoomLayout(pagedLayout, settings.zoomPercent);
   /** 확대 전에도 화면 높이 안이면 가운데 기준 + ▲▼ 위아래 보기, 넘치면 위에서부터 스크롤 */
@@ -428,13 +533,13 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
   // ---------- 세로 스크롤 (맨 아래 책 끝 카드 자리까지) ----------
   const continuous: ContinuousLayout = useMemo(() => {
     const layout = layoutContinuous(
-      pages.map(sizeOf),
+      pages.map((page) => sizeOf(page)),
       SCREEN,
       settings.continuousPadding,
       settings.continuousPageSpacing,
     );
     return withCards(layout, START_CARD_HEIGHT, END_CARD_HEIGHT);
-  }, [data, naturalSizes, settings.continuousPadding, settings.continuousPageSpacing]);
+  }, [pages, naturalSizes, isContinuous, settings.continuousPadding, settings.continuousPageSpacing]);
   const continuousScroll = scrollOf(continuous, anchor, SCREEN.height);
   const visible = visiblePages(continuous, continuousScroll, SCREEN.height);
   const continuousAtBottom = continuousScroll >= continuous.total - SCREEN.height - 1;
@@ -447,19 +552,14 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
   const isPdf = !!data && isPdfBook(data.book);
   const keyOf = (page: number) => pageKey(bookId, page, isPdf);
 
-  const isContinuous = readerType === 'CONTINUOUS';
-  /** 화질 개선 Lanczos 창 크기와 쪽 그림 filter (선명하게·대비) */
+  /** 화질 개선 Lanczos 창 크기와 쪽 그림 filter (선명하게·대비·밝기) */
   const lanczosA = lanczosWindow(settings.imageEnhancement);
-  const pageFilter = imageFilter(settings.imageEnhancement, settings.contrastPercent);
+  const pageFilter = imageFilter(settings.imageEnhancement, settings.contrastPercent, settings.brightnessPercent);
   /** 정보 표시·진행 저장에 쓰는 "보이는 쪽 중 가장 큰 번호" */
   const shownHighest = isContinuous ? pages[visible.last]?.number ?? 1 : highestPage(spread);
 
-  // 펼침이 바뀌면 맨 위부터
-  useEffect(() => {
-    setScrollY(0);
-    setPanStep(0);
-  }, [index, spreads]);
-  useEffect(() => setPanStep(0), [settings.zoomPercent]);
+  // 펼침이 바뀌면 맨 위부터 (확대해서 ▲▼로 옮겨 둔 자리는 작품에 저장돼 그대로 — Android 1.0.11)
+  useEffect(() => setScrollY(0), [index, spreads]);
 
   // 미리 받기 (Android): 앞 4·뒤 2 펼침(세로 스크롤은 쪽), 가까운 것부터. 이웃이 아니게 된 미리 받기는 취소
   const neighbourKeys = (): string[] => {
@@ -487,6 +587,46 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
     keys.forEach((key) => cache.prefetch(key));
   }, [isContinuous, index, spreads, visible.first, visible.last, bookId, nextBook, previousBook]);
 
+  // 여백 잘라내기·칸 간격 없애기 미리 처리 (Android: 미리 받는 쪽도 같은 처리를 거친다): 다음·이전·그다음 펼침.
+  // 처리한 크기를 적어 두면 넘겼을 때 배치가 바로 맞고, 화면 전환 효과도 쓸 수 있다
+  useEffect(() => {
+    const cache = sessionStore.get()?.pages;
+    if (!cache || !data || data.epub || isContinuous) return undefined;
+    let alive = true;
+    [1, -1, 2].forEach((d) => {
+      const neighbour = spreads[index + d];
+      const work = neighbour ? workFor(neighbour.length) : null;
+      if (!neighbour || !work) return;
+      const variant = variantOf(work);
+      neighbour.forEach((page) => {
+        const key = keyOf(page.number);
+        const workKey = pageWorkKey(key, work);
+        const record = (result: PageWorkResult) => {
+          if (alive) recordSize(variant, page.number, { width: result.width, height: result.height });
+        };
+        const hit = cachedPageWork(workKey);
+        if (hit) {
+          record(hit);
+          return;
+        }
+        cache.acquire(key).then(
+          (url) => {
+            const done = () => cache.release(key);
+            if (!alive) return done();
+            pageWork(workKey, url, work, false).then((result) => {
+              record(result);
+              done();
+            }, done);
+          },
+          () => undefined,
+        );
+      });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [isContinuous, index, spreads, bookId, settings.scaleType, settings.cropBorders, settings.removeGutters]);
+
   // Lanczos 미리 처리 (Android: 미리 받는 쪽에서 미리 처리): 앞·뒤 펼침을 그릴 크기로 — 넘기면 바로 또렷하게
   useEffect(() => {
     const cache = sessionStore.get()?.pages;
@@ -495,10 +635,27 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
     [1, -1].forEach((d) => {
       const neighbour = spreads[index + d];
       if (!neighbour) return;
-      const layout = zoomLayout(layoutSpread(neighbour.map(sizeOf), settings.scaleType, SCREEN), settings.zoomPercent);
+      const work = workFor(neighbour.length);
+      const layout = zoomLayout(
+        layoutSpread(
+          neighbour.map((page) => sizeOf(page, neighbour.length)),
+          settings.scaleType,
+          SCREEN,
+        ),
+        settings.zoomPercent,
+      );
       neighbour.forEach((page, i) => {
         const key = keyOf(page.number);
         const size = layout.pages[i];
+        if (work) {
+          // 처리한 쪽에서 맞춘다 — 처리가 끝나 크기가 적히면 이 효과가 다시 돈다
+          const workKey = pageWorkKey(key, work);
+          const processed = cachedPageWork(workKey);
+          const resultKey = size ? lanczosKey(workKey, size.width, size.height, lanczosA) : null;
+          if (!processed || !size || !resultKey || cachedLanczos(resultKey)) return;
+          lanczosBitmap(resultKey, processed.bitmap, size.width, size.height, lanczosA, false).catch(() => undefined);
+          return;
+        }
         if (!size || cachedLanczos(lanczosKey(key, size.width, size.height, lanczosA))) return;
         cache.acquire(key).then(
           (url) => {
@@ -516,10 +673,21 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
     return () => {
       alive = false;
     };
-  }, [lanczosA, isContinuous, index, spreads, bookId, settings.scaleType, settings.zoomPercent]);
+  }, [
+    lanczosA,
+    isContinuous,
+    index,
+    spreads,
+    bookId,
+    settings.scaleType,
+    settings.zoomPercent,
+    settings.cropBorders,
+    settings.removeGutters,
+    naturalSizes,
+  ]);
 
   // 끝이 가까우면 다음 권을 찾고 첫 쪽들을 미리 받는다
-  const nearEnd = isContinuous ? visible.last >= totalPages - 1 - NEXT_BOOK_LOOKAHEAD : index >= spreads.length - 1 - NEXT_BOOK_LOOKAHEAD;
+  const nearEnd = isContinuous ? visible.last >= pageCount - 1 - NEXT_BOOK_LOOKAHEAD : index >= spreads.length - 1 - NEXT_BOOK_LOOKAHEAD;
   useEffect(() => {
     if (!data || data.epub || !nearEnd || nextBook !== undefined) return;
     setNextBook('loading');
@@ -569,6 +737,10 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
     if (!isContinuous || !data || !moved.current) return;
     saver.current?.schedule(shownHighest, visible.endReached);
   }, [isContinuous, shownHighest, visible.endReached]);
+  // 맨 아래 책 끝 카드까지 왔으면 완독 — 마지막 쪽에서 열어 스크롤하지 않고 왔어도 남긴다 (Android 1.0.7 showEndPage)
+  useEffect(() => {
+    if (isContinuous && data && !data.epub && continuousAtBottom) saver.current?.schedule(totalPages, true);
+  }, [isContinuous, continuousAtBottom, data]);
 
   // 정보·패널 포커스
   useEffect(() => {
@@ -584,6 +756,8 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
     if (!nextBook || nextBook === 'loading' || switching.current) return;
     switching.current = true;
     const target = nextBook;
+    // 끝까지 왔다 — 마지막 쪽에서 열어 쪽을 넘기지 않고 왔어도 완독을 남긴다 (Android 1.0.7)
+    saver.current?.schedule(totalPages, true);
     const done = saver.current?.flush() ?? Promise.resolve();
     void done.then(() => load(target.id));
   };
@@ -606,7 +780,7 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
     const next = applyViewOption(settings, key, value);
     if (key === 'opt-type' && next.readerType !== readerType) {
       // 종류를 바꿀 때 보던 쪽을 이어 간다
-      if (next.readerType === 'CONTINUOUS') setAnchor({ index: Math.max(0, (spread[0]?.number ?? 1) - 1), offset: 0 });
+      if (next.readerType === 'CONTINUOUS') setAnchor({ index: pageIndexAtOrAfter(pages, spread[0]?.number ?? 1), offset: 0 });
       else setAnchorPage(pages[visible.first]?.number ?? 1);
       setAtEnd(false);
     }
@@ -621,10 +795,66 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
     setSeriesSettings(null);
     const after: ReaderType = effectiveSettings(defaults, null, data.seriesDirection).readerType;
     if (after !== before) {
-      if (after === 'CONTINUOUS') setAnchor({ index: Math.max(0, (spread[0]?.number ?? 1) - 1), offset: 0 });
+      if (after === 'CONTINUOUS') setAnchor({ index: pageIndexAtOrAfter(pages, spread[0]?.number ?? 1), offset: 0 });
       else setAnchorPage(pages[visible.first]?.number ?? 1);
     }
   };
+
+  /** 확대했을 때 ▲▼: 위아래로 옮긴 자리를 이 작품에 저장한다 — 쪽을 넘겨도 그대로 (Android 1.0.11·1.0.38) */
+  const panBy = (sign: 1 | -1) => {
+    const next = Math.min(
+      MAX_ZOOM_PAN_PERMILLE,
+      Math.max(MIN_ZOOM_PAN_PERMILLE, settings.zoomPanPermille + sign * ZOOM_PAN_STEP),
+    );
+    if (!data || next === settings.zoomPanPermille) return;
+    const changed = { ...settings, zoomPanPermille: next };
+    saveSeriesSettings(data.book.seriesId, changed);
+    setSeriesSettings(changed);
+  };
+
+  // ---------- 쪽 숨기기 (Android 1.0.8): 광고·빈 쪽 등을 이 책에서 건너뛴다. 서버 파일은 그대로 ----------
+  /** 보기 설정에서 숨길 수 있는 지금 쪽 — 펼침의 쪽들, 세로 스크롤은 진행에 쓰는 쪽. 남은 쪽이 하나면 없다 */
+  const hidablePages =
+    pageCount <= 1
+      ? []
+      : (isContinuous ? [shownHighest] : spread.map((page) => page.number))
+          .filter((number) => hidden.indexOf(number) < 0)
+          .slice(0, pageCount - 1);
+  const hiddenCount = hidden.filter((number) => allPages.some((page) => page.number === number)).length;
+
+  const applyHidden = (next: number[], anchorNumber: number) => {
+    if (!data) return;
+    saveHiddenPages(data.book.id, next);
+    setHidden(next);
+    setAtEnd(false);
+    setAtStart(false);
+    setTransition(null);
+    // 숨긴 쪽 자리에서 다음 쪽을 보인다
+    setAnchorPage(anchorNumber);
+    if (isContinuous) setAnchor({ index: pageIndexAtOrAfter(withoutHidden(allPages, next), anchorNumber), offset: 0 });
+  };
+
+  /** 이 책에서 쪽을 숨긴다. 마지막 남은 쪽은 숨기지 않는다 */
+  const hidePage = (number: number) => {
+    if (hidden.indexOf(number) >= 0 || pageCount <= 1) return;
+    applyHidden(hidden.concat(number), number);
+  };
+
+  /** 이 책에서 숨긴 쪽을 모두 되돌린다 */
+  const restoreHiddenPages = () => {
+    if (!hidden.length) return;
+    applyHidden([], isContinuous ? pages[visible.first]?.number ?? 1 : spread[0]?.number ?? 1);
+  };
+
+  /** 숨기기·되돌리기 버튼을 누르면 그 버튼이 사라진다 — 포커스를 남은 버튼으로 */
+  const refocusPanelButtons = () =>
+    setTimeout(() => {
+      const element = root.current?.querySelector<HTMLElement>('.reader-panel');
+      if (!element) return;
+      const hide = element.querySelector<HTMLElement>('[data-key^="panel-hide-"]');
+      const restore = element.querySelector<HTMLElement>('[data-key="panel-restore"]');
+      focusKeyOrFirst(element, (hide ?? restore)?.dataset.key ?? 'opt-type');
+    }, 0);
 
   const goToSpread = (target: number) => {
     if (!data || target === index) return;
@@ -634,11 +864,14 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
     }
     if (target >= spreads.length) {
       setAtEnd(true); // 마지막 펼침 다음 = 책 끝 화면
+      // 끝까지 왔다 — 마지막 쪽에서 열어 쪽을 넘기지 않고 왔어도 완독을 남긴다 (Android 1.0.7)
+      saver.current?.schedule(totalPages, true);
       return;
     }
     const next = spreads[target];
     setAnchorPage(next[0].number);
-    saver.current?.schedule(highestPage(next), spreadContains(next, totalPages));
+    // 마지막 쪽을 숨겼으면 보이는 마지막 쪽이 완독
+    saver.current?.schedule(highestPage(next), spreadContains(next, lastPageNumber) || highestPage(next) >= lastPageNumber);
   };
 
   const goToAnchor = (next: Anchor) => {
@@ -651,13 +884,13 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
     setAtEnd(false);
     setAtStart(false);
     if (isContinuous) {
-      const target = Math.min(totalPages - 1, Math.max(0, anchor.index + delta));
+      const target = Math.min(pageCount - 1, Math.max(0, anchor.index + delta));
       goToAnchor({ index: target, offset: 0 });
       return;
     }
     if (!spread.length) return;
     const targetPage = Math.min(totalPages, Math.max(1, spread[0].number + delta));
-    goToSpread(spreadIndexOf(spreads, targetPage));
+    goToSpread(spreadIndexAtOrAfter(spreads, targetPage));
   };
 
   const scrollVertical = (sign: 1 | -1) => {
@@ -672,7 +905,7 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
       }
       goToAnchor(anchorOf(continuous, scrollByScreen(continuous, continuousScroll, SCREEN.height, sign)));
     } else if (pagedFixed) {
-      if (pagedMaxScroll > 0) setPanStep((step) => Math.min(PAN_STEPS, Math.max(-PAN_STEPS, step + sign)));
+      if (pagedMaxScroll > 0) panBy(sign);
     } else {
       setScrollY((y) => Math.min(pagedMaxScroll, Math.max(0, y + (sign * SCREEN.height) / 2)));
     }
@@ -698,11 +931,11 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
         goToAnchor({ index: 0, offset: 0 });
         return;
       }
-      if (sign > 0 && anchor.index >= totalPages - 1) {
+      if (sign > 0 && anchor.index >= pageCount - 1) {
         goToAnchor(anchorOf(continuous, maxScroll(continuous, SCREEN.height)));
         return;
       }
-      goToAnchor(stepPage(anchor, totalPages, sign));
+      goToAnchor(stepPage(anchor, pageCount, sign));
       return;
     }
     // 오른쪽 키 = +1. RTL이면 반대
@@ -728,7 +961,16 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
     lastFlip.current = now;
     const incoming = spreads[target];
     const cache = sessionStore.get()?.pages;
-    const ready = !!incoming && !!cache && incoming.every((page) => cache.has(keyOf(page.number)));
+    // 처리(여백 잘라내기·칸 간격 없애기)까지 끝난 쪽이어야 바로 그릴 수 있다
+    const incomingWork = incoming ? workFor(incoming.length) : null;
+    const ready =
+      !!incoming &&
+      !!cache &&
+      incoming.every(
+        (page) =>
+          cache.has(keyOf(page.number)) &&
+          (!incomingWork || !!cachedPageWork(pageWorkKey(keyOf(page.number), incomingWork))),
+      );
     const kind = chooseTransition(settings.pageTransition, step, rapid, ready);
     if (kind === 'OFF' || !data) {
       setTransition(null);
@@ -742,7 +984,7 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
         outgoing: {
           pages: spread,
           layout: zoomedLayout,
-          position: spreadPosition(pagedLayout, zoomedLayout, SCREEN, panStep, scrollY),
+          position: spreadPosition(pagedLayout, zoomedLayout, SCREEN, settings.zoomPanPermille, scrollY),
         },
       });
     }
@@ -797,11 +1039,28 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
         case 'enter':
           if (focusedKey === 'panel-close') {
             if (key === 'enter') setPanel(false);
+            else move(key);
+          } else if (focusedKey && focusedKey.indexOf('panel-hide-') === 0) {
+            if (key === 'enter') {
+              hidePage(Number(focusedKey.slice('panel-hide-'.length)));
+              refocusPanelButtons();
+            } else {
+              move(key); // 버튼은 한 줄에 나란히 있다
+            }
+          } else if (focusedKey === 'panel-restore') {
+            if (key === 'enter') {
+              restoreHiddenPages();
+              refocusPanelButtons();
+            } else {
+              move(key);
+            }
           } else if (focusedKey === 'panel-reset') {
             if (key === 'enter') {
               resetSeries();
               const element = root.current?.querySelector<HTMLElement>('.reader-panel');
               if (element) focusKeyOrFirst(element, 'opt-type');
+            } else {
+              move(key);
             }
           } else {
             cycle(focusedKey, key === 'left' ? -1 : 1);
@@ -908,12 +1167,7 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
     );
   }
 
-  const onNaturalSize = (number: number, size: Size) =>
-    setNaturalSizes((previous) =>
-      previous[number]?.width === size.width && previous[number]?.height === size.height
-        ? previous
-        : { ...previous, [number]: size },
-    );
+  const onNaturalSize = recordSize;
   const bookTitle = bookDisplayTitle(data.book);
   const rtlReading = direction === 'RIGHT_TO_LEFT';
 
@@ -939,6 +1193,8 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
               height={placement.height}
               lanczos={lanczosA}
               filter={pageFilter}
+              work={null}
+              variant=""
               style={{
                 position: 'absolute',
                 top: px(placement.top),
@@ -971,6 +1227,7 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
     const renderSpread = (shown: PageInfo[], layout: SpreadLayout, position: { left: number; top: number }) => {
       const shownPages = rtl ? shown.slice().reverse() : shown;
       const shownSizes = rtl ? layout.pages.slice().reverse() : layout.pages;
+      const work = workFor(shown.length);
       return (
         <div class="reader-spread" style={{ transform: `translate(${px(position.left)}, ${px(position.top)})` }}>
           {shownPages.map((page, i) => (
@@ -983,6 +1240,8 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
               height={shownSizes[i]?.height ?? 0}
               lanczos={lanczosA}
               filter={pageFilter}
+              work={work}
+              variant={variantOf(work)}
               style={{ width: px(shownSizes[i]?.width ?? 0), height: px(shownSizes[i]?.height ?? 0) }}
               onNaturalSize={onNaturalSize}
             />
@@ -1008,7 +1267,11 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
           </div>
         )}
         <div key={layerKey(spread)} class={`reader-layer${animation(true)}`}>
-          {renderSpread(spread, zoomedLayout, spreadPosition(pagedLayout, zoomedLayout, SCREEN, panStep, scrollY))}
+          {renderSpread(
+            spread,
+            zoomedLayout,
+            spreadPosition(pagedLayout, zoomedLayout, SCREEN, settings.zoomPanPermille, scrollY),
+          )}
         </div>
       </div>
     );
@@ -1050,7 +1313,33 @@ export function ReaderScreen({ entry, active }: { entry: RouteEntry; active: boo
               {seriesSettings ? t.readerSettingsSeriesCustom : t.readerSettingsSeriesDefault}
             </div>
             <ViewRows options={options} onCycle={(key, delta) => cycle(key, delta)} />
+            {/* 버튼은 한 묶음으로 — 넘치면 다음 줄로. 쪽 숨기기는 이 책에서만, 이 기기에만 (Android 1.0.8) */}
             <div class="panel-buttons">
+              {hidablePages.map((number) => (
+                <Button
+                  key={`hide-${number}`}
+                  focusKey={`panel-hide-${number}`}
+                  class="panel-close"
+                  onClick={() => {
+                    hidePage(number);
+                    refocusPanelButtons();
+                  }}
+                >
+                  {fmt(t.readerHidePage, number)}
+                </Button>
+              ))}
+              {hiddenCount > 0 && (
+                <Button
+                  focusKey="panel-restore"
+                  class="panel-close"
+                  onClick={() => {
+                    restoreHiddenPages();
+                    refocusPanelButtons();
+                  }}
+                >
+                  {fmt(t.readerRestoreHiddenPages, hiddenCount)}
+                </Button>
+              )}
               {seriesSettings && (
                 <Button focusKey="panel-reset" class="panel-close" onClick={resetSeries}>
                   {t.readerSettingsReset}

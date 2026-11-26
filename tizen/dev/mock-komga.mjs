@@ -5,6 +5,7 @@
 import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, normalize } from 'node:path';
+import { crc32, deflateSync } from 'node:zlib';
 
 const port = Number(process.argv[2] ?? 8790);
 const root = 'dist';
@@ -91,6 +92,70 @@ for (const book of books.filter((b) => b.seriesId === 'S8')) book.media = { page
   book.readDate = Date.now() - 20_000_000;
   book.readProgress = { page: 2, completed: false, readDate: new Date(book.readDate).toISOString() };
 }
+// 한 권을 끝까지 읽은 시리즈 (S6, Android 1.0.47): 1권 완독 → 홈 "읽는 중"에 다음 권(02)으로 남는다. 줄의 맨 뒤
+{
+  const book = books.find((b) => b.id === 'S6B1');
+  book.readDate = Date.now() - 30_000_000;
+  book.readProgress = { page: PAGES, completed: true, readDate: new Date(book.readDate).toISOString() };
+}
+
+// 칸 만화 시리즈 (S9): 쪽마다 흰 여백 + 칸 셋(검은 테두리, 칸 사이 흰 여백) + 아래 여백의 쪽 번호 — PNG 그림.
+// 여백 잘라내기·칸 간격 없애기(Android 1.0.12~1.0.45) 시험용
+const PANEL_SERIES = 'S9';
+{
+  // 1권을 읽는 중 (읽는 중 줄의 맨 뒤)
+  const book = books.find((b) => b.id === 'S9B1');
+  book.readDate = Date.now() - 40_000_000;
+  book.readProgress = { page: 1, completed: false, readDate: new Date(book.readDate).toISOString() };
+}
+const pngChunk = (type, data) => {
+  const body = Buffer.concat([Buffer.from(type, 'latin1'), data]);
+  const out = Buffer.alloc(8 + data.length + 4);
+  out.writeUInt32BE(data.length, 0);
+  body.copy(out, 4);
+  out.writeUInt32BE(crc32(body), 8 + data.length);
+  return out;
+};
+/** 회색조 PNG (필터 없음) */
+function grayPng(width, height, gray) {
+  const raw = Buffer.alloc((width + 1) * height);
+  for (let y = 0; y < height; y++) gray.copy(raw, y * (width + 1) + 1, y * width, (y + 1) * width);
+  const head = Buffer.alloc(13);
+  head.writeUInt32BE(width, 0);
+  head.writeUInt32BE(height, 4);
+  head[8] = 8; // 비트 깊이
+  head[9] = 0; // 회색조
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    pngChunk('IHDR', head),
+    pngChunk('IDAT', deflateSync(raw)),
+    pngChunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+const panelPages = new Map();
+/** 800×1200: 여백(좌우 50, 위 60, 아래 90) 안에 칸 셋, 칸 사이 40px, 아래 여백 가운데에 쪽 번호 자리 */
+function panelPage(n) {
+  if (panelPages.has(n)) return panelPages.get(n);
+  const width = 800;
+  const height = 1200;
+  const gray = Buffer.alloc(width * height, 255);
+  const fill = (x0, y0, x1, y1, value) => {
+    for (let y = y0; y < y1; y++) gray.fill(value, y * width + x0, y * width + x1);
+  };
+  const tone = 120 + ((n * 23) % 80);
+  [[60, 380], [420, 760], [800, 1110]].forEach(([top, bottom], k) => {
+    fill(50, top, 750, bottom, 0); // 칸 테두리 (2px — 굵은 검은 줄은 검은 틈으로 본다)
+    fill(52, top + 2, 748, bottom - 2, tone); // 칸 그림 (회색)
+    // 칸 안 그림: 어두운 네모들
+    for (let i = 0; i < 6; i++) fill(90 + i * 105, top + 60 + ((i + k) % 3) * 40, 150 + i * 105, bottom - 70, 40);
+  });
+  // 칸 밖 쪽 번호 (작은 글자 덩어리)
+  for (let i = 0; i < 3; i++) fill(384 + i * 12, 1150, 392 + i * 12, 1164, 0);
+  const image = grayPng(width, height, gray);
+  panelPages.set(n, image);
+  return image;
+}
+
 const fixtureJpeg = readFileSync(new URL('./fixtures/pdf-page.jpg', import.meta.url));
 /** JPEG 하나를 쪽 전체에 놓은 한 쪽 PDF (Komga raw 쪽과 같은 모양) */
 function pdfPage() {
@@ -194,6 +259,9 @@ async function api(req, res, path, url) {
     if (status === 'IN_PROGRESS') {
       list = list.filter((b) => b.readProgress && !b.readProgress.completed);
       list.sort((a, b) => b.readDate - a.readDate);
+    } else if (status === 'READ') {
+      list = list.filter((b) => b.readProgress && b.readProgress.completed);
+      list.sort((a, b) => b.readDate - a.readDate);
     } else {
       list.sort((a, b) => a.number - b.number);
     }
@@ -272,6 +340,12 @@ async function api(req, res, path, url) {
     return svg(res, 300, 450, m[1], (m[1].length * 53) % 360);
   }
   if ((m = path.match(/^api\/v1\/books\/([^/]+)\/pages$/))) {
+    if (m[1].startsWith(`${PANEL_SERIES}B`)) {
+      return json(
+        res,
+        Array.from({ length: PAGES }, (_, i) => ({ number: i + 1, mediaType: 'image/png', width: 800, height: 1200 })),
+      );
+    }
     return json(
       res,
       Array.from({ length: PAGES }, (_, i) => ({ number: i + 1, mediaType: 'image/svg+xml', ...pageSize(i + 1) })),
@@ -279,6 +353,10 @@ async function api(req, res, path, url) {
   }
   if ((m = path.match(/^api\/v1\/books\/([^/]+)\/pages\/(\d+)$/))) {
     const n = Number(m[2]);
+    if (m[1].startsWith(`${PANEL_SERIES}B`)) {
+      res.writeHead(200, { 'Content-Type': 'image/png' });
+      return res.end(panelPage(n));
+    }
     const { width, height } = pageSize(n);
     return svg(res, width, height, `${m[1]} p${n}`, (n * 29) % 360);
   }

@@ -106,18 +106,25 @@ async function decode(url: string): Promise<ImageBitmap> {
   return createImageBitmap(blob);
 }
 
-async function process(url: string, width: number, height: number, a: number): Promise<ImageBitmap> {
+/** 원본: 받은 쪽의 object URL, 또는 이미 처리한 쪽(여백 잘라내기·칸 간격 없애기 결과 — 닫지 않는다) */
+export type LanczosSource = string | ImageBitmap;
+
+async function process(from: LanczosSource, width: number, height: number, a: number): Promise<ImageBitmap> {
   const started = Date.now();
-  const source = await decode(url);
-  if (Math.abs(source.width - width) <= SAME_SIZE_PX && Math.abs(source.height - height) <= SAME_SIZE_PX) return source;
+  const owned = typeof from === 'string';
+  const source = typeof from === 'string' ? await decode(from) : from;
+  // 처리한 쪽은 캐시의 것이라 그대로 돌려주지 않는다 (캐시가 닫으면 못 그린다) — 같은 크기면 복사한다
+  if (Math.abs(source.width - width) <= SAME_SIZE_PX && Math.abs(source.height - height) <= SAME_SIZE_PX) {
+    return owned ? source : createImageBitmap(source);
+  }
   const canvas = document.createElement('canvas');
   canvas.width = source.width;
   canvas.height = source.height;
   const context = canvas.getContext('2d');
-  if (!context) return source;
+  if (!context) return owned ? source : createImageBitmap(source);
   context.drawImage(source, 0, 0);
   const pixels = context.getImageData(0, 0, source.width, source.height);
-  source.close();
+  if (owned) source.close();
   canvas.width = 0; // 메모리 바로 놓기
   const out = await resample(pixels, width, height, a);
   const bitmap = await createImageBitmap(new ImageData(out as Uint8ClampedArray<ArrayBuffer>, width, height));
@@ -172,12 +179,12 @@ export function cachedLanczos(key: string): ImageBitmap | null {
 }
 
 /**
- * 쪽(object URL)을 width×height로 Lanczos(a) 처리한 ImageBitmap. 같은 요청은 한 번만.
+ * 쪽(object URL 또는 처리한 쪽)을 width×height로 Lanczos(a) 처리한 ImageBitmap. 같은 요청은 한 번만.
  * wanted = 지금 화면에 보일 쪽 (미리 처리보다 먼저).
  */
 export function lanczosBitmap(
   key: string,
-  url: string,
+  url: LanczosSource,
   width: number,
   height: number,
   a: number,

@@ -153,8 +153,10 @@ try {
   await expectFocus('패널: 화면 전환 아래 확대', 'opt-zoom');
   await key('ArrowLeft');
   await expectText('확대: 100%에서 ◀는 그대로', '[data-key="opt-zoom"] .view-row-value', /^‹100%›$/);
-  await key('ArrowRight', 25);
-  await expectText('확대: ▶ 25번 → 120%에서 멈춤', '[data-key="opt-zoom"] .view-row-value', /^‹120%›$/);
+  await key('ArrowRight', 55);
+  await expectText('확대: ▶ 55번 → 150%에서 멈춤 (Android 1.0.21)', '[data-key="opt-zoom"] .view-row-value', /^‹150%›$/);
+  await key('ArrowLeft', 30);
+  await expectText('확대: ◀ 30번 → 120%', '[data-key="opt-zoom"] .view-row-value', /^‹120%›$/);
   await key('Escape');
   await key('Escape');
   await page.waitForTimeout(300);
@@ -165,7 +167,9 @@ try {
   const spreadTop = () =>
     page.evaluate(() => Math.round(document.querySelector('.reader-spread').getBoundingClientRect().top));
   results.push(`${(await spreadTop()) === -108 ? 'PASS' : 'FAIL'} 확대: 가운데 기준 (위 -108)`);
-  await key('ArrowDown', 3);
+  await key('ArrowDown', 2);
+  results.push(`${(await spreadTop()) === -135 ? 'PASS' : 'FAIL'} 확대: ▼ 한 번에 넘치는 높이의 1/16 (두 번 = 위 -135, Android 1.0.38): ${await spreadTop()}`);
+  await key('ArrowDown', 8);
   results.push(`${(await spreadTop()) === -216 ? 'PASS' : 'FAIL'} 확대: ▼로 아래 끝까지 (위 -216, 더 안 내려감)`);
   await shot('reader-zoom-120-bottom');
   const layers = () =>
@@ -176,7 +180,7 @@ try {
   await page.waitForTimeout(400);
   const settled = await layers();
   results.push(`${settled.length === 1 && settled[0] === '-' ? 'PASS' : 'FAIL'} 밀기 끝나면 한 장만: ${settled.join(',')}`);
-  results.push(`${(await spreadTop()) === -108 ? 'PASS' : 'FAIL'} 확대: 펼침이 바뀌면 다시 가운데`);
+  results.push(`${(await spreadTop()) === -216 ? 'PASS' : 'FAIL'} 확대: 쪽을 넘겨도 옮겨 둔 자리 그대로 (Android 1.0.11): ${await spreadTop()}`);
   await key('ArrowLeft');
   const backward = await layers();
   // 바로 앞 넘김에서 0.4초 지났으니 연타 아님 → 이전 펼침은 왼쪽에서
@@ -328,15 +332,21 @@ try {
   await key('Escape');
   await key('Escape');
   await page.waitForTimeout(1200);
-  results.push(`${!patches.some((p) => p.includes('S5B1')) ? 'PASS' : 'FAIL'} 이전 권을 열어 보기만 하면 그 책 진행은 그대로`);
+  results.push(`${patches.some((p) => /S5B1 page=24 completed=true/.test(p)) ? 'PASS' : 'FAIL'} 이전 권 끝 카드에서 다음 권으로 → 이전 권 완독 저장 (Android 1.0.7)`);
   await expectFocus('경계 시험 뒤 돌아오면 연 책', 'reading-book-S5B2');
   await page.waitForTimeout(1500);
 
-  // 5-3. 홈 줄 (Android T9): 읽는 중 아래에 다음 권·최근 추가 책·최근 추가/업데이트 시리즈
+  // 5-3. 홈 줄 (Android T9, 1.0.34부터 "다음 권" 줄 없음): 읽는 중 아래에 최근 추가 책·최근 추가/업데이트 시리즈
   const rows = await page.evaluate(() => Array.from(document.querySelectorAll('.home .row-title')).map((el) => el.textContent));
-  results.push(`${rows.join('|') === '읽는 중|다음 권|최근 추가된 책|최근 추가된 시리즈|최근 업데이트된 시리즈|라이브러리' ? 'PASS' : 'FAIL'} 홈 줄 순서: ${rows.join(' | ')}`);
+  results.push(`${rows.join('|') === '읽는 중|최근 추가된 책|최근 추가된 시리즈|최근 업데이트된 시리즈|라이브러리' ? 'PASS' : 'FAIL'} 홈 줄 순서 (다음 권 줄 없음): ${rows.join(' | ')}`);
+  // 한 권을 끝까지 읽은 시리즈(S6: 1권 완독)는 다음 권(02)으로 읽는 중에 남는다 (Android 1.0.47)
+  const finished = await page.evaluate(() => ({
+    next: !!document.querySelector('[data-key="reading-book-S6B2"]'),
+    read: !!document.querySelector('[data-key="reading-book-S6B1"]'),
+  }));
+  results.push(`${finished.next && !finished.read ? 'PASS' : 'FAIL'} 끝까지 읽은 시리즈는 다음 권으로 읽는 중에 남음`);
   await key('ArrowDown');
-  await expectFocus('아래 → 다음 권 줄', (k) => k?.startsWith('ondeck-book-'));
+  await expectFocus('아래 → 최근 추가된 책 줄', (k) => k?.startsWith('latest-book-'));
   await shot('home-rows');
 
   // 5-4. 검색 (Android T8): 위로 올라가 검색 버튼 → 입력 → 400ms 뒤 결과
@@ -647,14 +657,14 @@ try {
   // 대비·Lanczos (Android 1.0.1~1.0.2): PDF 쪽은 JPEG라 Lanczos로 다시 맞춰 canvas에 그린다 (가짜 서버 일반 쪽은 SVG)
   await key('Enter');
   await key('Enter');
-  await key('ArrowDown', 7);
-  await expectFocus('패널: 확대 아래 대비', 'opt-contrast');
+  await key('ArrowDown', 9);
+  await expectFocus('패널: 확대·여백 잘라내기·칸 간격 아래 대비', 'opt-contrast');
   await key('ArrowLeft', 15);
   await expectText('대비: 50%에서 멈춤', '[data-key="opt-contrast"] .view-row-value', /^‹50%›$/);
   await key('ArrowRight', 16);
   await expectText('대비: 5%씩 → 130%', '[data-key="opt-contrast"] .view-row-value', /130%/);
-  await key('ArrowDown');
-  await expectFocus('패널: 화질 개선', 'opt-enhance');
+  await key('ArrowDown', 2);
+  await expectFocus('패널: 밝기 아래 화질 개선', 'opt-enhance');
   await key('ArrowRight', 3);
   await expectText('화질 개선 → Lanczos3', '[data-key="opt-enhance"] .view-row-value', /Lanczos3/);
   await key('Escape');
@@ -688,6 +698,123 @@ try {
   await key('Escape');
   await page.waitForTimeout(800);
 
+  // 12-2. 칸 만화 (S9): 정보 표시, 여백 잘라내기·칸 간격 없애기 (Android 1.0.12~1.0.45), 밝기, 쪽 숨기기
+  await page.evaluate(() => (document.querySelector('[data-key="reading-book-S9B1"]'))?.focus());
+  await expectFocus('칸 만화 책 카드', 'reading-book-S9B1');
+  await key('Enter');
+  await page.waitForTimeout(1200);
+  const pageBox = () =>
+    page.evaluate(() => {
+      const el = document.querySelector('.reader-layer:last-child .reader-page');
+      const r = el.getBoundingClientRect();
+      const canvas = el.querySelector('canvas.reader-image:not(.reader-canvas)');
+      return {
+        w: Math.round(r.width),
+        h: Math.round(r.height),
+        img: !!el.querySelector('img.reader-image'),
+        cw: canvas ? canvas.width : 0,
+        ch: canvas ? canvas.height : 0,
+        filter: canvas ? canvas.style.filter : '',
+      };
+    });
+  const plain = await pageBox();
+  results.push(`${plain.img && plain.w === 720 && plain.h === 1080 ? 'PASS' : 'FAIL'} 칸 만화: 처리 없이 보통 그림 720×1080 (${plain.w}×${plain.h})`);
+  await key('Enter'); // 정보
+  const dim = await page.evaluate(() =>
+    ['.reader-overlay', '.reader-overlay-bar'].map((s) => getComputedStyle(document.querySelector(s)).backgroundColor).join('|'),
+  );
+  results.push(`${dim === 'rgba(0, 0, 0, 0)|rgba(0, 0, 0, 0)' ? 'PASS' : 'FAIL'} 정보 표시는 화면을 어둡게 하지 않는다 (Android 1.0.46): ${dim}`);
+  await shot('overlay-no-dim');
+  await key('Enter'); // 보기 설정
+  await key('ArrowDown', 7);
+  await expectFocus('패널: 확대 아래 여백 잘라내기', 'opt-crop');
+  await key('ArrowLeft'); // 꺼짐 ← 상하좌우 (돈다)
+  await expectText('여백 잘라내기 → 상하좌우', '[data-key="opt-crop"] .view-row-value', /상하좌우/);
+  await key('ArrowDown');
+  await expectFocus('패널: 칸 간격 없애기', 'opt-gutters');
+  await expectText('칸 간격 없애기 이름 (실험적)', '[data-key="opt-gutters"] .view-row-label', /칸 간격 없애기 \(실험적\)/);
+  await key('ArrowRight');
+  await expectText('칸 간격 없애기 → 켜짐', '[data-key="opt-gutters"] .view-row-value', /켜짐/);
+  await key('ArrowDown', 2);
+  await expectFocus('패널: 대비 아래 밝기', 'opt-brightness');
+  await key('ArrowLeft', 4);
+  await expectText('밝기: 5%씩 → 80%', '[data-key="opt-brightness"] .view-row-value', /80%/);
+  await page.waitForTimeout(1500);
+  const worked = await pageBox();
+  // 800×1200 을 720×1080 으로 줄여 처리: 여백(좌우 45, 위 54, 아래 81)을 자르고 칸 사이(36×2)를 붙인다
+  results.push(
+    `${!worked.img && worked.cw > 600 && worked.cw < 660 && worked.ch > 820 && worked.ch < 900 ? 'PASS' : 'FAIL'} ` +
+      `여백 잘라내기 + 칸 간격 없애기: 처리한 쪽을 canvas 에 (${worked.cw}×${worked.ch})`,
+  );
+  results.push(`${worked.h === 1080 && worked.w > 720 ? 'PASS' : 'FAIL'} 잘라낸 만큼 화면에 더 크게: ${worked.w}×${worked.h}`);
+  results.push(`${/brightness\(0\.8\)/.test(worked.filter) ? 'PASS' : 'FAIL'} 밝기 80%: ${worked.filter}`);
+  const workMode = await page.evaluate(() => document.documentElement.getAttribute('data-pagework') ?? '');
+  results.push(`${workMode === 'worker' ? 'PASS' : 'FAIL'} 쪽 처리는 Web Worker로: ${workMode}`);
+  const panelFit = await page.evaluate(() => {
+    const panel = document.querySelector('.reader-panel').getBoundingClientRect();
+    const last = document.querySelector('.reader-panel .panel-buttons').getBoundingClientRect();
+    const backdrop = getComputedStyle(document.querySelector('.reader-panel-backdrop')).backgroundColor;
+    return { width: Math.round(panel.width), bottom: Math.round(last.bottom), backdrop };
+  });
+  results.push(
+    `${panelFit.width === 768 && panelFit.bottom <= 1080 && panelFit.backdrop === 'rgba(0, 0, 0, 0)' ? 'PASS' : 'FAIL'} ` +
+      `보기 설정: 화면 40%, 한 화면에 다 들어가고 책을 어둡게 덮지 않음 (폭 ${panelFit.width}, 끝 ${panelFit.bottom})`,
+  );
+  await shot('panel-crop-gutters');
+  // 쪽 숨기기 (Android 1.0.8): 이 책에서만, 이 기기에만
+  await key('ArrowDown', 2);
+  await expectFocus('패널: 화질 개선 아래 [1쪽 숨기기]', 'panel-hide-1');
+  await key('Enter');
+  await page.waitForTimeout(600);
+  await expectFocus('숨기면 다음 쪽의 [2쪽 숨기기]로', 'panel-hide-2');
+  await expectText('숨긴 쪽 되돌리기 버튼', '[data-key="panel-restore"]', /숨긴 쪽 되돌리기 \(1\)/);
+  const hiddenStore = await page.evaluate(() => localStorage.getItem('komgatv.reader.hiddenPages'));
+  results.push(`${hiddenStore === '{"S9B1":[1]}' ? 'PASS' : 'FAIL'} 숨긴 쪽은 이 기기에 저장: ${hiddenStore}`);
+  await key('Escape');
+  await expectText('1쪽을 숨기면 2쪽부터 (쪽 번호는 그대로)', '.reader-overlay-row:nth-child(2)', /^2 \/ 24/);
+  await key('Escape');
+  await page.waitForTimeout(1200);
+  // 넘기면 미리 처리해 둔 다음 쪽이 바로 — 화면 전환(밀기)도 그대로
+  await key('ArrowRight');
+  const workSlide = await page.evaluate(() => ({
+    layers: Array.from(document.querySelectorAll('.reader-layer')).map((el) => el.className),
+    drawn: !!document.querySelector('.reader-layer:last-child canvas.reader-image:not(.reader-canvas)'),
+  }));
+  results.push(
+    `${workSlide.drawn && workSlide.layers.some((c) => c.includes('slide-in-right')) ? 'PASS' : 'FAIL'} ` +
+      `미리 처리: 넘기자마자 처리한 쪽 + 밀기 (${workSlide.layers.join(',')})`,
+  );
+  await page.waitForTimeout(500);
+  await key('ArrowLeft');
+  await page.waitForTimeout(500);
+  await key('ArrowLeft'); // 2쪽이 첫 쪽 → 책 첫 화면
+  await page.waitForTimeout(400);
+  results.push(`${(await page.evaluate(() => !!document.querySelector('.end-view'))) ? 'PASS' : 'FAIL'} 숨긴 1쪽은 건너뛰고 책 첫 화면`);
+  await key('ArrowRight');
+  await page.waitForTimeout(400);
+  // 되돌리기
+  await key('Enter');
+  await key('Enter');
+  await key('ArrowDown', 12);
+  await expectFocus('패널 버튼 줄', 'panel-hide-2');
+  await key('ArrowRight');
+  await expectFocus('오른쪽 → [숨긴 쪽 되돌리기]', 'panel-restore');
+  await key('Enter');
+  await page.waitForTimeout(600);
+  results.push(
+    `${(await page.evaluate(() => !document.querySelector('[data-key="panel-restore"]') && localStorage.getItem('komgatv.reader.hiddenPages') === '{}')) ? 'PASS' : 'FAIL'} 숨긴 쪽 되돌리기 → 버튼 사라지고 저장도 지움`,
+  );
+  await expectFocus('되돌리면 [2쪽 숨기기]로', 'panel-hide-2');
+  await key('Escape');
+  await key('Escape');
+  await key('ArrowLeft');
+  await page.waitForTimeout(600);
+  await key('Enter');
+  await expectText('되돌리면 1쪽이 다시 보인다', '.reader-overlay-row:nth-child(2)', /^1 \/ 24/);
+  await key('Escape');
+  await key('Escape');
+  await page.waitForTimeout(1000);
+
   // 13. 표지 없는 EPUB → 제목을 적은 대체 표지 (Android 0.3.0)
   const epubCard = await page.evaluate(() => {
     const card = document.querySelector('[data-key="reading-book-S7B1"]');
@@ -718,7 +845,7 @@ try {
   results.push(`${patches.slice(beforeHide).some((p) => p === 'DELETE read-progress S8B2') ? 'PASS' : 'FAIL'} 빼기 → 서버 진행 지움: ${patches.slice(beforeHide).join(' | ')}`);
   const s8Cards = () =>
     page.evaluate(() => document.querySelectorAll('[data-key^="reading-book-S8"], [data-key^="ondeck-book-S8"]').length);
-  results.push(`${(await s8Cards()) === 0 ? 'PASS' : 'FAIL'} 빼면 그 시리즈가 읽는 중·다음 권에서 빠짐`);
+  results.push(`${(await s8Cards()) === 0 ? 'PASS' : 'FAIL'} 빼면 그 시리즈가 읽는 중에서 빠짐`);
   await expectFocus('뺀 뒤 포커스는 같은 줄 카드', (k) => k?.startsWith('reading-book-'));
   await shot('reading-after-hide');
   // 다시 켜도 빠져 있다 (가짜 서버의 다음 권에는 진행을 지운 S8B2가 나오지만 이 TV에서 숨김)

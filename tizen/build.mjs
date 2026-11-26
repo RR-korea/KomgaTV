@@ -22,6 +22,18 @@ const worker = await esbuild.build({
 });
 const workerSource = worker.outputFiles[0].text;
 
+// 쪽 그림 처리 Worker (여백 잘라내기·칸 간격 없애기)도 같은 식으로
+const pageWorker = await esbuild.build({
+  entryPoints: ['src/image/pageWorker.ts'],
+  bundle: true,
+  write: false,
+  format: 'iife',
+  target: 'chrome69',
+  minify: !serve,
+  legalComments: 'none',
+});
+const pageWorkerSource = pageWorker.outputFiles[0].text;
+
 const options = {
   entryPoints: { app: 'src/main.tsx' },
   outdir: 'dist',
@@ -34,7 +46,11 @@ const options = {
   minify: !serve,
   sourcemap: serve ? 'inline' : false,
   legalComments: 'none',
-  define: { APP_VERSION: JSON.stringify(version), LANCZOS_WORKER_SOURCE: JSON.stringify(workerSource) },
+  define: {
+    APP_VERSION: JSON.stringify(version),
+    LANCZOS_WORKER_SOURCE: JSON.stringify(workerSource),
+    PAGE_WORKER_SOURCE: JSON.stringify(pageWorkerSource),
+  },
   logLevel: 'info',
 };
 
