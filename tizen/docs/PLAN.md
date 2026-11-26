@@ -260,8 +260,10 @@ Android main `fcdd893`(1.0.47 / b62)까지의 **마지막 상태**를 옮겼다 
 
 #### Kotlin 대조 (알고리즘을 다시 옮길 때)
 1. 표본 만들기: 조사 쪽(`D:\Project\KomgaTV-gutters-data`)에서 고른 쪽을 화면 크기로 줄여 raw 로 쓴다 — 파일마다 너비·높이(int32 LE) + ARGB int32 LE.
+   `python -I dev/ref/sample.py D:/Project/KomgaTV-gutters-data <출력 폴더>` (240장, 약 700MB — 끝나면 지운다).
 2. Kotlin 쪽: Android main 을 별도 worktree 로 꺼내(저장소의 Android 파일은 건드리지 않는다) 테스트 폴더에 raw 를 읽어
    `findBorders`(네 모드)·`collapseGutters`·전체 순서의 결과(크기 + CRC32)를 한 줄씩 쓰는 JUnit 테스트를 임시로 두고 Gradle 로 돌린다.
+   테스트 파일은 `dev/ref/TizenRefTest.kt` (실행법은 그 파일 머리말).
 3. `TIZEN_REF_IN=<raw 폴더> TIZEN_REF_KOTLIN=<Kotlin 결과 표> npx vitest run test/pageWorkRef.test.ts` — 한 줄이라도 다르면 실패.
 
 ## Android와 다른 점
