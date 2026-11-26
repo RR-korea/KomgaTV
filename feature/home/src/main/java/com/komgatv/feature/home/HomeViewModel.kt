@@ -36,8 +36,7 @@ sealed interface HomeUiState {
     /**
      * 데이터 로딩 성공 (Komelia 홈과 같은 줄)
      *
-     * @property continueReading 읽는 중인 책 (IN_PROGRESS, 최근 읽은 순)
-     * @property onDeck 다음에 읽을 책 (읽던 시리즈의 다음 권)
+     * @property continueReading 읽는 중인 책 (IN_PROGRESS + 방금 다 읽은 시리즈의 다음 권, 최근 읽은 순)
      * @property latestBooks 최근 추가된 책
      * @property newSeries 최근 추가된 시리즈
      * @property updatedSeries 최근에 책이 더해진 시리즈
@@ -45,7 +44,6 @@ sealed interface HomeUiState {
      */
     data class Success(
         val continueReading: List<Book> = emptyList(),
-        val onDeck: List<Book> = emptyList(),
         val latestBooks: List<Book> = emptyList(),
         val newSeries: List<Series> = emptyList(),
         val updatedSeries: List<Series> = emptyList(),
@@ -81,7 +79,7 @@ class HomeViewModel @Inject constructor(
 
     init {
         loadHomeData()
-        // 리더를 나올 때의 저장이 돌아온 뒤에 끝나도 "읽는 중"·"다음 권" 줄을 맞춘다
+        // 리더를 나올 때의 저장이 돌아온 뒤에 끝나도 "읽는 중" 줄을 맞춘다
         viewModelScope.launch {
             progressEvents.updates.collect { refreshReadingRows() }
         }
@@ -100,17 +98,15 @@ class HomeViewModel @Inject constructor(
                 coroutineScope {
                     val libraries = async { libraryRepository.getLibraries().first() }
                     val continueReading = async { loadContinueReading() }
-                    val onDeck = async { optionalRow("다음 권") { bookRepository.getBooksOnDeck(ROW_SIZE) } }
                     val latestBooks = async { optionalRow("최근 추가된 책") { bookRepository.getLatestBooks(ROW_SIZE) } }
                     val newSeries = async { optionalRow("최근 추가된 시리즈") { seriesRepository.getNewSeries(ROW_SIZE) } }
                     val updatedSeries = async {
                         optionalRow("최근 업데이트된 시리즈") { seriesRepository.getUpdatedSeries(ROW_SIZE) }
                     }
 
-                    val reading = readingRows(continueReading.await(), onDeck.await())
+                    val reading = readingRows(continueReading.await())
                     _uiState.value = HomeUiState.Success(
                         continueReading = reading.continueReading,
-                        onDeck = reading.onDeck,
                         latestBooks = latestBooks.await(),
                         newSeries = newSeries.await(),
                         updatedSeries = updatedSeries.await(),
@@ -139,16 +135,15 @@ class HomeViewModel @Inject constructor(
     }
 
     /** "읽는 중에서 빼기"로 뺀 시리즈를 거른다. 뺀 뒤에 다시 읽은 시리즈는 다시 보이고 기록을 지운다 */
-    private suspend fun readingRows(continueReading: List<Book>, onDeck: List<Book>): ReadingRows {
-        val rows = filterReadingRows(continueReading, onDeck, homePreferences.hiddenReadingSeries.first())
+    private suspend fun readingRows(continueReading: List<Book>): ReadingRows {
+        val rows = filterReadingRows(continueReading, homePreferences.hiddenReadingSeries.first())
         homePreferences.unhideReadingSeries(rows.reactivated)
         return rows
     }
 
     /**
-     * 이 책의 시리즈를 "읽는 중"과 "다음 권"에서 뺀다.
+     * 이 책의 시리즈를 "읽는 중"에서 뺀다.
      * 읽던 책이면 서버의 읽기 진행도 지운다(다른 기기의 "읽는 중"에서도 빠진다).
-     * "다음 권"은 서버에서 지울 것이 없어 이 TV에서만 숨긴다 — 그 시리즈를 다시 읽으면 다시 보인다.
      */
     fun hideFromReading(book: Book) {
         viewModelScope.launch {
@@ -158,7 +153,6 @@ class HomeViewModel @Inject constructor(
             (_uiState.value as? HomeUiState.Success)?.let { state ->
                 _uiState.value = state.copy(
                     continueReading = state.continueReading.filter { it.seriesId != book.seriesId },
-                    onDeck = state.onDeck.filter { it.seriesId != book.seriesId },
                 )
             }
             val progress = book.readProgress
@@ -175,21 +169,26 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /** 읽는 중인 책 목록 로드 (IN_PROGRESS, 최근 읽은 순) */
-    private suspend fun loadContinueReading(): List<Book> {
-        return bookRepository.getBooksInProgress(page = 0, size = ROW_SIZE).first().books
+    /**
+     * 읽는 중인 책 목록 로드 (IN_PROGRESS + 한 권을 끝까지 읽은 시리즈의 다음 권, 최근 읽은 순).
+     * 끝까지 읽으면 그 책은 서버에서 "읽는 중"이 아니게 되므로 다음 권으로 줄에 남긴다 (사용자 11-21)
+     */
+    private suspend fun loadContinueReading(): List<Book> = coroutineScope {
+        val inProgress = async { bookRepository.getBooksInProgress(page = 0, size = ROW_SIZE).first().books }
+        val recentlyRead = async { bookRepository.getRecentlyReadBooks(size = ROW_SIZE) }
+        val onDeck = async { bookRepository.getBooksOnDeck(size = ROW_SIZE) }
+        mergeReadingRow(inProgress.await(), recentlyRead.await(), onDeck.await(), ROW_SIZE)
     }
 
-    /** 읽기 진행이 바뀌면 달라지는 줄("읽는 중", "다음 권")만 다시 읽는다 (내용이 보일 때만) */
+    /** 읽기 진행이 바뀌면 달라지는 줄("읽는 중")만 다시 읽는다 (내용이 보일 때만) */
     private suspend fun refreshReadingRows() {
         if (_uiState.value !is HomeUiState.Success) return
         try {
             coroutineScope {
                 val continueReading = async { loadContinueReading() }
-                val onDeck = async { optionalRow("다음 권") { bookRepository.getBooksOnDeck(ROW_SIZE) } }
-                val reading = readingRows(continueReading.await(), onDeck.await())
+                val reading = readingRows(continueReading.await())
                 (_uiState.value as? HomeUiState.Success)?.let {
-                    _uiState.value = it.copy(continueReading = reading.continueReading, onDeck = reading.onDeck)
+                    _uiState.value = it.copy(continueReading = reading.continueReading)
                 }
             }
         } catch (e: CancellationException) {

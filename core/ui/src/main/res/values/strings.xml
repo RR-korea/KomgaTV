@@ -32,11 +32,17 @@
     <string name="view_on">On</string>
     <string name="view_off">Off</string>
     <string name="view_zoom">Zoom</string>
+    <string name="view_remove_gutters">Remove panel gaps (experimental)</string>
+    <string name="view_crop_borders">Crop margins</string>
+    <string name="view_crop_top_bottom">Top &amp; bottom</string>
+    <string name="view_crop_left_right">Left &amp; right</string>
+    <string name="view_crop_all">All sides</string>
     <string name="view_transition">Page transition</string>
     <string name="view_transition_off">Off</string>
     <string name="view_transition_slide">Slide</string>
     <string name="view_transition_fade">Fade</string>
     <string name="view_contrast">Contrast</string>
+    <string name="view_brightness">Brightness</string>
     <string name="view_enhancement_lanczos2">Lanczos2 (fast)</string>
     <string name="view_enhancement_lanczos">Lanczos3</string>
     <string name="view_enhancement_lanczos4">Lanczos4 (best)</string>

@@ -32,11 +32,17 @@
     <string name="view_on">Attivo</string>
     <string name="view_off">Disattivo</string>
     <string name="view_zoom">Zoom</string>
+    <string name="view_remove_gutters">Rimuovi spazi vignette (sperimentale)</string>
+    <string name="view_crop_borders">Ritaglia i margini</string>
+    <string name="view_crop_top_bottom">Sopra e sotto</string>
+    <string name="view_crop_left_right">Sinistra e destra</string>
+    <string name="view_crop_all">Tutti i lati</string>
     <string name="view_transition">Transizione pagina</string>
     <string name="view_transition_off">Nessuna</string>
     <string name="view_transition_slide">Scorrimento</string>
     <string name="view_transition_fade">Dissolvenza</string>
     <string name="view_contrast">Contrasto</string>
+    <string name="view_brightness">Luminosità</string>
     <string name="view_enhancement_lanczos2">Lanczos2 (veloce)</string>
     <string name="view_enhancement_lanczos">Lanczos3</string>
     <string name="view_enhancement_lanczos4">Lanczos4 (migliore)</string>

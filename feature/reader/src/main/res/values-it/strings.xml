@@ -18,6 +18,8 @@
     <string name="reader_settings_series_default">Impostazioni predefinite dell\'app (Impostazioni server → Opzioni di lettura predefinite). Le modifiche fatte qui valgono solo per questa serie.</string>
     <string name="reader_settings_series_custom">Questa serie ha impostazioni proprie.</string>
     <string name="reader_settings_reset">Ripristina predefiniti dell\'app</string>
+    <string name="reader_hide_page">Nascondi pagina %1$d</string>
+    <string name="reader_restore_hidden_pages">Ripristina pagine nascoste (%1$d)</string>
     <string name="end_page_finished">Completato</string>
     <string name="end_page_next">Successivo</string>
     <string name="end_page_finding_next">Ricerca del libro successivo…</string>

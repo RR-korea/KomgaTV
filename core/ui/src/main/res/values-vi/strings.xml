@@ -32,11 +32,17 @@
     <string name="view_on">Bật</string>
     <string name="view_off">Tắt</string>
     <string name="view_zoom">Thu phóng</string>
+    <string name="view_remove_gutters">Bỏ khoảng cách khung (thử nghiệm)</string>
+    <string name="view_crop_borders">Cắt lề</string>
+    <string name="view_crop_top_bottom">Trên &amp; dưới</string>
+    <string name="view_crop_left_right">Trái &amp; phải</string>
+    <string name="view_crop_all">Mọi phía</string>
     <string name="view_transition">Chuyển trang</string>
     <string name="view_transition_off">Tắt</string>
     <string name="view_transition_slide">Trượt</string>
     <string name="view_transition_fade">Mờ dần</string>
     <string name="view_contrast">Độ tương phản</string>
+    <string name="view_brightness">Độ sáng</string>
     <string name="view_enhancement_lanczos2">Lanczos2 (nhanh)</string>
     <string name="view_enhancement_lanczos">Lanczos3</string>
     <string name="view_enhancement_lanczos4">Lanczos4 (tốt nhất)</string>

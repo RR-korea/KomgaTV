@@ -8,7 +8,6 @@
     <string name="home_book_completed">Gelesen</string>
     <string name="home_server_settings">Servereinstellungen</string>
     <string name="home_search">Suche</string>
-    <string name="home_on_deck">Als Nächstes</string>
     <string name="home_latest_books">Neue Bücher</string>
     <string name="home_new_series">Neue Serien</string>
     <string name="home_updated_series">Aktualisierte Serien</string>
@@ -22,7 +21,7 @@
     <string name="library_action_done_scan">Scan angefordert — der Server arbeitet jetzt daran</string>
     <string name="library_action_done_trash">Papierkorb geleert</string>
     <string name="library_action_failed">Nicht möglich (nur für Admins oder Serverfehler)</string>
-    <string name="reading_action_hint">Löscht den Lesefortschritt auf dem Server (auf allen Geräten) und blendet diese Serie in „Weiterlesen“ und „Als Nächstes“ aus. Sie erscheint wieder, sobald du sie erneut liest.</string>
+    <string name="reading_action_hint">Löscht den Lesefortschritt auf dem Server (auf allen Geräten) und blendet diese Serie in „Weiterlesen“ aus. Sie erscheint wieder, sobald du sie erneut liest.</string>
     <string name="reading_action_question">Diese Serie aus „Weiterlesen“ entfernen?</string>
     <string name="reading_action_keep">Behalten</string>
     <string name="reading_action_remove">Entfernen</string>

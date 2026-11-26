@@ -22,6 +22,7 @@ kotlinx-datetime = "0.8.0"
 
 # 이미지
 coil = "3.6.3"
+# 자동 채색 모델 실행 (MIT)
 
 # DI
 hilt = "2.60.1"

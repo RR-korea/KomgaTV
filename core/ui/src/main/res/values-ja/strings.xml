@@ -32,11 +32,17 @@
     <string name="view_on">オン</string>
     <string name="view_off">オフ</string>
     <string name="view_zoom">ズーム</string>
+    <string name="view_remove_gutters">コマ間を詰める（実験的）</string>
+    <string name="view_crop_borders">余白をトリミング</string>
+    <string name="view_crop_top_bottom">上下</string>
+    <string name="view_crop_left_right">左右</string>
+    <string name="view_crop_all">上下左右</string>
     <string name="view_transition">ページ切り替え効果</string>
     <string name="view_transition_off">オフ</string>
     <string name="view_transition_slide">スライド</string>
     <string name="view_transition_fade">フェード</string>
     <string name="view_contrast">コントラスト</string>
+    <string name="view_brightness">明るさ</string>
     <string name="view_enhancement_lanczos2">Lanczos2 (高速)</string>
     <string name="view_enhancement_lanczos">Lanczos3</string>
     <string name="view_enhancement_lanczos4">Lanczos4 (高画質)</string>

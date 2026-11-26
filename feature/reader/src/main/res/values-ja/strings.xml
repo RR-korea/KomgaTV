@@ -18,6 +18,8 @@
     <string name="reader_settings_series_default">アプリの既定値を使用中です (サーバー設定 → 表示の既定値)。ここでの変更はこのシリーズにのみ適用されます。</string>
     <string name="reader_settings_series_custom">このシリーズ専用の設定を使用中です。</string>
     <string name="reader_settings_reset">アプリの既定値に戻す</string>
+    <string name="reader_hide_page">%1$dページを隠す</string>
+    <string name="reader_restore_hidden_pages">隠したページを戻す (%1$d)</string>
     <string name="end_page_finished">読了</string>
     <string name="end_page_next">次の巻</string>
     <string name="end_page_finding_next">次の巻を探しています…</string>

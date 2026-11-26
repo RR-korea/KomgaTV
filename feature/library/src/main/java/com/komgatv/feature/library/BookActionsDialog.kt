@@ -25,6 +25,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.displayName
+import com.komgatv.core.ui.components.ignoreHeldSelectKey
 
 /**
  * 책 메뉴 (책 카드에서 OK를 길게) — 읽음으로 표시, 읽지 않음으로 표시, 분석. Back으로 닫는다.
@@ -43,6 +44,7 @@ internal fun BookActionsDialog(
     Dialog(onDismissRequest = onDismiss) {
         Box(
             modifier = Modifier
+                .ignoreHeldSelectKey()
                 .width(420.dp)
                 .background(Color(0xFF1E1E1E), RoundedCornerShape(12.dp))
                 .padding(24.dp),

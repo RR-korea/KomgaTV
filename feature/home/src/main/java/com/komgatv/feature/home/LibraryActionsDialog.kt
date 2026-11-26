@@ -26,6 +26,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.tv.material3.Button
@@ -35,6 +36,7 @@ import com.komgatv.core.model.Book
 import com.komgatv.core.model.Library
 import com.komgatv.core.model.cardTitle
 import kotlinx.coroutines.delay
+import com.komgatv.core.ui.components.ignoreHeldSelectKey
 
 /**
  * 라이브러리 메뉴 (라이브러리 카드에서 OK를 길게) — 스캔, 휴지통 비우기 (둘 다 관리자). Back으로 닫는다.
@@ -52,6 +54,7 @@ internal fun LibraryActionsDialog(
     Dialog(onDismissRequest = onDismiss) {
         Box(
             modifier = Modifier
+                .ignoreHeldSelectKey()
                 .ignoreHeldKey()
                 .width(440.dp)
                 .background(Color(0xFF1E1E1E), RoundedCornerShape(12.dp))
@@ -78,7 +81,7 @@ internal fun LibraryActionsDialog(
 }
 
 /**
- * "읽는 중"·"다음 권" 책 메뉴 (OK를 길게) — 이 시리즈를 두 줄에서 뺄지 묻는다.
+ * "읽는 중" 책 메뉴 (OK를 길게) — 이 시리즈를 "읽는 중"에서 뺄지 묻는다.
  * [유지]에 먼저 포커스(실수로 지우지 않게), [제거]를 눌러야 뺀다. Back도 유지.
  */
 @Composable
@@ -93,6 +96,7 @@ internal fun ReadingActionsDialog(
     Dialog(onDismissRequest = onDismiss) {
         Box(
             modifier = Modifier
+                .ignoreHeldSelectKey()
                 .ignoreHeldKey()
                 .width(480.dp)
                 .background(Color(0xFF1E1E1E), RoundedCornerShape(12.dp))
@@ -109,11 +113,11 @@ internal fun ReadingActionsDialog(
                     Button(
                         onClick = onDismiss,
                         modifier = Modifier.weight(1f).focusRequester(firstFocus),
-                    ) { Text(stringResource(R.string.reading_action_keep)) }
+                    ) { Text(stringResource(R.string.reading_action_keep), Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }
                     Button(
                         onClick = { onHide(); onDismiss() },
                         modifier = Modifier.weight(1f),
-                    ) { Text(stringResource(R.string.reading_action_remove)) }
+                    ) { Text(stringResource(R.string.reading_action_remove), Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }
                 }
                 Text(
                     text = stringResource(R.string.reading_action_hint),

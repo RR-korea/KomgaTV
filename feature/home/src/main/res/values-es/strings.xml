@@ -8,7 +8,6 @@
     <string name="home_book_completed">Leído</string>
     <string name="home_server_settings">Ajustes del servidor</string>
     <string name="home_search">Buscar</string>
-    <string name="home_on_deck">A continuación</string>
     <string name="home_latest_books">Libros recientes</string>
     <string name="home_new_series">Series nuevas</string>
     <string name="home_updated_series">Series actualizadas</string>
@@ -23,7 +22,7 @@
     <string name="library_action_done_scan">Escaneo solicitado — el servidor ya está en ello</string>
     <string name="library_action_done_trash">Papelera vaciada</string>
     <string name="library_action_failed">No se pudo hacer (solo admin o error del servidor)</string>
-    <string name="reading_action_hint">Borra el progreso de lectura en el servidor (en todos los dispositivos) y oculta esta serie de «Seguir leyendo» y «A continuación». Volverá a aparecer cuando la leas de nuevo.</string>
+    <string name="reading_action_hint">Borra el progreso de lectura en el servidor (en todos los dispositivos) y oculta esta serie de «Seguir leyendo». Volverá a aparecer cuando la leas de nuevo.</string>
     <string name="reading_action_question">¿Quitar esta serie de «Seguir leyendo»?</string>
     <string name="reading_action_keep">Conservar</string>
     <string name="reading_action_remove">Quitar</string>

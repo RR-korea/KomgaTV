@@ -75,7 +75,8 @@ fun PosterCard(
             onLongClick = onLongClick,
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(2f / 3f), // 만화 포스터 비율 (2:3)
+                .aspectRatio(2f / 3f) // 만화 포스터 비율 (2:3)
+                .then(if (onLongClick != null) Modifier.selectKeyClicks(onClick, onLongClick) else Modifier),
             // 포커스 확대는 Card가 한다. 아래 제목을 덮지 않게 작게 키운다.
             scale = CardDefaults.scale(focusedScale = 1.05f),
             shape = CardDefaults.shape(

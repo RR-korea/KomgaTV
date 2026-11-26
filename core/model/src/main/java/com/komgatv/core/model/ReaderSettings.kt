@@ -91,6 +91,24 @@ enum class PageTransition {
 }
 
 /**
+ * 테두리 잘라내기 — 쪽 둘레의 빈 테두리(흰·검은 스캔 여백)를 어느 변에서 자를지.
+ * 두 쪽 보기에서 한 쪽만 테두리가 있으면 다른 쪽도 같은 만큼 잘라 두 쪽을 맞춘다.
+ */
+enum class CropBorders {
+    /** 자르지 않는다 */
+    OFF,
+
+    /** 위아래만 */
+    TOP_BOTTOM,
+
+    /** 좌우만 */
+    LEFT_RIGHT,
+
+    /** 네 변 모두 */
+    ALL,
+}
+
+/**
  * 리더 보기 설정 모델 (앱 전체 기본값, 또는 한 작품의 설정)
  *
  * @property readerType 리더 종류 (기본값: PAGED)
@@ -100,7 +118,7 @@ enum class PageTransition {
  * @property continuousPadding 세로 스크롤 시 좌우 여백 (화면 너비 비율, 기본값: 0f)
  * @property continuousPageSpacing 세로 스크롤 시 쪽 사이 간격 dp (기본값: 0)
  * @property zoomPercent 페이지 넘김에서 크기 맞춤으로 맞춘 결과를 더 확대(줌인)하는 비율 %
- *   ([MIN_ZOOM_PERCENT]~[MAX_ZOOM_PERCENT], 1% 단위 — 100이면 확대 안 함, 120%까지면 충분하다는 사용자 의견).
+ *   ([MIN_ZOOM_PERCENT]~[MAX_ZOOM_PERCENT], 1% 단위 — 100이면 확대 안 함, 150%까지).
  *   스캔 여백을 잘라 크게 볼 때 — 작품별로만 바꾼다.
  */
 data class ReaderSettings(
@@ -116,14 +134,31 @@ data class ReaderSettings(
     val zoomPercent: Int = MIN_ZOOM_PERCENT,
     /** 대비 % (작품별, [MIN_CONTRAST_PERCENT]~[MAX_CONTRAST_PERCENT], 5% 단위, 100 = 그대로) — 흐린 스캔본을 진하게 */
     val contrastPercent: Int = 100,
+    /** 밝기 % (작품별, [MIN_BRIGHTNESS_PERCENT]~[MAX_BRIGHTNESS_PERCENT], 5% 단위, 100 = 그대로) — 어두운 스캔본을 밝게, 밤에는 어둡게 */
+    val brightnessPercent: Int = 100,
+    /**
+     * 확대했을 때 위아래로 옮겨 둔 자리 ‰ (작품별, [MIN_ZOOM_PAN_PERMILLE]~[MAX_ZOOM_PAN_PERMILLE], [ZOOM_PAN_STEP] 단위).
+     * 0 = 가운데, -1000 = 맨 위, 1000 = 맨 아래. 쪽을 넘겨도 그 자리를 유지한다.
+     */
+    val zoomPanPermille: Int = 0,
+    /** 칸 사이 위아래 여백을 없애고 칸들을 쪽 가운데로 모은다 (작품별, 페이지 넘김) */
+    val removeGutters: Boolean = false,
+    /** 쪽 둘레의 빈 테두리(흰·검은 스캔 여백)를 잘라내 쪽을 화면에 더 크게 (작품별, 페이지 넘김) */
+    val cropBorders: CropBorders = CropBorders.OFF,
     /** 페이지 넘김 화면 전환 효과 */
     val pageTransition: PageTransition = PageTransition.SLIDE,
 ) {
     companion object {
         const val MIN_ZOOM_PERCENT = 100
-        const val MAX_ZOOM_PERCENT = 120
+        const val MAX_ZOOM_PERCENT = 150
         const val MIN_CONTRAST_PERCENT = 50
-        const val MAX_CONTRAST_PERCENT = 150
+        const val MAX_CONTRAST_PERCENT = 190
         const val CONTRAST_STEP = 5
+        const val MIN_BRIGHTNESS_PERCENT = 10
+        const val MIN_ZOOM_PAN_PERMILLE = -1000
+        const val MAX_ZOOM_PAN_PERMILLE = 1000
+        const val ZOOM_PAN_STEP = 125
+        const val MAX_BRIGHTNESS_PERCENT = 150
+        const val BRIGHTNESS_STEP = 5
     }
 }

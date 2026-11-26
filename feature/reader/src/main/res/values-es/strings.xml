@@ -18,6 +18,8 @@
     <string name="reader_settings_series_default">Usando los valores de la app (Ajustes del servidor → Vista predeterminada). Los cambios aquí solo se aplican a esta serie.</string>
     <string name="reader_settings_series_custom">Esta serie tiene sus propios ajustes.</string>
     <string name="reader_settings_reset">Restablecer valores de la app</string>
+    <string name="reader_hide_page">Ocultar página %1$d</string>
+    <string name="reader_restore_hidden_pages">Restaurar páginas ocultas (%1$d)</string>
     <string name="end_page_finished">Terminado</string>
     <string name="end_page_next">Siguiente tomo</string>
     <string name="end_page_finding_next">Buscando el siguiente tomo…</string>

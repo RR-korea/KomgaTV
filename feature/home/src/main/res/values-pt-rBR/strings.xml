@@ -8,7 +8,6 @@
     <string name="home_book_completed">Concluído</string>
     <string name="home_server_settings">Configurações do servidor</string>
     <string name="home_search">Buscar</string>
-    <string name="home_on_deck">A seguir</string>
     <string name="home_latest_books">Livros adicionados recentemente</string>
     <string name="home_new_series">Séries adicionadas recentemente</string>
     <string name="home_updated_series">Séries atualizadas recentemente</string>
@@ -23,7 +22,7 @@
     <string name="library_action_done_scan">Escaneamento solicitado — o servidor está processando agora</string>
     <string name="library_action_done_trash">Lixeira esvaziada</string>
     <string name="library_action_failed">Não foi possível (só admin ou erro no servidor)</string>
-    <string name="reading_action_hint">Apaga o progresso de leitura no servidor (em todos os dispositivos) e tira esta série de “Continuar lendo” e “A seguir”. Ela volta quando você a ler de novo.</string>
+    <string name="reading_action_hint">Apaga o progresso de leitura no servidor (em todos os dispositivos) e tira esta série de “Continuar lendo”. Ela volta quando você a ler de novo.</string>
     <string name="reading_action_question">Remover esta série de “Continuar lendo”?</string>
     <string name="reading_action_keep">Manter</string>
     <string name="reading_action_remove">Remover</string>

@@ -1,5 +1,6 @@
 package com.komgatv.core.datastore
 
+import com.komgatv.core.model.CropBorders
 import com.komgatv.core.model.ImageEnhancement
 import com.komgatv.core.model.PageLayout
 import com.komgatv.core.model.PageTransition
@@ -25,16 +26,26 @@ class ReaderSettingsCodecTest {
             imageEnhancement = ImageEnhancement.SHARPEN,
             zoomPercent = 117,
             contrastPercent = 125,
+            brightnessPercent = 85,
+            zoomPanPermille = -375,
+            removeGutters = true,
+            cropBorders = CropBorders.ALL,
             pageTransition = PageTransition.FADE,
         )
         assertEquals(s, ReaderSettingsCodec.decode(ReaderSettingsCodec.encode(s)))
     }
 
     @Test
-    fun `확대는 100~120 밖이면 끝값, 없으면 100`() {
-        assertEquals(120, ReaderSettingsCodec.decode("zoomPercent=999")!!.zoomPercent)
+    fun `확대는 100~150 밖이면 끝값, 없으면 100`() {
+        assertEquals(150, ReaderSettingsCodec.decode("zoomPercent=999")!!.zoomPercent)
         assertEquals(100, ReaderSettingsCodec.decode("zoomPercent=20")!!.zoomPercent)
         assertEquals(100, ReaderSettingsCodec.decode("pageLayout=DOUBLE_PAGES")!!.zoomPercent)
+    }
+
+    @Test
+    fun `예전에 % 로 저장한 확대 위치는 ‰ 로 읽는다`() {
+        assertEquals(-500, ReaderSettingsCodec.decode("zoomPanPercent=-50")!!.zoomPanPermille)
+        assertEquals(1000, ReaderSettingsCodec.decode("zoomPanPercent=100")!!.zoomPanPermille)
     }
 
     @Test

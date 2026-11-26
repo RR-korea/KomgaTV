@@ -26,9 +26,11 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.komgatv.core.model.CropBorders
 import com.komgatv.core.model.ImageEnhancement
 import com.komgatv.core.model.PageLayout
 import com.komgatv.core.model.PageTransition
@@ -62,7 +64,7 @@ fun ViewSettingsForm(
     onLayoutOffsetChange: (Boolean) -> Unit = {},
     showZoom: Boolean = false,
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(3.dp)) {
         OptionRow(
             title = stringResource(R.string.view_reader_type),
             options = listOf(
@@ -132,6 +134,24 @@ fun ViewSettingsForm(
                         onPrevious = { onChange(settings.copy(zoomPercent = stepZoom(settings.zoomPercent, -1))) },
                         onNext = { onChange(settings.copy(zoomPercent = stepZoom(settings.zoomPercent, 1))) },
                     )
+                    // 쪽 둘레의 흰·검은 빈 테두리를 잘라내 쪽을 더 크게 — 위아래, 좌우, 네 변
+                    OptionRow(
+                        title = stringResource(R.string.view_crop_borders),
+                        options = listOf(
+                            CropBorders.OFF to stringResource(R.string.view_off),
+                            CropBorders.TOP_BOTTOM to stringResource(R.string.view_crop_top_bottom),
+                            CropBorders.LEFT_RIGHT to stringResource(R.string.view_crop_left_right),
+                            CropBorders.ALL to stringResource(R.string.view_crop_all),
+                        ),
+                        current = settings.cropBorders,
+                        onChange = { onChange(settings.copy(cropBorders = it)) },
+                    )
+                    // 칸 사이 위아래 여백을 없애 칸들을 쪽 가운데로 모은다 (확대와 함께 쓰면 칸이 화면을 더 채운다)
+                    OnOffRow(
+                        title = stringResource(R.string.view_remove_gutters),
+                        value = settings.removeGutters,
+                        onChange = { onChange(settings.copy(removeGutters = it)) },
+                    )
                 }
             }
 
@@ -153,12 +173,18 @@ fun ViewSettingsForm(
             }
         }
         if (showZoom) {
-            // 대비는 페이지 넘김·세로 스크롤 모두 (작품별)
+            // 대비·밝기는 페이지 넘김·세로 스크롤 모두 (작품별)
             SettingRow(
                 title = stringResource(R.string.view_contrast),
                 value = stringResource(R.string.view_percent_value, settings.contrastPercent),
                 onPrevious = { onChange(settings.copy(contrastPercent = stepContrast(settings.contrastPercent, -1))) },
                 onNext = { onChange(settings.copy(contrastPercent = stepContrast(settings.contrastPercent, 1))) },
+            )
+            SettingRow(
+                title = stringResource(R.string.view_brightness),
+                value = stringResource(R.string.view_percent_value, settings.brightnessPercent),
+                onPrevious = { onChange(settings.copy(brightnessPercent = stepBrightness(settings.brightnessPercent, -1))) },
+                onNext = { onChange(settings.copy(brightnessPercent = stepBrightness(settings.brightnessPercent, 1))) },
             )
         }
         OptionRow(
@@ -181,6 +207,10 @@ fun ViewSettingsForm(
 private fun stepContrast(current: Int, delta: Int): Int =
     (current + delta * ReaderSettings.CONTRAST_STEP)
         .coerceIn(ReaderSettings.MIN_CONTRAST_PERCENT, ReaderSettings.MAX_CONTRAST_PERCENT)
+
+private fun stepBrightness(current: Int, delta: Int): Int =
+    (current + delta * ReaderSettings.BRIGHTNESS_STEP)
+        .coerceIn(ReaderSettings.MIN_BRIGHTNESS_PERCENT, ReaderSettings.MAX_BRIGHTNESS_PERCENT)
 
 private fun stepZoom(current: Int, delta: Int): Int =
     (current + delta).coerceIn(ReaderSettings.MIN_ZOOM_PERCENT, ReaderSettings.MAX_ZOOM_PERCENT)
@@ -247,19 +277,24 @@ private fun SettingRow(
                     else -> false
                 }
             }
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+            .padding(horizontal = 14.dp, vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        // 이름과 값은 같은 글자 크기 — 이름이 길면 말줄임, 줄이 두 줄로 늘지 않게 (값은 다 보인다)
         Text(
             text = title,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyLarge,
             color = Color.LightGray.copy(alpha = alpha),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
         )
         Text(
             text = if (enabled) "‹  $value  ›" else value,
             style = MaterialTheme.typography.bodyLarge,
             color = (if (focused) Color.White else Color(0xFFE0E0E0)).copy(alpha = alpha),
+            maxLines = 1,
         )
     }
 }

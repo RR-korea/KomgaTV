@@ -35,7 +35,8 @@ fun NameCard(
         onLongClick = onLongClick,
         modifier = modifier
             .width(240.dp)
-            .aspectRatio(16f / 9f),
+            .aspectRatio(16f / 9f)
+            .then(if (onLongClick != null) Modifier.selectKeyClicks(onClick, onLongClick) else Modifier),
         scale = CardDefaults.scale(focusedScale = 1.05f),
         shape = CardDefaults.shape(shape = RoundedCornerShape(8.dp)),
         colors = CardDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceVariant),

@@ -18,6 +18,8 @@
     <string name="reader_settings_series_default">Verwendet die App-Standards (Servereinstellungen → Standardansicht). Änderungen hier gelten nur für diese Serie.</string>
     <string name="reader_settings_series_custom">Diese Serie hat eigene Einstellungen.</string>
     <string name="reader_settings_reset">Auf App-Standards zurücksetzen</string>
+    <string name="reader_hide_page">Seite %1$d ausblenden</string>
+    <string name="reader_restore_hidden_pages">Ausgeblendete Seiten zeigen (%1$d)</string>
     <string name="end_page_finished">Ausgelesen</string>
     <string name="end_page_next">Nächster Band</string>
     <string name="end_page_finding_next">Nächster Band wird gesucht…</string>

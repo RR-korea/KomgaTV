@@ -18,6 +18,8 @@
     <string name="reader_settings_series_default">Réglages par défaut de l\'application (Paramètres du serveur → Options de lecture par défaut). Les modifications faites ici ne s\'appliquent qu\'à cette série.</string>
     <string name="reader_settings_series_custom">Cette série a ses propres réglages.</string>
     <string name="reader_settings_reset">Rétablir les réglages par défaut</string>
+    <string name="reader_hide_page">Masquer la page %1$d</string>
+    <string name="reader_restore_hidden_pages">Rétablir les pages masquées (%1$d)</string>
     <string name="end_page_finished">Terminé</string>
     <string name="end_page_next">Suivant</string>
     <string name="end_page_finding_next">Recherche du livre suivant…</string>

@@ -34,6 +34,12 @@ import javax.inject.Singleton
 interface BookRepository {
     fun getBooks(seriesId: String, page: Int = 0, size: Int = 20): Flow<BookPageResult>
     fun getBooksInProgress(page: Int = 0, size: Int = 20): Flow<BookPageResult>
+
+    /** 최근에 다 읽은 책 (읽은 순) — "읽는 중" 줄에 그 시리즈의 다음 권을 넣을 때 쓴다 */
+    suspend fun getRecentlyReadBooks(size: Int = 20): List<Book> = emptyList()
+
+    /** 다음에 읽을 책 — 읽던 시리즈의 다음 권 (Komga on deck) */
+    suspend fun getBooksOnDeck(size: Int = 20): List<Book> = emptyList()
     suspend fun getBookById(bookId: String): Book
 
     /** 책의 페이지 목록(번호·가로·세로 크기). 두 쪽 보기의 펼침 계산에 쓴다. */
@@ -41,9 +47,6 @@ interface BookRepository {
 
     /** page는 1부터 시작한다. */
     suspend fun updateReadProgress(bookId: String, page: Int, completed: Boolean)
-
-    /** 다음에 읽을 책 — 읽던 시리즈의 다음 권 (Komga on deck) */
-    suspend fun getBooksOnDeck(size: Int = 20): List<Book>
 
     /** 최근 추가된 책 */
     suspend fun getLatestBooks(size: Int = 20): List<Book>
@@ -115,6 +118,21 @@ class BookRepositoryImpl @Inject constructor(
         emit(result.toBookPageResult())
     }
 
+    override suspend fun getRecentlyReadBooks(size: Int): List<Book> {
+        val condition = allOfBooks {
+            readStatus { isEqualTo(KomgaReadStatus.READ) }
+        }.toBookCondition()
+        return sessionManager.requireClient().bookClient().getBookList(
+            search = KomgaBookSearch(condition = condition),
+            pageRequest = KomgaPageRequest(pageIndex = 0, size = size, sort = KomgaBooksSort.byReadDateDesc()),
+        ).content.map { it.toDomain() }
+    }
+
+    override suspend fun getBooksOnDeck(size: Int): List<Book> =
+        sessionManager.requireClient().bookClient()
+            .getBooksOnDeck(libraryIds = emptyList(), pageRequest = KomgaPageRequest(size = size))
+            .content.map { it.toDomain() }
+
     override suspend fun getBookById(bookId: String): Book =
         sessionManager.requireClient().bookClient().getOne(KomgaBookId(bookId)).toDomain()
 
@@ -128,11 +146,6 @@ class BookRepositoryImpl @Inject constructor(
         )
         progressEvents.notifyUpdated(bookId)
     }
-
-    override suspend fun getBooksOnDeck(size: Int): List<Book> =
-        sessionManager.requireClient().bookClient()
-            .getBooksOnDeck(libraryIds = emptyList(), pageRequest = KomgaPageRequest(size = size))
-            .content.map { it.toDomain() }
 
     override suspend fun getLatestBooks(size: Int): List<Book> =
         sessionManager.requireClient().bookClient()

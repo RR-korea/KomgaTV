@@ -32,11 +32,17 @@
     <string name="view_on">开启</string>
     <string name="view_off">关闭</string>
     <string name="view_zoom">缩放</string>
+    <string name="view_remove_gutters">去除分格间距（实验性）</string>
+    <string name="view_crop_borders">裁剪页边距</string>
+    <string name="view_crop_top_bottom">上下</string>
+    <string name="view_crop_left_right">左右</string>
+    <string name="view_crop_all">上下左右</string>
     <string name="view_transition">翻页效果</string>
     <string name="view_transition_off">关闭</string>
     <string name="view_transition_slide">滑动</string>
     <string name="view_transition_fade">淡入淡出</string>
     <string name="view_contrast">对比度</string>
+    <string name="view_brightness">亮度</string>
     <string name="view_enhancement_lanczos2">Lanczos2（快速）</string>
     <string name="view_enhancement_lanczos">Lanczos3</string>
     <string name="view_enhancement_lanczos4">Lanczos4（最佳）</string>

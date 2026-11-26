@@ -15,6 +15,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
@@ -36,7 +37,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.TransformOrigin
@@ -52,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -74,14 +75,18 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Precision
 import timber.log.Timber
+import com.komgatv.core.model.CropBorders
 import com.komgatv.core.model.ImageEnhancement
 import com.komgatv.core.model.PageTransition
+import com.komgatv.core.model.ReaderSettings
 import com.komgatv.core.model.ReaderType
 import com.komgatv.core.model.ReadingDirection
 import com.komgatv.core.model.ScaleType
 import com.komgatv.core.ui.components.ProgressBar
 import com.komgatv.core.ui.components.loadErrorText
 import com.komgatv.feature.reader.continuous.ContinuousPages
+import com.komgatv.feature.reader.enhance.CropBorderTransformation
+import com.komgatv.feature.reader.enhance.GutterTransformation
 import com.komgatv.feature.reader.enhance.ImageEnhancer
 import com.komgatv.feature.reader.enhance.LanczosTransformation
 import com.komgatv.feature.reader.enhance.SharpenTransformation
@@ -209,11 +214,13 @@ private fun ReaderContent(
     // (PDF는 서버가 쪽마다 2~3초씩 그려서, 쌓이면 지금 쪽이 그 뒤에서 한참 기다린다)
     val preloads = remember { mutableMapOf<String, Disposable>() }
     LaunchedEffect(
-        state.preloadSpreads, state.spreadPageUrls, state.scaleType, state.imageEnhancement, screenWidthPx, screenHeightPx,
+        state.preloadSpreads, state.spreadPageUrls, state.scaleType, state.imageEnhancement, state.removeGutters,
+        state.cropBorders, screenWidthPx, screenHeightPx,
     ) {
         val imageLoader = SingletonImageLoader.get(context)
-        val variant = "${state.scaleType}|${state.imageEnhancement}|${screenWidthPx}x$screenHeightPx"
-        val wanted = state.preloadSpreads.flatMap { urls -> urls.map { url -> "$url|${urls.size}|$variant" to (url to urls.size) } }
+        val variant = "${state.scaleType}|${state.imageEnhancement}|${state.removeGutters}|${state.cropBorders}|" +
+            "${screenWidthPx}x$screenHeightPx"
+        val wanted = state.preloadSpreads.flatMap { urls -> urls.map { url -> "$url|${urls.size}|$variant" to (url to urls) } }
             .toMap()
         // 지금 보이는 쪽은 화면이 같은 주소를 받는 중일 수 있어 끊지 않는다 (같은 요청은 한 번만 받는다)
         val current = state.spreadPageUrls.map { "$it|${state.spreadPageUrls.size}|$variant" }.toSet()
@@ -224,9 +231,12 @@ private fun ReaderContent(
         }
         wanted.forEach { (key, page) ->
             if (key in preloads) return@forEach
-            val (url, slots) = page
+            val (url, spread) = page
             preloads[key] = imageLoader.enqueue(
-                pageRequest(context, url, state.scaleType, slotWidth(screenWidthPx, slots), screenHeightPx, state.imageEnhancement)
+                pageRequest(
+                    context, url, state.scaleType, slotWidth(screenWidthPx, spread.size), screenHeightPx,
+                    state.imageEnhancement, state.removeGutters, state.cropBorders,
+                )
             )
         }
     }
@@ -237,23 +247,24 @@ private fun ReaderContent(
         }
     }
 
-    // Back은 키 이벤트로 오지 않는다 (targetSdk 36: 예측형 뒤로 가기). 시스템 뒤로 가기를 가로챈다.
-    BackHandler {
+    // 뒤로: 설정 패널 → 오버레이 → 리더 나가기 차례로 닫는다
+    val goBack = {
         when {
             state.showSettingsPanel -> viewModel.closeSettingsPanel()
             state.showOverlay -> viewModel.closeOverlay()
             else -> onNavigateBack()
         }
     }
+    // 예측형 뒤로 가기(Android 13+)에서는 Back이 키 이벤트로 오지 않고 여기로 온다
+    BackHandler { goBack() }
 
     val contentScale = remember(state.scaleType) { contentScaleFor(state.scaleType) }
 
     // 확대(줌인): 크기 맞춤 결과를 펼침째(두 쪽이면 두 쪽 함께, 가운데 기준) 키운다.
-    // 화면 고정 모드에서는 ▲▼로 위아래를 본다 (반 칸씩, 쪽이 바뀌면 가운데로).
+    // 화면 고정 모드에서는 ▲▼로 위아래를 본다 (넘치는 높이의 1/16씩). 옮겨 둔 자리는 작품에 저장돼 쪽을 넘겨도 그대로.
     val zoom = state.zoomPercent / 100f
-    var panStep by remember(state.currentSpreadIndex, state.zoomPercent, state.scaleType) { mutableIntStateOf(0) }
     val panOffset by animateFloatAsState(
-        targetValue = -panStep / PAN_STEPS.toFloat() * (zoom - 1f) * screenHeightPx / 2f,
+        targetValue = -state.zoomPanPermille / 1000f * (zoom - 1f) * screenHeightPx / 2f,
         label = "zoom-pan",
     )
 
@@ -264,6 +275,12 @@ private fun ReaderContent(
             .focusRequester(focusRequester)
             .focusable()
             .onPreviewKeyEvent { keyEvent ->
+                // 예측형 뒤로 가기가 없는 TV에서는 Back이 키 이벤트로 먼저 온다 — 그대로 두면 Compose가 포커스만 풀고
+                // 패널이 닫히지 않는다. 떼는 순간 닫고, 누름·뗌 모두 여기서 받는다
+                if (keyEvent.key == Key.Back) {
+                    if (keyEvent.type == KeyEventType.KeyUp) goBack()
+                    return@onPreviewKeyEvent true
+                }
                 if (keyEvent.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
 
                 // 설정 패널이 열려 있으면 키는 패널 항목이 처리
@@ -293,7 +310,7 @@ private fun ReaderContent(
                             scrollState.animateScrollTo((scrollState.value - screenHeightPx / 2).coerceAtLeast(0))
                         }
                     } else if (!scrollable && zoom > 1f) {
-                        panStep = (panStep - 1).coerceAtLeast(-PAN_STEPS)
+                        viewModel.setZoomPanPermille(state.zoomPanPermille - ReaderSettings.ZOOM_PAN_STEP)
                     }
                     Key.DirectionDown -> if (state.showOverlay) {
                         viewModel.jumpPages(-10)
@@ -311,7 +328,7 @@ private fun ReaderContent(
                             )
                         }
                     } else if (!scrollable && zoom > 1f) {
-                        panStep = (panStep + 1).coerceAtMost(PAN_STEPS)
+                        viewModel.setZoomPanPermille(state.zoomPanPermille + ReaderSettings.ZOOM_PAN_STEP)
                     }
                     else -> return@onPreviewKeyEvent false
                 }
@@ -340,7 +357,7 @@ private fun ReaderContent(
                 tiles = state.continuousTiles,
                 listState = listState,
                 filterQuality = ImageEnhancer.filterQuality(state.imageEnhancement),
-                colorFilter = ImageEnhancer.contrastFilter(state.contrastPercent),
+                colorFilter = ImageEnhancer.colorFilter(state.contrastPercent, state.brightnessPercent),
                 scrollToTileIndex = state.scrollToTileIndex,
                 // 화질 설정이 바뀌면 보이는 타일도 다시 불러오게 함수 자체를 바꾼다
                 loadTile = remember(state.imageEnhancement) { { tile -> viewModel.loadTile(tile) } },
@@ -407,6 +424,10 @@ private fun ReaderContent(
                 onChange = viewModel::applySettings,
                 onLayoutOffsetChange = viewModel::setLayoutOffset,
                 onReset = viewModel::resetSeriesSettings,
+                hidablePages = state.hidablePages,
+                hiddenPageCount = state.hiddenPageCount,
+                onHidePage = viewModel::hidePage,
+                onRestoreHiddenPages = viewModel::restoreHiddenPages,
             )
         }
     }
@@ -511,8 +532,14 @@ private fun SpreadPages(
             // PDF 원본 쪽(/raw)을 서버가 못 주면(파일을 옮겼거나 분석 중 등) 서버가 그린 일반 쪽으로 다시 받는다
             var useRendered by remember(url) { mutableStateOf(false) }
             val pageUrl = if (useRendered) url.removeSuffix("/raw") else url
-            val request = remember(pageUrl, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement) {
-                pageRequest(context, pageUrl, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement)
+            val request = remember(
+                pageUrl, state.scaleType, slotWidthPx, screenHeightPx, state.imageEnhancement, state.removeGutters,
+                state.cropBorders,
+            ) {
+                pageRequest(
+                    context, pageUrl, state.scaleType, slotWidthPx, screenHeightPx,
+                    state.imageEnhancement, state.removeGutters, state.cropBorders,
+                )
             }
             // 받는 중이면 스피너, 실패하면 문구 — 빨리 넘길 때 검은 화면이 멈춘 것처럼 보이지 않게
             var loadState by remember(request) { mutableStateOf<AsyncImagePainter.State>(AsyncImagePainter.State.Empty) }
@@ -533,7 +560,7 @@ private fun SpreadPages(
                     contentScale = contentScale,
                     alignment = alignment,
                     filterQuality = ImageEnhancer.filterQuality(state.imageEnhancement),
-                    colorFilter = ImageEnhancer.contrastFilter(state.contrastPercent),
+                    colorFilter = ImageEnhancer.colorFilter(state.contrastPercent, state.brightnessPercent),
                     onState = {
                         loadState = it
                         if (it is AsyncImagePainter.State.Error && !useRendered && url.endsWith("/raw")) useRendered = true
@@ -552,11 +579,9 @@ private fun SpreadPages(
 
 @Composable
 private fun ReaderOverlay(state: ReaderUiState.Reading) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.6f)),
-    ) {
+    // 화면은 어둡게 하지 않는다 — 흰 쪽 위에서도 글자가 보이게 글자에 검은 그림자만
+    val shadow = Shadow(color = Color.Black, blurRadius = 8f)
+    Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -565,7 +590,7 @@ private fun ReaderOverlay(state: ReaderUiState.Reading) {
         ) {
             Text(
                 text = state.bookTitle,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium.copy(shadow = shadow),
                 color = Color.White,
             )
 
@@ -582,13 +607,13 @@ private fun ReaderOverlay(state: ReaderUiState.Reading) {
                 }
                 Text(
                     text = stringResource(R.string.reader_page_range_format, pageNumbers, state.totalPages),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyMedium.copy(shadow = shadow),
                     color = Color.White,
                 )
                 val percent = state.shownPage * 100 / state.totalPages
                 Text(
                     text = stringResource(R.string.reader_page_percent_format, percent),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyMedium.copy(shadow = shadow),
                     color = Color.White,
                 )
             }
@@ -608,7 +633,7 @@ private fun ReaderOverlay(state: ReaderUiState.Reading) {
 
             Text(
                 text = stringResource(R.string.reader_overlay_hint),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodySmall.copy(shadow = shadow),
                 color = Color.White.copy(alpha = 0.7f),
             )
         }
@@ -629,6 +654,8 @@ private fun pageRequest(
     slotWidthPx: Int,
     screenHeightPx: Int,
     enhancement: ImageEnhancement,
+    removeGutters: Boolean,
+    cropBorders: CropBorders,
 ): ImageRequest {
     val size = when (scaleType) {
         ScaleType.SCREEN -> CoilSize(slotWidthPx, screenHeightPx)
@@ -644,16 +671,17 @@ private fun pageRequest(
         .crossfade(false)
         .transformations(
             listOfNotNull(
-                // 화면 크기로 Lanczos 리샘플링한 뒤 선명하게
+                // 쪽 둘레 여백(칸 밖 쪽 번호·광고 포함)을 쪽마다 먼저 자르고, 칸 사이 여백을 줄인 뒤 남은 위아래 빈 줄만 한 번 더 뺀다.
+                // 그다음 화면 크기로 Lanczos 리샘플링하고 선명하게
+                if (cropBorders != CropBorders.OFF) CropBorderTransformation(cropBorders) else null,
+                if (removeGutters) GutterTransformation() else null,
+                if (removeGutters && cropBorders != CropBorders.OFF) CropBorderTransformation(cropBorders, blankOnly = true) else null,
                 ImageEnhancer.lanczos(enhancement)?.let { LanczosTransformation(scaleType, it) },
                 ImageEnhancer.sharpenAmount(enhancement)?.let { SharpenTransformation(it) },
             ),
         )
         .build()
 }
-
-/** 확대 상태에서 ▲▼ 한 번에 움직이는 양 — 넘치는 높이의 절반을 이만큼 나눈다 */
-private const val PAN_STEPS = 2
 
 /**
  * 스크롤 모드(너비 맞춤·원본)의 확대: 위쪽 가운데를 기준으로 키우고, 키운 높이만큼 자리를 차지해 끝까지 스크롤된다.

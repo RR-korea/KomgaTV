@@ -1,5 +1,6 @@
 package com.komgatv.core.datastore
 
+import com.komgatv.core.model.CropBorders
 import com.komgatv.core.model.ImageEnhancement
 import com.komgatv.core.model.PageLayout
 import com.komgatv.core.model.PageTransition
@@ -23,6 +24,10 @@ internal object ReaderSettingsCodec {
         "imageEnhancement" to s.imageEnhancement.name,
         "zoomPercent" to s.zoomPercent.toString(),
         "contrastPercent" to s.contrastPercent.toString(),
+        "brightnessPercent" to s.brightnessPercent.toString(),
+        "zoomPanPermille" to s.zoomPanPermille.toString(),
+        "removeGutters" to s.removeGutters.toString(),
+        "cropBorders" to s.cropBorders.name,
         "pageTransition" to s.pageTransition.name,
     ).joinToString(";") { (k, v) -> "$k=$v" }
 
@@ -46,6 +51,13 @@ internal object ReaderSettingsCodec {
             pageTransition = enumOrNull<PageTransition>(map["pageTransition"]) ?: d.pageTransition,
             contrastPercent = map["contrastPercent"]?.toIntOrNull()
                 ?.coerceIn(ReaderSettings.MIN_CONTRAST_PERCENT, ReaderSettings.MAX_CONTRAST_PERCENT) ?: d.contrastPercent,
+            brightnessPercent = map["brightnessPercent"]?.toIntOrNull()
+                ?.coerceIn(ReaderSettings.MIN_BRIGHTNESS_PERCENT, ReaderSettings.MAX_BRIGHTNESS_PERCENT) ?: d.brightnessPercent,
+            // 예전(1.0.37까지)에는 % 로 저장했다
+            zoomPanPermille = (map["zoomPanPermille"]?.toIntOrNull() ?: map["zoomPanPercent"]?.toIntOrNull()?.times(10))
+                ?.coerceIn(ReaderSettings.MIN_ZOOM_PAN_PERMILLE, ReaderSettings.MAX_ZOOM_PAN_PERMILLE) ?: d.zoomPanPermille,
+            removeGutters = map["removeGutters"]?.toBooleanStrictOrNull() ?: d.removeGutters,
+            cropBorders = enumOrNull<CropBorders>(map["cropBorders"]) ?: d.cropBorders,
         )
     }
 

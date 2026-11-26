@@ -12,6 +12,7 @@ import com.komgatv.core.datastore.ReaderPreferences
 import com.komgatv.core.model.Book
 import com.komgatv.core.model.BookMetadata
 import com.komgatv.core.model.BookPage
+import com.komgatv.core.model.CropBorders
 import com.komgatv.core.model.ImageEnhancement
 import com.komgatv.core.model.LoadError
 import com.komgatv.core.model.PageLayout
@@ -735,6 +736,95 @@ class ReaderViewModelTest {
     }
 
     @Test
+    fun `다음 권 - 마지막 쪽에 저장된 채 열어 바로 넘어가도 완독을 저장한다`() = runTest(testDispatcher) {
+        openBook(progress = ReadProgress(page = 10, completed = false))
+        addNextBook()
+        advanceUntilIdle()
+
+        viewModel.nextSpread() // 책 끝 — 쪽은 넘기지 않았다
+        viewModel.nextSpread() // 다음 권
+        advanceUntilIdle()
+
+        assertEquals(listOf(ProgressUpdate("b1", 10, true)), bookRepository.progressUpdates)
+    }
+
+    @Test
+    fun `다음 권 - 불러오는 동안 누른 키는 무시해 새 책이 끝 화면으로 열리거나 옛 쪽이 저장되지 않는다`() = runTest(testDispatcher) {
+        openBook(progress = ReadProgress(page = 9, completed = false))
+        addNextBook()
+        advanceUntilIdle()
+        viewModel.nextSpread() // 10쪽
+        viewModel.nextSpread() // 책 끝
+        advanceUntilIdle()
+
+        viewModel.nextSpread() // 다음 권 불러오기 시작 — 화면은 아직 옛 책
+        viewModel.nextSpread()
+        viewModel.previousSpread()
+        viewModel.jumpPages(-5)
+        viewModel.saveProgressOnExit()
+        advanceUntilIdle()
+
+        assertEquals(null, reading.endPage)
+        assertEquals(1, reading.currentSpread.pages.first().number)
+        assertEquals(6, reading.totalPages)
+        assertTrue(bookRepository.progressUpdates.none { it.bookId == "b2" })
+        assertTrue(bookRepository.progressUpdates.contains(ProgressUpdate("b1", 10, true)))
+    }
+
+    @Test
+    fun `쪽 숨기기 - 숨긴 쪽은 건너뛰고 원래 쪽 번호로 저장하며, 다시 열어도 숨겨져 있다`() = runTest(testDispatcher) {
+        openBook(progress = ReadProgress(page = 4, completed = false))
+        advanceUntilIdle()
+        assertEquals(listOf(4), reading.hidablePages)
+
+        viewModel.nextSpread() // 5쪽
+        viewModel.hidePage(5)
+        advanceUntilIdle()
+        assertEquals(6, reading.currentSpread.pages.first().number) // 숨긴 자리의 다음 쪽
+        assertEquals(1, reading.hiddenPageCount)
+        assertEquals(10, reading.totalPages) // 쪽 번호·전체 쪽 수는 원래대로
+        assertEquals(setOf(5), readerPreferences.hidden.value["b1"])
+
+        viewModel.previousSpread()
+        assertEquals(4, reading.currentSpread.pages.first().number)
+
+        // 다시 열어도 숨겨져 있다
+        viewModel = ReaderViewModel(bookRepository, seriesRepository, FakeImageUrls, readerPreferences, tileSource)
+        openBook(progress = ReadProgress(page = 4, completed = false))
+        advanceUntilIdle()
+        viewModel.nextSpread()
+        assertEquals(6, reading.currentSpread.pages.first().number)
+
+        viewModel.restoreHiddenPages()
+        advanceUntilIdle()
+        assertEquals(0, reading.hiddenPageCount)
+        assertEquals(6, reading.currentSpread.pages.first().number)
+        viewModel.previousSpread()
+        assertEquals(5, reading.currentSpread.pages.first().number)
+    }
+
+    @Test
+    fun `쪽 숨기기 - 마지막 쪽을 숨기면 보이는 마지막 쪽에서 완독, 마지막 남은 쪽은 숨기지 않는다`() = runTest(testDispatcher) {
+        openBook(pages = (1..3).map { BookPage(number = it, width = 1000, height = 1000) })
+        advanceUntilIdle()
+        viewModel.jumpPages(2) // 3쪽
+        viewModel.hidePage(3)
+        advanceUntilIdle()
+        assertEquals(2, reading.currentSpread.pages.first().number)
+
+        viewModel.previousSpread() // 1쪽
+        viewModel.nextSpread() // 2쪽 — 보이는 마지막 쪽
+        advanceUntilIdle()
+        assertEquals(ProgressUpdate("b1", 2, true), bookRepository.progressUpdates.last())
+
+        viewModel.hidePage(2)
+        viewModel.hidePage(1) // 남은 쪽이 하나라 숨기지 않는다
+        advanceUntilIdle()
+        assertEquals(1, reading.currentSpread.pages.first().number)
+        assertEquals(emptyList<Int>(), reading.hidablePages)
+    }
+
+    @Test
     fun `다음 권 - 마지막 권이면 책 끝 화면에 머물고, 뒤로 가면 마지막 쪽`() = runTest(testDispatcher) {
         openBook(progress = ReadProgress(page = 10, completed = false))
         advanceUntilIdle()
@@ -862,7 +952,7 @@ class ReaderViewModelTest {
     }
 
     @Test
-    fun `확대 - 1% 단위로 바뀌고 100~120 안에서, 이 작품에만 저장된다`() = runTest(testDispatcher) {
+    fun `확대 - 1% 단위로 바뀌고 100~150 안에서, 이 작품에만 저장된다`() = runTest(testDispatcher) {
         openBook()
         advanceUntilIdle()
         assertEquals(100, reading.zoomPercent)
@@ -874,9 +964,59 @@ class ReaderViewModelTest {
         assertEquals(100, readerPreferences.readerSettings.first().zoomPercent)
 
         viewModel.setZoomPercent(1000)
-        assertEquals(120, reading.zoomPercent)
+        assertEquals(150, reading.zoomPercent)
         viewModel.setZoomPercent(50)
         assertEquals(100, reading.zoomPercent)
+    }
+
+    @Test
+    fun `확대 - 위아래로 옮긴 자리는 쪽을 넘겨도 유지되고 이 작품에 저장된다`() = runTest(testDispatcher) {
+        readerPreferences.series.value = mapOf("s1" to ReaderSettings(zoomPercent = 110))
+        openBook()
+        advanceUntilIdle()
+        assertEquals(0, reading.zoomPanPermille)
+
+        viewModel.setZoomPanPermille(reading.zoomPanPermille + ReaderSettings.ZOOM_PAN_STEP)
+        viewModel.setZoomPanPermille(reading.zoomPanPermille + ReaderSettings.ZOOM_PAN_STEP)
+        advanceUntilIdle()
+        assertEquals(250, reading.zoomPanPermille)
+        assertEquals(250, readerPreferences.series.value["s1"]!!.zoomPanPermille)
+        assertEquals(0, readerPreferences.readerSettings.first().zoomPanPermille)
+
+        viewModel.onDpadRight()
+        advanceUntilIdle()
+        assertEquals(250, reading.zoomPanPermille)
+
+        viewModel.setZoomPanPermille(5000)
+        assertEquals(1000, reading.zoomPanPermille)
+        viewModel.setZoomPanPermille(-5000)
+        assertEquals(-1000, reading.zoomPanPermille)
+    }
+
+    @Test
+    fun `칸 간격 없애기 - 켜면 이 작품에만 저장된다`() = runTest(testDispatcher) {
+        openBook()
+        advanceUntilIdle()
+        assertEquals(false, reading.removeGutters)
+
+        viewModel.applySettings(reading.settings.copy(removeGutters = true))
+        advanceUntilIdle()
+        assertEquals(true, reading.removeGutters)
+        assertEquals(true, readerPreferences.series.value["s1"]!!.removeGutters)
+        assertEquals(false, readerPreferences.readerSettings.first().removeGutters)
+    }
+
+    @Test
+    fun `테두리 잘라내기 - 고르면 이 작품에만 저장된다`() = runTest(testDispatcher) {
+        openBook()
+        advanceUntilIdle()
+        assertEquals(CropBorders.OFF, reading.cropBorders)
+
+        viewModel.applySettings(reading.settings.copy(cropBorders = CropBorders.TOP_BOTTOM))
+        advanceUntilIdle()
+        assertEquals(CropBorders.TOP_BOTTOM, reading.cropBorders)
+        assertEquals(CropBorders.TOP_BOTTOM, readerPreferences.series.value["s1"]!!.cropBorders)
+        assertEquals(CropBorders.OFF, readerPreferences.readerSettings.first().cropBorders)
     }
 
     @Test
@@ -923,7 +1063,7 @@ class ReaderViewModelTest {
     }
 
     @Test
-    fun `대비 - 5% 단위, 50~150 안에서, 이 작품에만 저장된다`() = runTest(testDispatcher) {
+    fun `대비 - 5% 단위, 50~190 안에서, 이 작품에만 저장된다`() = runTest(testDispatcher) {
         openBook()
         advanceUntilIdle()
         assertEquals(100, reading.contrastPercent)
@@ -934,9 +1074,20 @@ class ReaderViewModelTest {
         assertEquals(125, readerPreferences.series.value["s1"]!!.contrastPercent)
 
         viewModel.setContrastPercent(500)
-        assertEquals(150, reading.contrastPercent)
+        assertEquals(190, reading.contrastPercent)
         viewModel.setContrastPercent(0)
         assertEquals(50, reading.contrastPercent)
+
+        // 밝기도 같은 방식 — 이 작품에 저장, 범위를 넘으면 끝에서 멈춘다
+        assertEquals(100, reading.brightnessPercent)
+        viewModel.applySettings(reading.settings.copy(brightnessPercent = 80))
+        advanceUntilIdle()
+        assertEquals(80, reading.brightnessPercent)
+        assertEquals(80, readerPreferences.series.value["s1"]!!.brightnessPercent)
+        viewModel.setBrightnessPercent(500)
+        assertEquals(150, reading.brightnessPercent)
+        viewModel.setBrightnessPercent(0)
+        assertEquals(10, reading.brightnessPercent)
     }
 
     @Test
@@ -1053,8 +1204,6 @@ class ReaderViewModelTest {
             progressUpdates.add(ProgressUpdate(bookId, page, completed))
         }
 
-        override suspend fun getBooksOnDeck(size: Int): List<Book> = emptyList()
-
         override suspend fun getLatestBooks(size: Int): List<Book> = emptyList()
 
         override fun searchBooks(query: String, page: Int, size: Int): Flow<BookPageResult> = throw NotImplementedError()
@@ -1117,6 +1266,14 @@ class ReaderViewModelTest {
 
         override suspend fun clearSeriesSettings(seriesId: String) {
             series.value = series.value - seriesId
+        }
+
+        val hidden = MutableStateFlow<Map<String, Set<Int>>>(emptyMap())
+
+        override fun hiddenPages(bookId: String): Flow<Set<Int>> = hidden.map { it[bookId].orEmpty() }
+
+        override suspend fun saveHiddenPages(bookId: String, pages: Set<Int>) {
+            hidden.value = hidden.value + (bookId to pages)
         }
 
         // 테스트 준비용: 앱 기본값 한 항목만 바꾸기
